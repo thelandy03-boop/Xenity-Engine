@@ -3,7 +3,7 @@ use crate::icons;
 use crate::unity_style::*;
 use crate::roblox_icon_bytes;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum RobloxClass {
     Workspace,
     Model,
@@ -18,6 +18,130 @@ pub enum RobloxClass {
     Folder,
 }
 
+#[derive(Clone, Debug)]
+pub struct InstanceProperties {
+    pub class_name: String,
+    pub parent_name: String,
+    pub archivable: bool,
+
+    // Appearance
+    pub color: Color32,
+    pub material: String,
+    pub transparency: f32,
+    pub reflectance: f32,
+    pub cast_shadow: bool,
+
+    // Transform
+    pub position: [f32; 3],
+    pub orientation: [f32; 3],
+    pub size: [f32; 3],
+
+    // Collision
+    pub can_collide: bool,
+    pub can_touch: bool,
+    pub can_query: bool,
+    pub collision_group: String,
+
+    // Assembly
+    pub anchored: bool,
+    pub massless: bool,
+    pub mass: f32,
+
+    // Light
+    pub brightness: f32,
+    pub range: f32,
+    pub shadows: bool,
+    pub light_enabled: bool,
+
+    // Sound
+    pub sound_id: String,
+    pub volume: f32,
+    pub playback_speed: f32,
+    pub playing: bool,
+    pub looped: bool,
+
+    // Script
+    pub script_enabled: bool,
+    pub run_context: String,
+
+    // Humanoid
+    pub health: f32,
+    pub max_health: f32,
+    pub walk_speed: f32,
+    pub jump_power: f32,
+    pub auto_rotate: bool,
+
+    // Camera
+    pub fov: f32,
+    pub camera_type: String,
+}
+
+impl InstanceProperties {
+    pub fn default_for(class: &RobloxClass, parent: &str) -> Self {
+        let (class_name, color, material, pos, rot, size, anchored, can_collide, mass) = match class {
+            RobloxClass::Workspace => ("Workspace", Color32::WHITE, "Air", [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], true, false, 0.0),
+            RobloxClass::Model => ("Model", Color32::WHITE, "SmoothPlastic", [0.0, 1.25, 0.0], [0.0, 0.0, 0.0], [4.0, 5.0, 4.0], false, true, 15.0),
+            RobloxClass::Part => ("Part", Color32::from_rgb(163, 162, 165), "Plastic", [0.0, 1.0, 0.0], [0.0, 0.0, 0.0], [4.0, 1.2, 2.0], true, true, 5.0),
+            RobloxClass::MeshPart => ("MeshPart", Color32::from_rgb(85, 85, 90), "SmoothPlastic", [0.0, 1.0, 0.0], [0.0, 0.0, 0.0], [2.0, 2.0, 2.0], false, true, 3.2),
+            RobloxClass::Camera => ("Camera", Color32::WHITE, "Air", [0.0, 15.0, 25.0], [-15.0, 0.0, 0.0], [1.0, 1.0, 1.0], true, false, 0.0),
+            RobloxClass::Light => ("DirectionalLight", Color32::from_rgb(255, 245, 210), "Air", [0.0, 50.0, 0.0], [-45.0, 30.0, 0.0], [1.0, 1.0, 1.0], true, false, 0.0),
+            RobloxClass::Terrain => ("Terrain", Color32::from_rgb(106, 127, 63), "Grass", [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [2048.0, 512.0, 2048.0], true, true, 9999.0),
+            RobloxClass::Script => ("Script", Color32::WHITE, "Air", [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], true, false, 0.0),
+            RobloxClass::Sound => ("Sound", Color32::WHITE, "Air", [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], true, false, 0.0),
+            RobloxClass::Humanoid => ("Humanoid", Color32::WHITE, "Air", [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], false, false, 1.0),
+            RobloxClass::Folder => ("Folder", Color32::WHITE, "Air", [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], true, false, 0.0),
+        };
+
+        Self {
+            class_name: class_name.to_string(),
+            parent_name: parent.to_string(),
+            archivable: true,
+
+            color,
+            material: material.to_string(),
+            transparency: 0.0,
+            reflectance: 0.0,
+            cast_shadow: true,
+
+            position: pos,
+            orientation: rot,
+            size,
+
+            can_collide,
+            can_touch: true,
+            can_query: true,
+            collision_group: "Default".to_string(),
+
+            anchored,
+            massless: false,
+            mass,
+
+            brightness: 2.0,
+            range: 60.0,
+            shadows: true,
+            light_enabled: true,
+
+            sound_id: "rbxassetid://9043254123".to_string(),
+            volume: 0.85,
+            playback_speed: 1.0,
+            playing: false,
+            looped: true,
+
+            script_enabled: true,
+            run_context: "Legacy".to_string(),
+
+            health: 100.0,
+            max_health: 100.0,
+            walk_speed: 16.0,
+            jump_power: 50.0,
+            auto_rotate: true,
+
+            fov: 70.0,
+            camera_type: "Custom".to_string(),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct ExplorerItem {
     pub id: usize,
@@ -25,6 +149,7 @@ pub struct ExplorerItem {
     pub class: RobloxClass,
     pub is_active: bool,
     pub is_expanded: bool,
+    pub properties: InstanceProperties,
     pub children: Vec<ExplorerItem>,
 }
 
@@ -73,7 +198,7 @@ impl Default for SceneHierarchyState {
     fn default() -> Self {
         Self {
             search_query: String::new(),
-            selected_id: Some(3), // Player seleccionado por defecto
+            selected_id: Some(13), // Player seleccionado por defecto
             next_id: 100,
             textures: None,
             items: vec![
@@ -83,51 +208,58 @@ impl Default for SceneHierarchyState {
                     class: RobloxClass::Workspace,
                     is_active: true,
                     is_expanded: true,
+                    properties: InstanceProperties::default_for(&RobloxClass::Workspace, "Game"),
                     children: vec![
                         ExplorerItem {
-                            id: 1,
+                            id: 11,
                             name: "Camera".into(),
                             class: RobloxClass::Camera,
                             is_active: true,
                             is_expanded: false,
+                            properties: InstanceProperties::default_for(&RobloxClass::Camera, "Workspace"),
                             children: vec![],
                         },
                         ExplorerItem {
-                            id: 2,
+                            id: 12,
                             name: "Terrain".into(),
                             class: RobloxClass::Terrain,
                             is_active: true,
                             is_expanded: false,
+                            properties: InstanceProperties::default_for(&RobloxClass::Terrain, "Workspace"),
                             children: vec![],
                         },
                         ExplorerItem {
-                            id: 3,
+                            id: 13,
                             name: "Player".into(),
                             class: RobloxClass::Model,
                             is_active: true,
                             is_expanded: true,
+                            properties: InstanceProperties::default_for(&RobloxClass::Model, "Workspace"),
                             children: vec![
                                 ExplorerItem {
-                                    id: 31,
+                                    id: 14,
                                     name: "Humanoid".into(),
                                     class: RobloxClass::Humanoid,
                                     is_active: true,
                                     is_expanded: false,
+                                    properties: InstanceProperties::default_for(&RobloxClass::Humanoid, "Player"),
                                     children: vec![],
                                 },
                                 ExplorerItem {
-                                    id: 32,
+                                    id: 15,
                                     name: "Weapon_Holder".into(),
                                     class: RobloxClass::Model,
                                     is_active: true,
                                     is_expanded: true,
+                                    properties: InstanceProperties::default_for(&RobloxClass::Model, "Player"),
                                     children: vec![
                                         ExplorerItem {
-                                            id: 321,
+                                            id: 16,
                                             name: "Pistol_Mesh".into(),
                                             class: RobloxClass::MeshPart,
                                             is_active: true,
                                             is_expanded: false,
+                                            properties: InstanceProperties::default_for(&RobloxClass::MeshPart, "Weapon_Holder"),
                                             children: vec![],
                                         },
                                     ],
@@ -135,112 +267,125 @@ impl Default for SceneHierarchyState {
                             ],
                         },
                         ExplorerItem {
-                            id: 4,
+                            id: 17,
                             name: "Environment".into(),
                             class: RobloxClass::Model,
                             is_active: true,
                             is_expanded: true,
+                            properties: InstanceProperties::default_for(&RobloxClass::Model, "Workspace"),
                             children: vec![
                                 ExplorerItem {
-                                    id: 41,
+                                    id: 18,
                                     name: "Ground_Plane".into(),
                                     class: RobloxClass::Part,
                                     is_active: true,
                                     is_expanded: false,
+                                    properties: InstanceProperties::default_for(&RobloxClass::Part, "Environment"),
                                     children: vec![],
                                 },
                                 ExplorerItem {
-                                    id: 42,
+                                    id: 19,
                                     name: "Tree_01".into(),
                                     class: RobloxClass::Model,
                                     is_active: true,
                                     is_expanded: true,
+                                    properties: InstanceProperties::default_for(&RobloxClass::Model, "Environment"),
                                     children: vec![
                                         ExplorerItem {
-                                            id: 421,
+                                            id: 20,
                                             name: "Trunk".into(),
                                             class: RobloxClass::Part,
                                             is_active: true,
                                             is_expanded: false,
+                                            properties: InstanceProperties::default_for(&RobloxClass::Part, "Tree_01"),
                                             children: vec![],
                                         },
                                         ExplorerItem {
-                                            id: 422,
+                                            id: 21,
                                             name: "Leaves".into(),
                                             class: RobloxClass::Part,
                                             is_active: true,
                                             is_expanded: false,
+                                            properties: InstanceProperties::default_for(&RobloxClass::Part, "Tree_01"),
                                             children: vec![],
                                         },
                                     ],
                                 },
                             ],
-                        },
-                    ],
-                },
-                ExplorerItem {
-                    id: 20,
-                    name: "Lighting".into(),
-                    class: RobloxClass::Light,
-                    is_active: true,
-                    is_expanded: true,
-                    children: vec![
-                        ExplorerItem {
-                            id: 21,
-                            name: "DirectionalLight".into(),
-                            class: RobloxClass::Light,
-                            is_active: true,
-                            is_expanded: false,
-                            children: vec![],
-                        },
-                        ExplorerItem {
-                            id: 22,
-                            name: "Sky".into(),
-                            class: RobloxClass::Part,
-                            is_active: true,
-                            is_expanded: false,
-                            children: vec![],
                         },
                     ],
                 },
                 ExplorerItem {
                     id: 30,
-                    name: "StarterPack".into(),
-                    class: RobloxClass::Folder,
+                    name: "Lighting".into(),
+                    class: RobloxClass::Light,
                     is_active: true,
                     is_expanded: true,
+                    properties: InstanceProperties::default_for(&RobloxClass::Light, "Game"),
                     children: vec![
                         ExplorerItem {
                             id: 31,
-                            name: "PlayerController".into(),
-                            class: RobloxClass::Script,
+                            name: "DirectionalLight".into(),
+                            class: RobloxClass::Light,
                             is_active: true,
                             is_expanded: false,
+                            properties: InstanceProperties::default_for(&RobloxClass::Light, "Lighting"),
+                            children: vec![],
+                        },
+                        ExplorerItem {
+                            id: 32,
+                            name: "Sky".into(),
+                            class: RobloxClass::Part,
+                            is_active: true,
+                            is_expanded: false,
+                            properties: InstanceProperties::default_for(&RobloxClass::Part, "Lighting"),
                             children: vec![],
                         },
                     ],
                 },
                 ExplorerItem {
                     id: 40,
+                    name: "StarterPack".into(),
+                    class: RobloxClass::Folder,
+                    is_active: true,
+                    is_expanded: true,
+                    properties: InstanceProperties::default_for(&RobloxClass::Folder, "Game"),
+                    children: vec![
+                        ExplorerItem {
+                            id: 41,
+                            name: "PlayerController".into(),
+                            class: RobloxClass::Script,
+                            is_active: true,
+                            is_expanded: false,
+                            properties: InstanceProperties::default_for(&RobloxClass::Script, "StarterPack"),
+                            children: vec![],
+                        },
+                    ],
+                },
+                ExplorerItem {
+                    id: 50,
                     name: "ReplicatedStorage".into(),
                     class: RobloxClass::Folder,
                     is_active: true,
                     is_expanded: true,
+                    properties: InstanceProperties::default_for(&RobloxClass::Folder, "Game"),
                     children: vec![
                         ExplorerItem {
-                            id: 41,
+                            id: 51,
                             name: "BulletVFX".into(),
                             class: RobloxClass::MeshPart,
                             is_active: true,
                             is_expanded: false,
+                            properties: InstanceProperties::default_for(&RobloxClass::MeshPart, "ReplicatedStorage"),
                             children: vec![],
                         },
                         ExplorerItem {
-                            id: 42,
+                            id: 52,
                             name: "HitSound".into(),
                             class: RobloxClass::Sound,
                             is_active: true,
                             is_expanded: false,
+                            properties: InstanceProperties::default_for(&RobloxClass::Sound, "ReplicatedStorage"),
                             children: vec![],
                         },
                     ],
@@ -260,6 +405,26 @@ pub const STUDIO_TEXT: Color32 = Color32::from_rgb(204, 204, 204);     // #CCCCC
 pub const STUDIO_INPUT_BG: Color32 = Color32::from_rgb(26, 26, 26);    // #1A1A1A
 
 impl SceneHierarchyState {
+    pub fn find_item_mut(&mut self, target_id: usize) -> Option<&mut ExplorerItem> {
+        fn find_recursive<'a>(items: &'a mut [ExplorerItem], target_id: usize) -> Option<&'a mut ExplorerItem> {
+            for item in items.iter_mut() {
+                if item.id == target_id {
+                    return Some(item);
+                }
+                if let Some(found) = find_recursive(&mut item.children, target_id) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+        find_recursive(&mut self.items, target_id)
+    }
+
+    pub fn get_selected_item_mut(&mut self) -> Option<&mut ExplorerItem> {
+        let id = self.selected_id?;
+        self.find_item_mut(id)
+    }
+
     pub fn show(&mut self, ui: &mut egui::Ui) -> Option<String> {
         let mut clicked_object_name = None;
 

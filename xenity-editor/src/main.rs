@@ -4,13 +4,15 @@ mod icons;
 mod unity_style;
 mod unity_widgets;
 mod hierarchy_window;
+mod properties_window;
 mod project_browser;
 pub mod roblox_icon_bytes;
 
 use eframe::egui::{self, Color32, CursorIcon, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
 use unity_style::*;
 use unity_widgets::*;
-use hierarchy_window::SceneHierarchyState;
+use hierarchy_window::{SceneHierarchyState, STUDIO_BG, STUDIO_BORDER, STUDIO_SELECTION};
+use properties_window::PropertiesWindowState;
 use project_browser::{AssetItem, AssetType, ProjectBrowserState};
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -48,8 +50,10 @@ struct XenityEditorApp {
     pivot_mode: bool,
     local_space: bool,
 
-    // Hierarchy State oficial de Unity
+    // Roblox Studio Dock
     hierarchy: SceneHierarchyState,
+    properties_window: PropertiesWindowState,
+    right_split_ratio: f32,
 
     // Project Browser oficial de Unity 2019
     project_browser: ProjectBrowserState,
@@ -123,6 +127,8 @@ impl Default for XenityEditorApp {
             local_space: false,
 
             hierarchy: SceneHierarchyState::default(),
+            properties_window: PropertiesWindowState::default(),
+            right_split_ratio: 0.5,
             project_browser: ProjectBrowserState::default(),
 
             entity_is_active: true,
@@ -433,150 +439,61 @@ impl eframe::App for XenityEditorApp {
                 }
             });
 
-        // --- 5. PANEL IZQUIERDO: HIERARCHY (100% ARQUITECTURA OFICIAL DE UNITY) ---
-        egui::SidePanel::left("hierarchy_panel")
+        // --- 5. PANEL DERECHO: ROBLOX STUDIO DOCK (EXPLORER ARRIBA + PROPERTIES ABAJO) ---
+        egui::SidePanel::right("studio_right_dock")
             .resizable(true)
-            .default_width(240.0)
-            .frame(egui::Frame::none().fill(PANEL_BG).inner_margin(egui::Margin::same(0.0)))
+            .default_width(330.0)
+            .min_width(240.0)
+            .max_width(650.0)
+            .frame(egui::Frame::none().fill(STUDIO_BG).inner_margin(egui::Margin::same(0.0)))
             .show(ctx, |ui| {
-                // Usamos la nueva ventana de jerarquía oficial SceneHierarchyWindow
-                if let Some(clicked_name) = self.hierarchy.show(ui) {
+                let full_rect = ui.available_rect_before_wrap();
+                let total_h = full_rect.height();
+
+                let split_h = (total_h * self.right_split_ratio).clamp(100.0, (total_h - 100.0).max(100.0));
+                let split_y = full_rect.min.y + split_h;
+
+                // --- 1. EXPLORER (Mitad Superior) ---
+                let explorer_rect = Rect::from_min_max(
+                    full_rect.min,
+                    Pos2::new(full_rect.max.x, split_y - 2.0),
+                );
+                let mut explorer_ui = ui.child_ui(explorer_rect, egui::Layout::top_down(egui::Align::Min), None);
+                if let Some(clicked_name) = self.hierarchy.show(&mut explorer_ui) {
                     self.entity_name = clicked_name.clone();
                     self.add_log(Color32::from_rgb(180, 215, 255), format!("Selected: {}", clicked_name));
                 }
-            });
 
-        // --- 6. PANEL DERECHO: INSPECTOR ---
-        egui::SidePanel::right("inspector_panel")
-            .resizable(true)
-            .default_width(320.0)
-            .frame(egui::Frame::none().fill(PANEL_BG).inner_margin(egui::Margin::same(0.0)))
-            .show(ctx, |ui| {
-                draw_unity_window_tab(ui, "Inspector", true, true);
-
-                if let Some(id) = self.hierarchy.selected_id {
-                    ui.add_space(6.0);
-
-                    // CABECERA OFICIAL GAMEOBJECT DE UNITY
-                    ui.horizontal(|ui| {
-                        ui.add_space(8.0);
-                        ui.checkbox(&mut self.entity_is_active, "");
-
-                        let (icon_rect, _) = ui.allocate_exact_size(Vec2::new(16.0, 16.0), Sense::hover());
-                        icons::cube(ui.painter(), icon_rect, Color32::from_rgb(100, 175, 240));
-
-                        ui.add(egui::TextEdit::singleline(&mut self.entity_name).desired_width(120.0));
-
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            ui.add_space(8.0);
-                            ui.checkbox(&mut self.entity_is_static, "Static");
-                        });
-                    });
-
-                    ui.add_space(4.0);
-                    ui.horizontal(|ui| {
-                        ui.add_space(8.0);
-                        ui.label(egui::RichText::new("Tag").size(11.5).color(TEXT_MUTED));
-                        let tag_btn = format!("{} ▼", self.entity_tag);
-                        if ui.button(tag_btn).clicked() {}
-
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            ui.add_space(8.0);
-                            let layer_btn = format!("{} ▼", self.entity_layer);
-                            if ui.button(layer_btn).clicked() {}
-                            ui.label(egui::RichText::new("Layer").size(11.5).color(TEXT_MUTED));
-                        });
-                    });
-
-                    ui.add_space(4.0);
-                    ui.separator();
-
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        // --- COMPONENTE TRANSFORM ---
-                        if unity_component_header(ui, "Transform", &mut self.transform_expanded, None) {
-                            ui.add_space(4.0);
-                            unity_vector3(ui, "Position", &mut self.pos, 0.05);
-                            ui.add_space(2.0);
-                            unity_vector3(ui, "Rotation", &mut self.rot, 0.5);
-                            ui.add_space(2.0);
-                            unity_vector3(ui, "Scale", &mut self.scale, 0.05);
-                            ui.add_space(6.0);
-                        }
-
-                        // --- COMPONENTE MESH RENDERER ---
-                        ui.add_space(4.0);
-                        if unity_component_header(ui, "Mesh Renderer", &mut self.mesh_expanded, None) {
-                            ui.add_space(4.0);
-                            unity_object_field(ui, "Mesh", "Character_Body", "Mesh");
-                            ui.add_space(2.0);
-                            unity_object_field(ui, "Material", "Mat_Player_Armor", "Material");
-                            ui.add_space(2.0);
-                            unity_checkbox(ui, "Cast Shadows", &mut self.cast_shadows);
-                            ui.add_space(2.0);
-                            unity_checkbox(ui, "Receive Shadows", &mut self.receive_shadows);
-                            ui.add_space(6.0);
-                        }
-
-                        // --- COMPONENTE RIGIDBODY ---
-                        ui.add_space(4.0);
-                        if unity_component_header(ui, "Rigidbody", &mut self.rigidbody_expanded, Some(&mut self.rigidbody_enabled)) {
-                            if self.rigidbody_enabled {
-                                ui.add_space(4.0);
-                                unity_float(ui, "Mass", &mut self.mass, 0.1);
-                                ui.add_space(2.0);
-                                unity_float(ui, "Drag", &mut self.drag, 0.01);
-                                ui.add_space(2.0);
-                                unity_float(ui, "Angular Drag", &mut self.angular_drag, 0.01);
-                                ui.add_space(2.0);
-                                unity_checkbox(ui, "Use Gravity", &mut self.use_gravity);
-                                ui.add_space(2.0);
-                                unity_checkbox(ui, "Is Kinematic", &mut self.is_kinematic);
-                                ui.add_space(6.0);
-                            }
-                        }
-
-                        // --- COMPONENTE BOX COLLIDER ---
-                        ui.add_space(4.0);
-                        if unity_component_header(ui, "Box Collider", &mut self.collider_expanded, Some(&mut self.collider_enabled)) {
-                            if self.collider_enabled {
-                                ui.add_space(4.0);
-                                unity_checkbox(ui, "Is Trigger", &mut self.is_trigger);
-                                ui.add_space(2.0);
-                                unity_vector3(ui, "Center", &mut self.collider_center, 0.05);
-                                ui.add_space(2.0);
-                                unity_vector3(ui, "Size", &mut self.collider_size, 0.05);
-                                ui.add_space(6.0);
-                            }
-                        }
-
-                        // --- COMPONENTE AUDIO SOURCE ---
-                        ui.add_space(4.0);
-                        if unity_component_header(ui, "Audio Source", &mut self.audio_expanded, Some(&mut self.audio_enabled)) {
-                            if self.audio_enabled {
-                                ui.add_space(4.0);
-                                unity_object_field(ui, "AudioClip", "Footsteps.wav", "AudioClip");
-                                ui.add_space(2.0);
-                                unity_slider(ui, "Volume", &mut self.volume, 0.0..=1.0);
-                                ui.add_space(2.0);
-                                unity_slider(ui, "Pitch", &mut self.pitch, 0.5..=2.0);
-                                ui.add_space(2.0);
-                                unity_checkbox(ui, "Loop", &mut self.loop_audio);
-                                ui.add_space(6.0);
-                            }
-                        }
-
-                        ui.add_space(10.0);
-                        ui.horizontal(|ui| {
-                            ui.add_space(20.0);
-                            let btn_w = ui.available_width() - 20.0;
-                            if ui.add_sized([btn_w, 24.0], egui::Button::new(egui::RichText::new("Add Component").size(12.0))).clicked() {
-                                self.add_log(Color32::from_rgb(180, 215, 255), "Add Component menu.");
-                            }
-                        });
-                    });
-                } else {
-                    ui.label("Selecciona una entidad en la Jerarquía.");
+                // --- 2. SEPARADOR HORIZONTAL REDIMENSIONABLE (SPLITTER) ---
+                let splitter_rect = Rect::from_min_max(
+                    Pos2::new(full_rect.min.x, split_y - 2.0),
+                    Pos2::new(full_rect.max.x, split_y + 2.0),
+                );
+                let splitter_resp = ui.interact(splitter_rect, ui.id().with("dock_vertical_splitter"), Sense::click_and_drag());
+                if splitter_resp.hovered() || splitter_resp.dragged() {
+                    ui.ctx().set_cursor_icon(CursorIcon::ResizeVertical);
                 }
+                let splitter_color = if splitter_resp.dragged() || splitter_resp.hovered() {
+                    STUDIO_SELECTION
+                } else {
+                    STUDIO_BORDER
+                };
+                ui.painter().rect_filled(splitter_rect, 0.0, splitter_color);
+
+                if splitter_resp.dragged() {
+                    let delta_y = splitter_resp.drag_delta().y;
+                    let new_h = split_h + delta_y;
+                    self.right_split_ratio = (new_h / total_h).clamp(0.15, 0.85);
+                }
+
+                // --- 3. PROPERTIES (Mitad Inferior) ---
+                let properties_rect = Rect::from_min_max(
+                    Pos2::new(full_rect.min.x, split_y + 2.0),
+                    full_rect.max,
+                );
+                let mut prop_ui = ui.child_ui(properties_rect, egui::Layout::top_down(egui::Align::Min), None);
+                let selected_item = self.hierarchy.get_selected_item_mut();
+                self.properties_window.show(&mut prop_ui, selected_item);
             });
 
         // --- 7. PANEL CENTRAL: VIEWPORT (WGPU RENDER TARGET) ---
