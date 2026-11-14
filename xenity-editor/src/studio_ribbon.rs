@@ -204,49 +204,56 @@ impl StudioRibbonState {
         let bar_center_y = tabs_rect.center().y;
 
         // --- LADO IZQUIERDO: Botón "Probar ▾" ---
-        let probar_w = 64.0;
-        let probar_rect = Rect::from_center_size(Pos2::new(cur_x + probar_w * 0.5, bar_center_y), Vec2::new(probar_w, 22.0));
+        let probar_w = 68.0;
+        let probar_rect = Rect::from_center_size(Pos2::new(cur_x + probar_w * 0.5, bar_center_y), Vec2::new(probar_w, 24.0));
         let probar_resp = ui.interact(probar_rect, ui.id().with("btn_probar_dropdown"), Sense::click());
         let probar_bg = if self.probar_dropdown_open {
             Color32::from_rgb(34, 35, 40)
         } else if probar_resp.hovered() {
-            Color32::from_rgb(48, 50, 56)
+            Color32::from_rgb(46, 48, 54)
         } else {
-            Color32::from_rgb(34, 35, 40)
+            Color32::from_rgb(38, 40, 46)
         };
         let probar_stroke = if self.probar_dropdown_open {
             Stroke::new(1.5, Color32::from_rgb(0, 136, 255))
         } else {
-            Stroke::new(1.0, Color32::from_rgb(52, 54, 60))
+            Stroke::new(1.0, Color32::from_rgb(56, 58, 66))
         };
         ui.painter().rect(probar_rect, Rounding::same(4.0), probar_bg, probar_stroke);
+
+        let cur_label = match self.probar_mode {
+            1 => "Probar",
+            2 => "Ejecutar",
+            _ => "Probar",
+        };
         ui.painter().text(
-            Pos2::new(probar_rect.min.x + 8.0, bar_center_y),
+            Pos2::new(probar_rect.min.x + 10.0, bar_center_y),
             egui::Align2::LEFT_CENTER,
-            "Probar",
-            FontId::proportional(11.0),
-            Color32::from_rgb(220, 220, 225),
+            cur_label,
+            FontId::proportional(11.5),
+            Color32::from_rgb(225, 226, 232),
         );
-        let p_arrow_x = probar_rect.max.x - 10.0;
+        let p_arrow_x = probar_rect.max.x - 12.0;
         if self.probar_dropdown_open {
             // Flecha ▴ hacia arriba
-            let p1 = Pos2::new(p_arrow_x - 2.5, bar_center_y + 1.5);
-            let p2 = Pos2::new(p_arrow_x + 2.5, bar_center_y + 1.5);
-            let p3 = Pos2::new(p_arrow_x, bar_center_y - 2.0);
+            let p1 = Pos2::new(p_arrow_x - 3.0, bar_center_y + 1.5);
+            let p2 = Pos2::new(p_arrow_x + 3.0, bar_center_y + 1.5);
+            let p3 = Pos2::new(p_arrow_x, bar_center_y - 2.5);
             ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], Color32::WHITE, Stroke::NONE));
         } else {
             // Flecha ▾ hacia abajo
-            let p1 = Pos2::new(p_arrow_x - 2.5, bar_center_y - 1.5);
-            let p2 = Pos2::new(p_arrow_x + 2.5, bar_center_y - 1.5);
-            let p3 = Pos2::new(p_arrow_x, bar_center_y + 2.0);
-            ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], Color32::from_rgb(180, 180, 185), Stroke::NONE));
+            let p1 = Pos2::new(p_arrow_x - 3.0, bar_center_y - 1.5);
+            let p2 = Pos2::new(p_arrow_x + 3.0, bar_center_y - 1.5);
+            let p3 = Pos2::new(p_arrow_x, bar_center_y + 2.5);
+            ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], Color32::from_rgb(165, 167, 175), Stroke::NONE));
         }
         if probar_resp.clicked() {
+            // ÚNICAMENTE abre o cierra el menú desplegable, NUNCA ejecuta la simulación
             self.probar_dropdown_open = !self.probar_dropdown_open;
         }
         probar_resp.on_hover_text("Opciones de prueba y simulación");
 
-        // Menú Desplegable Oficial de "Probar" (Imagen 1 de referencia)
+        // Menú Desplegable Oficial de "Probar" (Imagen 1 y 2 de referencia)
         if self.probar_dropdown_open {
             let menu_pos = Pos2::new(probar_rect.min.x, probar_rect.max.y + 3.0);
             let menu_w = 145.0;
@@ -288,43 +295,41 @@ impl StudioRibbonState {
                         );
 
                         if it_resp.clicked() {
+                            // Selecciona la opción y cierra el menú SIN ejecutar la simulación
                             self.probar_mode = idx;
                             self.probar_dropdown_open = false;
-                            if idx == 0 || idx == 1 || idx == 2 {
-                                action = RibbonAction::PlaySimulation;
-                            }
                         }
 
                         item_y += item_h;
                     }
                 });
         }
-        cur_x += probar_w + 10.0;
+        cur_x += probar_w + 14.0;
 
-        // Botón Play ▶ (Azul)
-        let play_rect = Rect::from_center_size(Pos2::new(cur_x + 8.0, bar_center_y), Vec2::new(18.0, 20.0));
+        // Botón Play ▶ (Azul vibrante)
+        let play_rect = Rect::from_center_size(Pos2::new(cur_x + 7.0, bar_center_y), Vec2::new(18.0, 22.0));
         let play_resp = ui.interact(play_rect, ui.id().with("quick_sim_play"), Sense::click());
         if play_resp.hovered() {
-            ui.painter().rect_filled(play_rect, Rounding::same(3.0), STUDIO_HOVER);
+            ui.painter().rect_filled(play_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
         }
         let tri_color = if is_playing { Color32::from_rgb(100, 140, 180) } else { Color32::from_rgb(0, 136, 255) };
-        let tri_p1 = Pos2::new(play_rect.center().x - 4.0, bar_center_y - 5.0);
-        let tri_p2 = Pos2::new(play_rect.center().x + 5.0, bar_center_y);
-        let tri_p3 = Pos2::new(play_rect.center().x - 4.0, bar_center_y + 5.0);
+        let tri_p1 = Pos2::new(play_rect.center().x - 4.5, bar_center_y - 5.5);
+        let tri_p2 = Pos2::new(play_rect.center().x + 5.5, bar_center_y);
+        let tri_p3 = Pos2::new(play_rect.center().x - 4.5, bar_center_y + 5.5);
         ui.painter().add(egui::Shape::convex_polygon(vec![tri_p1, tri_p2, tri_p3], tri_color, Stroke::NONE));
         if play_resp.clicked() { action = RibbonAction::PlaySimulation; }
         play_resp.on_hover_text("Jugar (F5)");
-        cur_x += 20.0;
+        cur_x += 24.0;
 
         // Botón Pause ⏸ ▾
-        let pause_rect = Rect::from_center_size(Pos2::new(cur_x + 12.0, bar_center_y), Vec2::new(24.0, 20.0));
+        let pause_rect = Rect::from_center_size(Pos2::new(cur_x + 9.0, bar_center_y), Vec2::new(22.0, 22.0));
         let pause_resp = ui.interact(pause_rect, ui.id().with("quick_sim_pause"), Sense::click());
         if pause_resp.hovered() {
-            ui.painter().rect_filled(pause_rect, Rounding::same(3.0), STUDIO_HOVER);
+            ui.painter().rect_filled(pause_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
         }
-        let pause_col = if is_paused { Color32::WHITE } else { Color32::from_rgb(150, 153, 160) };
-        let bar1_rect = Rect::from_center_size(Pos2::new(pause_rect.center().x - 5.0, bar_center_y), Vec2::new(2.5, 9.0));
-        let bar2_rect = Rect::from_center_size(Pos2::new(pause_rect.center().x - 0.5, bar_center_y), Vec2::new(2.5, 9.0));
+        let pause_col = if is_paused { Color32::WHITE } else { Color32::from_rgb(150, 153, 162) };
+        let bar1_rect = Rect::from_center_size(Pos2::new(pause_rect.center().x - 5.0, bar_center_y), Vec2::new(2.5, 10.0));
+        let bar2_rect = Rect::from_center_size(Pos2::new(pause_rect.center().x - 0.5, bar_center_y), Vec2::new(2.5, 10.0));
         ui.painter().rect_filled(bar1_rect, 0.5, pause_col);
         ui.painter().rect_filled(bar2_rect, 0.5, pause_col);
         let pause_arrow_x = pause_rect.center().x + 6.0;
@@ -336,41 +341,52 @@ impl StudioRibbonState {
         pause_resp.on_hover_text("Pausar");
         cur_x += 26.0;
 
-        // Botón Stop ⏹ (Rojo)
-        let stop_rect = Rect::from_center_size(Pos2::new(cur_x + 8.0, bar_center_y), Vec2::new(18.0, 20.0));
+        // Botón Stop ⏹ (Rojo apagado cuando no está en juego, idéntico a Imagen 2)
+        let stop_rect = Rect::from_center_size(Pos2::new(cur_x + 7.0, bar_center_y), Vec2::new(18.0, 22.0));
         let stop_resp = ui.interact(stop_rect, ui.id().with("quick_sim_stop"), Sense::click());
         if stop_resp.hovered() {
-            ui.painter().rect_filled(stop_rect, Rounding::same(3.0), STUDIO_HOVER);
+            ui.painter().rect_filled(stop_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
         }
-        let stop_col = if is_playing { Color32::from_rgb(230, 60, 60) } else { Color32::from_rgb(110, 50, 50) };
-        let stop_sq_rect = Rect::from_center_size(stop_rect.center(), Vec2::new(9.0, 9.0));
+        let stop_col = if is_playing { Color32::from_rgb(230, 50, 50) } else { Color32::from_rgb(115, 42, 42) };
+        let stop_sq_rect = Rect::from_center_size(stop_rect.center(), Vec2::new(9.5, 9.5));
         ui.painter().rect_filled(stop_sq_rect, Rounding::same(1.5), stop_col);
         if stop_resp.clicked() { action = RibbonAction::StopSimulation; }
         stop_resp.on_hover_text("Detener (Shift+F5)");
-        cur_x += 20.0;
+        cur_x += 24.0;
 
         // Botón Emulador de Dispositivo 🖥
-        let dev_rect = Rect::from_center_size(Pos2::new(cur_x + 8.0, bar_center_y), Vec2::new(18.0, 20.0));
+        let dev_rect = Rect::from_center_size(Pos2::new(cur_x + 7.0, bar_center_y), Vec2::new(18.0, 22.0));
         let dev_resp = ui.interact(dev_rect, ui.id().with("quick_device_emu"), Sense::click());
         if dev_resp.hovered() {
-            ui.painter().rect_filled(dev_rect, Rounding::same(3.0), STUDIO_HOVER);
+            ui.painter().rect_filled(dev_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
         }
-        let dev_col = if dev_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(140, 143, 150) };
-        let mon_rect = Rect::from_center_size(Pos2::new(dev_rect.center().x, bar_center_y - 1.5), Vec2::new(11.0, 8.0));
-        ui.painter().rect_stroke(mon_rect, Rounding::same(1.0), Stroke::new(1.0, dev_col));
+        let dev_col = if dev_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 153, 162) };
+        let mon_rect = Rect::from_center_size(Pos2::new(dev_rect.center().x, bar_center_y - 1.5), Vec2::new(12.0, 9.0));
+        ui.painter().rect_stroke(mon_rect, Rounding::same(1.5), Stroke::new(1.0, dev_col));
         ui.painter().line_segment(
             [Pos2::new(dev_rect.center().x, mon_rect.max.y), Pos2::new(dev_rect.center().x, mon_rect.max.y + 2.5)],
             Stroke::new(1.0, dev_col),
         );
         ui.painter().line_segment(
-            [Pos2::new(dev_rect.center().x - 3.0, mon_rect.max.y + 2.5), Pos2::new(dev_rect.center().x + 3.0, mon_rect.max.y + 2.5)],
+            [Pos2::new(dev_rect.center().x - 3.5, mon_rect.max.y + 2.5), Pos2::new(dev_rect.center().x + 3.5, mon_rect.max.y + 2.5)],
             Stroke::new(1.0, dev_col),
         );
         dev_resp.on_hover_text("Emulación de dispositivo");
 
-        // --- PESTAÑAS MODERNAS TIPO PÍLDORA (CENTRADAS / DERECHA) ---
-        let modern_tabs = [
-            ("Inicio", RibbonTab::Home),
+        // --- PESTAÑAS MODERNAS TIPO PÍLDORA (ESPACIADO EXACTO SEGÚN IMAGEN 2) ---
+        let mut tab_x = (tabs_rect.min.x + 360.0).max(cur_x + 40.0);
+
+        // 1. Pestaña activa: Inicio (Píldora destacada)
+        let inicio_font = FontId::proportional(11.5);
+        let inicio_rect = Rect::from_center_size(Pos2::new(tab_x + 24.0, bar_center_y), Vec2::new(48.0, 24.0));
+        let inicio_resp = ui.interact(inicio_rect, ui.id().with("mod_tab_inicio"), Sense::click());
+        ui.painter().rect_filled(inicio_rect, Rounding::same(4.0), Color32::from_rgb(52, 54, 60));
+        ui.painter().text(inicio_rect.center(), egui::Align2::CENTER_CENTER, "Inicio", inicio_font, Color32::WHITE);
+        if inicio_resp.clicked() { self.current_tab = RibbonTab::Home; }
+        tab_x += 48.0 + 20.0;
+
+        // 2. Pestañas inactivas con espaciado amplio y elegante
+        let other_tabs = [
             ("Avatar", RibbonTab::Avatar),
             ("UI", RibbonTab::View),
             ("Script", RibbonTab::Plugins),
@@ -379,49 +395,39 @@ impl StudioRibbonState {
             ("Sin título", RibbonTab::Home),
         ];
 
-        let mut tab_x = (tabs_rect.min.x + 360.0).max(cur_x + 30.0);
-
-        for (label, tab) in modern_tabs {
-            let is_active = self.current_tab == tab && label == "Inicio";
-            let font_id = FontId::proportional(11.5);
+        for (label, tab) in other_tabs {
+            let font_id = FontId::proportional(12.0);
             let galley = ui.painter().layout_no_wrap(label.to_string(), font_id.clone(), Color32::WHITE);
             let text_w = galley.size().x;
-            let tab_w = text_w + 18.0;
-            let tab_h = 22.0;
 
-            let rect = Rect::from_center_size(Pos2::new(tab_x + tab_w * 0.5, bar_center_y), Vec2::new(tab_w, tab_h));
+            let rect = Rect::from_center_size(Pos2::new(tab_x + text_w * 0.5, bar_center_y), Vec2::new(text_w + 8.0, 22.0));
             let resp = ui.interact(rect, ui.id().with(("mod_tab", label)), Sense::click());
 
-            if is_active {
-                ui.painter().rect_filled(rect, Rounding::same(5.0), Color32::from_rgb(52, 54, 60));
-                ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, font_id, Color32::WHITE);
-            } else {
-                if resp.hovered() {
-                    ui.painter().rect_filled(rect, Rounding::same(5.0), Color32::from_rgba_unmultiplied(255, 255, 255, 12));
-                }
-                let col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(160, 163, 172) };
-                ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, font_id, col);
+            if resp.hovered() {
+                ui.painter().rect_filled(rect, Rounding::same(4.0), Color32::from_rgba_unmultiplied(255, 255, 255, 12));
             }
+            let col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 153, 162) };
+            ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, font_id, col);
 
             if resp.clicked() {
                 self.current_tab = tab;
             }
 
-            tab_x += tab_w + 6.0;
+            tab_x += text_w + 22.0;
         }
 
         // Botón '+' para nueva pestaña
-        let add_tab_rect = Rect::from_center_size(Pos2::new(tab_x + 10.0, bar_center_y), Vec2::new(18.0, 20.0));
+        let add_tab_rect = Rect::from_center_size(Pos2::new(tab_x + 6.0, bar_center_y), Vec2::new(18.0, 20.0));
         let add_tab_resp = ui.interact(add_tab_rect, ui.id().with("add_tab_btn"), Sense::click());
         if add_tab_resp.hovered() {
-            ui.painter().rect_filled(add_tab_rect, Rounding::same(3.0), STUDIO_HOVER);
+            ui.painter().rect_filled(add_tab_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
         }
         ui.painter().text(
             add_tab_rect.center(),
             egui::Align2::CENTER_CENTER,
             "+",
             FontId::proportional(13.0),
-            if add_tab_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(160, 163, 172) },
+            if add_tab_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 153, 162) },
         );
         add_tab_resp.on_hover_text("Nueva pestaña");
 
