@@ -68,4 +68,8 @@ pub fn apply_roblox_studio_theme(ctx: &egui::Context) {
     visuals.window_rounding = round;
 
     ctx.set_visuals(visuals);
+
+    ctx.style_mut(|s| {
+        s.interaction.resize_grab_radius_side = 6.0;
+    });
 }
