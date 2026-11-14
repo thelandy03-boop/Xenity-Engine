@@ -46,6 +46,7 @@ pub struct StudioIcons {
     pub studio_logo: TextureHandle,
     pub out_clear: TextureHandle,
     pub out_more: TextureHandle,
+    pub doc_place_cloud: TextureHandle,
 
     // View Selector Cube
     pub view_front: TextureHandle,
@@ -108,6 +109,7 @@ impl StudioIcons {
             studio_logo: load_png(ctx, "rbx_studio_logo", include_bytes!("../assets/icons/roblox_studio_logo.png")),
             out_clear: load_png(ctx, "rbx_out_clear", include_bytes!("../assets/icons/output_clear.png")),
             out_more: load_png(ctx, "rbx_out_more", include_bytes!("../assets/icons/output_more.png")),
+            doc_place_cloud: load_png(ctx, "rbx_doc_place_cloud", include_bytes!("../assets/icons/place_cloud.png")),
 
             view_front: load_png(ctx, "rbx_view_front", include_bytes!("../assets/icons/view_front.png")),
             view_top: load_png(ctx, "rbx_view_top", include_bytes!("../assets/icons/view_top.png")),
