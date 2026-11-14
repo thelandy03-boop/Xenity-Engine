@@ -58,7 +58,7 @@ impl Default for StudioRibbonState {
             play_dropdown_open: false,
 
             move_snap_enabled: true,
-            move_snap_studs: 1.0,
+            move_snap_studs: 21.0,
             rotate_snap_enabled: true,
             rotate_snap_deg: 45.0,
             collisions_enabled: true,
@@ -190,66 +190,166 @@ impl StudioRibbonState {
         );
 
         // =====================================================================
-        // 2. PESTAÑAS DEL RIBBON
+        // 2. BARRA SUPERIOR MODERNA (PROBAR + CONTROLES + PESTAÑAS PÍLDORA)
         // =====================================================================
-        let tabs_bar_h = 28.0;
+        let tabs_bar_h = 32.0;
         let (tabs_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), tabs_bar_h), Sense::hover());
-        ui.painter().rect_filled(tabs_rect, 0.0, STUDIO_BG);
+        ui.painter().rect_filled(tabs_rect, 0.0, Color32::from_rgb(22, 23, 27));
 
-        let mut tab_x = tabs_rect.min.x + 8.0;
+        let mut cur_x = tabs_rect.min.x + 8.0;
+        let bar_center_y = tabs_rect.center().y;
 
-        let file_rect = Rect::from_min_size(Pos2::new(tab_x, tabs_rect.min.y + 3.0), Vec2::new(48.0, 22.0));
-        let file_resp = ui.interact(file_rect, ui.id().with("ribbon_tab_file"), Sense::click());
-        let file_bg = if file_resp.hovered() { Color32::from_rgb(60, 60, 65) } else { Color32::from_rgb(48, 48, 52) };
-        ui.painter().rect_filled(file_rect, Rounding::same(3.0), file_bg);
-        ui.painter().text(file_rect.center(), egui::Align2::CENTER_CENTER, "FILE", FontId::proportional(11.5), Color32::WHITE);
-        tab_x += 54.0;
+        // --- LADO IZQUIERDO: Botón "Probar ▾" ---
+        let probar_w = 64.0;
+        let probar_rect = Rect::from_center_size(Pos2::new(cur_x + probar_w * 0.5, bar_center_y), Vec2::new(probar_w, 22.0));
+        let probar_resp = ui.interact(probar_rect, ui.id().with("btn_probar_dropdown"), Sense::click());
+        let probar_bg = if probar_resp.hovered() { Color32::from_rgb(48, 50, 56) } else { Color32::from_rgb(34, 35, 40) };
+        ui.painter().rect(probar_rect, Rounding::same(4.0), probar_bg, Stroke::new(1.0, Color32::from_rgb(52, 54, 60)));
+        ui.painter().text(
+            Pos2::new(probar_rect.min.x + 8.0, bar_center_y),
+            egui::Align2::LEFT_CENTER,
+            "Probar",
+            FontId::proportional(11.0),
+            Color32::from_rgb(220, 220, 225),
+        );
+        let p_arrow_x = probar_rect.max.x - 10.0;
+        let p1 = Pos2::new(p_arrow_x - 2.5, bar_center_y - 1.5);
+        let p2 = Pos2::new(p_arrow_x + 2.5, bar_center_y - 1.5);
+        let p3 = Pos2::new(p_arrow_x, bar_center_y + 2.0);
+        ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], Color32::from_rgb(180, 180, 185), Stroke::NONE));
+        if probar_resp.clicked() {
+            if !is_playing { action = RibbonAction::PlaySimulation; }
+        }
+        probar_resp.on_hover_text("Opciones de simulación");
+        cur_x += probar_w + 10.0;
 
-        let tabs = [
-            (RibbonTab::Home, "HOME"),
-            (RibbonTab::Model, "MODEL"),
-            (RibbonTab::Avatar, "AVATAR"),
-            (RibbonTab::Test, "TEST"),
-            (RibbonTab::View, "VIEW"),
-            (RibbonTab::Plugins, "PLUGINS"),
+        // Botón Play ▶ (Azul)
+        let play_rect = Rect::from_center_size(Pos2::new(cur_x + 8.0, bar_center_y), Vec2::new(18.0, 20.0));
+        let play_resp = ui.interact(play_rect, ui.id().with("quick_sim_play"), Sense::click());
+        if play_resp.hovered() {
+            ui.painter().rect_filled(play_rect, Rounding::same(3.0), STUDIO_HOVER);
+        }
+        let tri_color = if is_playing { Color32::from_rgb(100, 140, 180) } else { Color32::from_rgb(0, 136, 255) };
+        let tri_p1 = Pos2::new(play_rect.center().x - 4.0, bar_center_y - 5.0);
+        let tri_p2 = Pos2::new(play_rect.center().x + 5.0, bar_center_y);
+        let tri_p3 = Pos2::new(play_rect.center().x - 4.0, bar_center_y + 5.0);
+        ui.painter().add(egui::Shape::convex_polygon(vec![tri_p1, tri_p2, tri_p3], tri_color, Stroke::NONE));
+        if play_resp.clicked() { action = RibbonAction::PlaySimulation; }
+        play_resp.on_hover_text("Jugar (F5)");
+        cur_x += 20.0;
+
+        // Botón Pause ⏸ ▾
+        let pause_rect = Rect::from_center_size(Pos2::new(cur_x + 12.0, bar_center_y), Vec2::new(24.0, 20.0));
+        let pause_resp = ui.interact(pause_rect, ui.id().with("quick_sim_pause"), Sense::click());
+        if pause_resp.hovered() {
+            ui.painter().rect_filled(pause_rect, Rounding::same(3.0), STUDIO_HOVER);
+        }
+        let pause_col = if is_paused { Color32::WHITE } else { Color32::from_rgb(150, 153, 160) };
+        let bar1_rect = Rect::from_center_size(Pos2::new(pause_rect.center().x - 5.0, bar_center_y), Vec2::new(2.5, 9.0));
+        let bar2_rect = Rect::from_center_size(Pos2::new(pause_rect.center().x - 0.5, bar_center_y), Vec2::new(2.5, 9.0));
+        ui.painter().rect_filled(bar1_rect, 0.5, pause_col);
+        ui.painter().rect_filled(bar2_rect, 0.5, pause_col);
+        let pause_arrow_x = pause_rect.center().x + 6.0;
+        let pau_p1 = Pos2::new(pause_arrow_x - 2.5, bar_center_y - 1.5);
+        let pau_p2 = Pos2::new(pause_arrow_x + 2.5, bar_center_y - 1.5);
+        let pau_p3 = Pos2::new(pause_arrow_x, bar_center_y + 2.0);
+        ui.painter().add(egui::Shape::convex_polygon(vec![pau_p1, pau_p2, pau_p3], pause_col, Stroke::NONE));
+        if pause_resp.clicked() { action = RibbonAction::PauseSimulation; }
+        pause_resp.on_hover_text("Pausar");
+        cur_x += 26.0;
+
+        // Botón Stop ⏹ (Rojo)
+        let stop_rect = Rect::from_center_size(Pos2::new(cur_x + 8.0, bar_center_y), Vec2::new(18.0, 20.0));
+        let stop_resp = ui.interact(stop_rect, ui.id().with("quick_sim_stop"), Sense::click());
+        if stop_resp.hovered() {
+            ui.painter().rect_filled(stop_rect, Rounding::same(3.0), STUDIO_HOVER);
+        }
+        let stop_col = if is_playing { Color32::from_rgb(230, 60, 60) } else { Color32::from_rgb(110, 50, 50) };
+        let stop_sq_rect = Rect::from_center_size(stop_rect.center(), Vec2::new(9.0, 9.0));
+        ui.painter().rect_filled(stop_sq_rect, Rounding::same(1.5), stop_col);
+        if stop_resp.clicked() { action = RibbonAction::StopSimulation; }
+        stop_resp.on_hover_text("Detener (Shift+F5)");
+        cur_x += 20.0;
+
+        // Botón Emulador de Dispositivo 🖥
+        let dev_rect = Rect::from_center_size(Pos2::new(cur_x + 8.0, bar_center_y), Vec2::new(18.0, 20.0));
+        let dev_resp = ui.interact(dev_rect, ui.id().with("quick_device_emu"), Sense::click());
+        if dev_resp.hovered() {
+            ui.painter().rect_filled(dev_rect, Rounding::same(3.0), STUDIO_HOVER);
+        }
+        let dev_col = if dev_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(140, 143, 150) };
+        let mon_rect = Rect::from_center_size(Pos2::new(dev_rect.center().x, bar_center_y - 1.5), Vec2::new(11.0, 8.0));
+        ui.painter().rect_stroke(mon_rect, Rounding::same(1.0), Stroke::new(1.0, dev_col));
+        ui.painter().line_segment(
+            [Pos2::new(dev_rect.center().x, mon_rect.max.y), Pos2::new(dev_rect.center().x, mon_rect.max.y + 2.5)],
+            Stroke::new(1.0, dev_col),
+        );
+        ui.painter().line_segment(
+            [Pos2::new(dev_rect.center().x - 3.0, mon_rect.max.y + 2.5), Pos2::new(dev_rect.center().x + 3.0, mon_rect.max.y + 2.5)],
+            Stroke::new(1.0, dev_col),
+        );
+        dev_resp.on_hover_text("Emulación de dispositivo");
+
+        // --- PESTAÑAS MODERNAS TIPO PÍLDORA (CENTRADAS / DERECHA) ---
+        let modern_tabs = [
+            ("Inicio", RibbonTab::Home),
+            ("Avatar", RibbonTab::Avatar),
+            ("UI", RibbonTab::View),
+            ("Script", RibbonTab::Plugins),
+            ("Modelo", RibbonTab::Model),
+            ("Plugins", RibbonTab::Plugins),
+            ("Sin título", RibbonTab::Home),
         ];
 
-        for (tab, label) in tabs {
-            let is_active = self.current_tab == tab;
-            let tab_w = 64.0;
-            let rect = Rect::from_min_size(Pos2::new(tab_x, tabs_rect.min.y + 2.0), Vec2::new(tab_w, tabs_bar_h - 2.0));
-            let resp = ui.interact(rect, ui.id().with(label), Sense::click());
+        let mut tab_x = (tabs_rect.min.x + 360.0).max(cur_x + 30.0);
 
-            let bg = if is_active {
-                STUDIO_TAB_ACTIVE
-            } else if resp.hovered() {
-                STUDIO_TAB_HOVER
-            } else {
-                STUDIO_BG
-            };
+        for (label, tab) in modern_tabs {
+            let is_active = self.current_tab == tab && label == "Inicio";
+            let font_id = FontId::proportional(11.5);
+            let galley = ui.painter().layout_no_wrap(label.to_string(), font_id.clone(), Color32::WHITE);
+            let text_w = galley.size().x;
+            let tab_w = text_w + 18.0;
+            let tab_h = 22.0;
 
-            ui.painter().rect_filled(rect, Rounding { nw: 3.0, ne: 3.0, sw: 0.0, se: 0.0 }, bg);
+            let rect = Rect::from_center_size(Pos2::new(tab_x + tab_w * 0.5, bar_center_y), Vec2::new(tab_w, tab_h));
+            let resp = ui.interact(rect, ui.id().with(("mod_tab", label)), Sense::click());
 
             if is_active {
-                ui.painter().line_segment(
-                    [Pos2::new(rect.min.x + 2.0, rect.min.y), Pos2::new(rect.max.x - 2.0, rect.min.y)],
-                    Stroke::new(2.5, STUDIO_SELECTION),
-                );
+                ui.painter().rect_filled(rect, Rounding::same(5.0), Color32::from_rgb(52, 54, 60));
+                ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, font_id, Color32::WHITE);
+            } else {
+                if resp.hovered() {
+                    ui.painter().rect_filled(rect, Rounding::same(5.0), Color32::from_rgba_unmultiplied(255, 255, 255, 12));
+                }
+                let col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(160, 163, 172) };
+                ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, font_id, col);
             }
-
-            let text_color = if is_active { Color32::WHITE } else { STUDIO_TEXT };
-            ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, FontId::proportional(11.5), text_color);
 
             if resp.clicked() {
                 self.current_tab = tab;
             }
 
-            tab_x += tab_w + 2.0;
+            tab_x += tab_w + 6.0;
         }
+
+        // Botón '+' para nueva pestaña
+        let add_tab_rect = Rect::from_center_size(Pos2::new(tab_x + 10.0, bar_center_y), Vec2::new(18.0, 20.0));
+        let add_tab_resp = ui.interact(add_tab_rect, ui.id().with("add_tab_btn"), Sense::click());
+        if add_tab_resp.hovered() {
+            ui.painter().rect_filled(add_tab_rect, Rounding::same(3.0), STUDIO_HOVER);
+        }
+        ui.painter().text(
+            add_tab_rect.center(),
+            egui::Align2::CENTER_CENTER,
+            "+",
+            FontId::proportional(13.0),
+            if add_tab_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(160, 163, 172) },
+        );
+        add_tab_resp.on_hover_text("Nueva pestaña");
 
         ui.painter().line_segment(
             [Pos2::new(tabs_rect.min.x, tabs_rect.max.y), Pos2::new(tabs_rect.max.x, tabs_rect.max.y)],
-            Stroke::new(1.0, STUDIO_BORDER),
+            Stroke::new(1.0, Color32::from_rgb(38, 40, 45)),
         );
 
         // =====================================================================
@@ -413,19 +513,6 @@ impl StudioRibbonState {
         }
         if draw_modern_ribbon_button(ui, "Recursos", false, &icons.rib_assetmgr, false) {
             // Asset Manager
-        }
-
-        draw_modern_divider(ui);
-
-        // 6. Simulación y Prueba (Jugar ▾ / Detener)
-        if is_playing {
-            if draw_modern_ribbon_button(ui, "Detener", false, &icons.sim_stop, false) {
-                *action = RibbonAction::StopSimulation;
-            }
-        } else {
-            if draw_modern_ribbon_button(ui, "Jugar", false, &icons.sim_play, true) {
-                *action = RibbonAction::PlaySimulation;
-            }
         }
     }
 
