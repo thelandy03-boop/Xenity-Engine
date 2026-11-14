@@ -245,8 +245,12 @@ impl eframe::App for RobloxStudioApp {
                         // Explorer (Mitad Superior)
                         let explorer_rect = Rect::from_min_max(full_rect.min, Pos2::new(full_rect.max.x, split_y - 2.0));
                         let mut explorer_ui = ui.child_ui(explorer_rect, egui::Layout::top_down(egui::Align::Min), None);
-                        if let Some(clicked_name) = self.hierarchy.show(&mut explorer_ui, icons) {
+                        let (clicked_name, exp_close) = self.hierarchy.show(&mut explorer_ui, icons);
+                        if let Some(clicked_name) = clicked_name {
                             self.output.add_log(LogType::Info, "Explorer", format!("Selected: {}", clicked_name));
+                        }
+                        if exp_close {
+                            self.show_explorer = false;
                         }
 
                         // Splitter Barra Horizontal
@@ -268,16 +272,26 @@ impl eframe::App for RobloxStudioApp {
                         let properties_rect = Rect::from_min_max(Pos2::new(full_rect.min.x, split_y + 2.0), full_rect.max);
                         let mut prop_ui = ui.child_ui(properties_rect, egui::Layout::top_down(egui::Align::Min), None);
                         let selected_item = self.hierarchy.get_selected_item_mut();
-                        self.properties.show(&mut prop_ui, selected_item, icons);
+                        let prop_close = self.properties.show(&mut prop_ui, selected_item, icons);
+                        if prop_close {
+                            self.show_properties = false;
+                        }
                     } else if self.show_explorer {
                         // Solo Explorer ocupa todo el panel
-                        if let Some(clicked_name) = self.hierarchy.show(ui, icons) {
+                        let (clicked_name, exp_close) = self.hierarchy.show(ui, icons);
+                        if let Some(clicked_name) = clicked_name {
                             self.output.add_log(LogType::Info, "Explorer", format!("Selected: {}", clicked_name));
+                        }
+                        if exp_close {
+                            self.show_explorer = false;
                         }
                     } else if self.show_properties {
                         // Solo Properties ocupa todo el panel
                         let selected_item = self.hierarchy.get_selected_item_mut();
-                        self.properties.show(ui, selected_item, icons);
+                        let prop_close = self.properties.show(ui, selected_item, icons);
+                        if prop_close {
+                            self.show_properties = false;
+                        }
                     }
                 });
         }
