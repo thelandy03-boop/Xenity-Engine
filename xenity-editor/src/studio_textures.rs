@@ -76,6 +76,15 @@ pub struct StudioIcons {
     pub rib_toolbox: TextureHandle,
     pub rib_assetmgr: TextureHandle,
 
+    // Official Ribbon Avatar Tab Icons
+    pub rib_avatar_settings: TextureHandle,
+    pub rib_avatar_setup: TextureHandle,
+    pub rib_accessory: TextureHandle,
+    pub rib_anim_constraint: TextureHandle,
+    pub rib_ugc_validation: TextureHandle,
+    pub rib_layered: TextureHandle,
+    pub rib_remap_rig: TextureHandle,
+
     // Top Right Official Studio Utility Icons
     pub top_avatar: TextureHandle,
     pub top_bell: TextureHandle,
@@ -173,6 +182,14 @@ impl StudioIcons {
             rib_properties: load_png(ctx, "rbx_rib_properties", include_bytes!("../assets/icons/ribbon/RibbonProperties.png")),
             rib_toolbox: load_png(ctx, "rbx_rib_toolbox", include_bytes!("../assets/icons/ribbon/RibbonToolbox.png")),
             rib_assetmgr: load_png(ctx, "rbx_rib_assetmgr", include_bytes!("../assets/icons/ribbon/RibbonAssetManager.png")),
+
+            rib_avatar_settings: load_png(ctx, "rbx_rib_avatar_settings", include_bytes!("../assets/icons/ribbon/RibbonAvatarSettings.png")),
+            rib_avatar_setup: load_png(ctx, "rbx_rib_avatar_setup", include_bytes!("../assets/icons/ribbon/RibbonSetup.png")),
+            rib_accessory: load_png(ctx, "rbx_rib_accessory", include_bytes!("../assets/icons/ribbon/RibbonAccessory.png")),
+            rib_anim_constraint: load_png(ctx, "rbx_rib_anim_constraint", include_bytes!("../assets/icons/ribbon/RibbonAnimationConstraint.png")),
+            rib_ugc_validation: load_png(ctx, "rbx_rib_ugc_validation", include_bytes!("../assets/icons/ribbon/RibbonUGCValidation.png")),
+            rib_layered: load_png(ctx, "rbx_rib_layered", include_bytes!("../assets/icons/ribbon/RibbonLayered.png")),
+            rib_remap_rig: load_png(ctx, "rbx_rib_remap_rig", include_bytes!("../assets/icons/ribbon/RibbonRemapRig.png")),
 
             top_avatar: load_png(ctx, "rbx_top_avatar", include_bytes!("../assets/icons/top_avatar.png")),
             top_bell: load_png(ctx, "rbx_top_bell", include_bytes!("../assets/icons/top_bell.png")),

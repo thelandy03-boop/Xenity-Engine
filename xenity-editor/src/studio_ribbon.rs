@@ -6,11 +6,12 @@ use crate::icons;
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum RibbonTab {
     Home,
-    Model,
     Avatar,
-    Test,
-    View,
+    UI,
+    Script,
+    Model,
     Plugins,
+    Untitled,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -373,60 +374,64 @@ impl StudioRibbonState {
         );
         dev_resp.on_hover_text("Emulación de dispositivo");
 
-        // --- PESTAÑAS MODERNAS TIPO PÍLDORA (PERFECTAMENTE CENTRADAS EN LA VENTANA) ---
-        let other_tabs = [
+        // --- PESTAÑAS MODERNAS TIPO PÍLDORA (PERFECTAMENTE CENTRADAS Y SIN ERRORES) ---
+        let all_tabs = [
+            ("Inicio", RibbonTab::Home),
             ("Avatar", RibbonTab::Avatar),
-            ("UI", RibbonTab::View),
-            ("Script", RibbonTab::Plugins),
+            ("UI", RibbonTab::UI),
+            ("Script", RibbonTab::Script),
             ("Modelo", RibbonTab::Model),
             ("Plugins", RibbonTab::Plugins),
-            ("Sin título", RibbonTab::Home),
+            ("Sin título", RibbonTab::Untitled),
         ];
 
-        let inicio_w = 48.0;
-        let tab_gap = 20.0;
+        let tab_gap = 18.0;
         let font_id = FontId::proportional(12.0);
 
-        // Cálculo exacto del ancho total del bloque de pestañas
-        let mut total_tabs_w = inicio_w + tab_gap;
-        for (label, _) in &other_tabs {
-            let galley = ui.painter().layout_no_wrap(label.to_string(), font_id.clone(), Color32::WHITE);
-            total_tabs_w += galley.size().x + tab_gap;
-        }
-        total_tabs_w += 18.0; // Ancho del botón '+'
+        // Precalcular anchos dinámicos para centrado horizontal perfecto
+        let mut tab_widths: Vec<f32> = Vec::with_capacity(all_tabs.len());
+        let mut total_tabs_w = 0.0;
 
-        // Centrado dinámico respecto al ancho total de la barra
+        for (label, tab) in &all_tabs {
+            let galley = ui.painter().layout_no_wrap(label.to_string(), font_id.clone(), Color32::WHITE);
+            let text_w = galley.size().x;
+            let w = if self.current_tab == *tab {
+                text_w + 22.0
+            } else {
+                text_w + 6.0
+            };
+            tab_widths.push(w);
+            total_tabs_w += w + tab_gap;
+        }
+        total_tabs_w += 18.0; // Botón '+'
+
         let center_x = tabs_rect.center().x;
         let mut tab_x = (center_x - total_tabs_w * 0.5).max(cur_x + 20.0);
 
-        // 1. Pestaña activa: Inicio (Píldora destacada oficial)
-        let inicio_font = FontId::proportional(11.5);
-        let inicio_rect = Rect::from_center_size(Pos2::new(tab_x + inicio_w * 0.5, bar_center_y), Vec2::new(inicio_w, 24.0));
-        let inicio_resp = ui.interact(inicio_rect, ui.id().with("mod_tab_inicio"), Sense::click());
-        ui.painter().rect_filled(inicio_rect, Rounding::same(4.0), Color32::from_rgb(52, 54, 60));
-        ui.painter().text(inicio_rect.center(), egui::Align2::CENTER_CENTER, "Inicio", inicio_font, Color32::WHITE);
-        if inicio_resp.clicked() { self.current_tab = RibbonTab::Home; }
-        tab_x += inicio_w + tab_gap;
+        for (i, (label, tab)) in all_tabs.iter().enumerate() {
+            let w = tab_widths[i];
+            let is_active = self.current_tab == *tab;
 
-        // 2. Pestañas inactivas centradas
-        for (label, tab) in other_tabs {
-            let galley = ui.painter().layout_no_wrap(label.to_string(), font_id.clone(), Color32::WHITE);
-            let text_w = galley.size().x;
-
-            let rect = Rect::from_center_size(Pos2::new(tab_x + text_w * 0.5, bar_center_y), Vec2::new(text_w + 6.0, 22.0));
+            let rect = Rect::from_center_size(Pos2::new(tab_x + w * 0.5, bar_center_y), Vec2::new(w, 24.0));
             let resp = ui.interact(rect, ui.id().with(("mod_tab", label)), Sense::click());
 
-            if resp.hovered() {
-                ui.painter().rect_filled(rect, Rounding::same(4.0), Color32::from_rgba_unmultiplied(255, 255, 255, 12));
+            if is_active {
+                // Píldora redondeada activa oficial
+                ui.painter().rect_filled(rect, Rounding::same(4.0), Color32::from_rgb(52, 54, 60));
+                ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, *label, FontId::proportional(11.5), Color32::WHITE);
+            } else {
+                if resp.hovered() {
+                    ui.painter().rect_filled(rect, Rounding::same(4.0), Color32::from_rgba_unmultiplied(255, 255, 255, 12));
+                }
+                let col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 153, 162) };
+                ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, *label, font_id.clone(), col);
             }
-            let col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 153, 162) };
-            ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, font_id.clone(), col);
 
             if resp.clicked() {
-                self.current_tab = tab;
+                self.current_tab = *tab;
             }
 
-            tab_x += text_w + tab_gap;
+            tab_x += w + tab_gap;
         }
 
         // Botón '+' para nueva pestaña
@@ -443,78 +448,6 @@ impl StudioRibbonState {
             if add_tab_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 153, 162) },
         );
         add_tab_resp.on_hover_text("Nueva pestaña");
-
-        // --- LADO DERECHO OFICIAL ROBLOX STUDIO: Acciones rápidas con ICONOS REALES ---
-        let mut r_x = tabs_rect.max.x - 18.0;
-
-        // 1. Avatar circular de usuario (Icono PNG Real)
-        let av_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(20.0, 20.0));
-        let av_resp = ui.interact(av_rect, ui.id().with("top_avatar_btn"), Sense::click());
-        if av_resp.hovered() {
-            ui.painter().rect_filled(av_rect, Rounding::same(10.0), Color32::from_rgba_unmultiplied(255, 255, 255, 20));
-        }
-        ui.painter().circle_filled(av_rect.center(), 10.0, Color32::from_rgb(35, 45, 60));
-        ui.painter().circle_stroke(av_rect.center(), 10.0, Stroke::new(1.2, Color32::from_rgb(0, 136, 255)));
-        let av_img_rect = Rect::from_center_size(av_rect.center(), Vec2::new(16.0, 16.0));
-        ui.painter().image(icons.top_avatar.id(), av_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        av_resp.on_hover_text("Perfil de usuario");
-        r_x -= 24.0;
-
-        // 2. Campana de Notificaciones (Icono PNG Real con punto de alerta rojo)
-        let bell_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(20.0, 20.0));
-        let bell_resp = ui.interact(bell_rect, ui.id().with("top_bell_btn"), Sense::click());
-        if bell_resp.hovered() {
-            ui.painter().rect_filled(bell_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
-        }
-        let bell_img_rect = Rect::from_center_size(bell_rect.center(), Vec2::new(14.0, 14.0));
-        ui.painter().image(icons.top_bell.id(), bell_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        ui.painter().circle_filled(Pos2::new(bell_rect.center().x + 5.0, bell_rect.center().y - 4.5), 2.5, Color32::from_rgb(230, 50, 50));
-        bell_resp.on_hover_text("Notificaciones");
-        r_x -= 24.0;
-
-        // 3. Guardado en la Nube (Icono PNG Real)
-        let cloud_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(20.0, 20.0));
-        let cloud_resp = ui.interact(cloud_rect, ui.id().with("top_cloud_btn"), Sense::click());
-        if cloud_resp.hovered() {
-            ui.painter().rect_filled(cloud_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
-        }
-        let cloud_img_rect = Rect::from_center_size(cloud_rect.center(), Vec2::new(14.0, 14.0));
-        ui.painter().image(icons.top_cloud.id(), cloud_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        if cloud_resp.clicked() { action = RibbonAction::SavePlace; }
-        cloud_resp.on_hover_text("Guardar en Roblox (Ctrl+S)");
-        r_x -= 24.0;
-
-        // 4. Compartir Enlace (Icono PNG Real)
-        let share_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(20.0, 20.0));
-        let share_resp = ui.interact(share_rect, ui.id().with("top_share_btn"), Sense::click());
-        if share_resp.hovered() {
-            ui.painter().rect_filled(share_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
-        }
-        let share_img_rect = Rect::from_center_size(share_rect.center(), Vec2::new(14.0, 14.0));
-        ui.painter().image(icons.top_share.id(), share_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        share_resp.on_hover_text("Compartir");
-        r_x -= 24.0;
-
-        // 5. Chat del Equipo (Icono PNG Real)
-        let chat_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(20.0, 20.0));
-        let chat_resp = ui.interact(chat_rect, ui.id().with("top_chat_btn"), Sense::click());
-        if chat_resp.hovered() {
-            ui.painter().rect_filled(chat_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
-        }
-        let chat_img_rect = Rect::from_center_size(chat_rect.center(), Vec2::new(14.0, 14.0));
-        ui.painter().image(icons.top_chat.id(), chat_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        chat_resp.on_hover_text("Chat");
-        r_x -= 24.0;
-
-        // 6. Colaborar (Icono PNG Real)
-        let collab_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(20.0, 20.0));
-        let collab_resp = ui.interact(collab_rect, ui.id().with("top_collab_btn"), Sense::click());
-        if collab_resp.hovered() {
-            ui.painter().rect_filled(collab_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
-        }
-        let collab_img_rect = Rect::from_center_size(collab_rect.center(), Vec2::new(14.0, 14.0));
-        ui.painter().image(icons.top_collab.id(), collab_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        collab_resp.on_hover_text("Colaborar");
 
         ui.painter().line_segment(
             [Pos2::new(tabs_rect.min.x, tabs_rect.max.y), Pos2::new(tabs_rect.max.x, tabs_rect.max.y)],
@@ -543,16 +476,10 @@ impl StudioRibbonState {
                     &mut action,
                 );
             }
-            RibbonTab::Model => {
-                self.draw_model_ribbon(&mut child_ui, icons, &mut action);
-            }
             RibbonTab::Avatar => {
-                self.draw_avatar_ribbon(&mut child_ui, icons);
+                self.draw_avatar_ribbon(&mut child_ui, icons, &mut action);
             }
-            RibbonTab::Test => {
-                self.draw_test_ribbon(&mut child_ui, icons, is_playing, is_paused, &mut action);
-            }
-            RibbonTab::View => {
+            RibbonTab::UI => {
                 self.draw_view_ribbon(
                     &mut child_ui,
                     icons,
@@ -566,8 +493,37 @@ impl StudioRibbonState {
                     &mut action,
                 );
             }
+            RibbonTab::Script => {
+                self.draw_view_ribbon(
+                    &mut child_ui,
+                    icons,
+                    explorer_visible,
+                    properties_visible,
+                    toolbox_visible,
+                    output_visible,
+                    command_bar_visible,
+                    view_selector_visible,
+                    grid_visible,
+                    &mut action,
+                );
+            }
+            RibbonTab::Model => {
+                self.draw_model_ribbon(&mut child_ui, icons, &mut action);
+            }
             RibbonTab::Plugins => {
                 self.draw_plugins_ribbon(&mut child_ui, icons);
+            }
+            RibbonTab::Untitled => {
+                self.draw_home_ribbon(
+                    &mut child_ui,
+                    icons,
+                    is_playing,
+                    is_paused,
+                    toolbox_visible,
+                    explorer_visible,
+                    properties_visible,
+                    &mut action,
+                );
             }
         }
 
@@ -739,16 +695,75 @@ impl StudioRibbonState {
         });
     }
 
-    // --- AVATAR RIBBON CON ICONOS REALES ---
-    fn draw_avatar_ribbon(&mut self, ui: &mut egui::Ui, icons: &StudioIcons) {
-        ui.add_space(8.0);
+    // --- AVATAR RIBBON CON ICONOS OFICIALES REALES (Idéntico a Imagen 1 de Referencia) ---
+    fn draw_avatar_ribbon(&mut self, ui: &mut egui::Ui, icons: &StudioIcons, action: &mut RibbonAction) {
+        ui.add_space(4.0);
+
+        // 1. Herramientas de Transformación (Seleccionar, Mover, Escalar, Girar, Transformar)
+        if draw_modern_ribbon_button(ui, "Seleccionar", self.current_tool == StudioTool::Select, &icons.rib_select, false) {
+            self.current_tool = StudioTool::Select;
+            *action = RibbonAction::ChangeTool(StudioTool::Select);
+        }
+        if draw_modern_ribbon_button(ui, "Mover", self.current_tool == StudioTool::Move, &icons.rib_move, false) {
+            self.current_tool = StudioTool::Move;
+            *action = RibbonAction::ChangeTool(StudioTool::Move);
+        }
+        if draw_modern_ribbon_button(ui, "Escalar", self.current_tool == StudioTool::Scale, &icons.rib_scale, false) {
+            self.current_tool = StudioTool::Scale;
+            *action = RibbonAction::ChangeTool(StudioTool::Scale);
+        }
+        if draw_modern_ribbon_button(ui, "Girar", self.current_tool == StudioTool::Rotate, &icons.rib_rotate, false) {
+            self.current_tool = StudioTool::Rotate;
+            *action = RibbonAction::ChangeTool(StudioTool::Rotate);
+        }
+        if draw_modern_ribbon_button(ui, "Transformar", self.current_tool == StudioTool::Transform, &icons.rib_transform, false) {
+            self.current_tool = StudioTool::Transform;
+            *action = RibbonAction::ChangeTool(StudioTool::Transform);
+        }
+
+        // 2. Geométrico + Snap Steppers
+        if draw_modern_ribbon_button(ui, "Geométrico", false, &icons.rib_geometric, true) {
+            // Dropdown de tipo de pivote geométrico
+        }
+
         ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                draw_real_icon_button(ui, "Rig Builder", false, &icons.win_buildrig);
-                draw_real_icon_button(ui, "Animation Editor", false, &icons.win_animeditor);
-            });
-            draw_group_footer(ui, "Rig & Animation");
+            ui.add_space(8.0);
+            draw_snap_row(ui, &mut self.move_snap_enabled, &mut self.move_snap_studs, &icons.rib_move_spin, true);
+            ui.add_space(2.0);
+            draw_snap_row(ui, &mut self.rotate_snap_enabled, &mut self.rotate_snap_deg, &icons.rib_rotate_spin, false);
         });
+
+        draw_modern_divider(ui);
+
+        // 3. Creación y Configuración de Avatar
+        if draw_modern_ribbon_button(ui, "Configuración", false, &icons.rib_avatar_settings, false) {
+            // Configuración de Avatar
+        }
+        if draw_modern_ribbon_button(ui, "Personaje", false, &icons.rib_character, false) {
+            // Rig Builder / Personaje
+        }
+        if draw_modern_ribbon_button(ui, "Configurar", false, &icons.rib_avatar_setup, false) {
+            // Setup de Avatar
+        }
+        if draw_modern_ribbon_button(ui, "Accesorio", false, &icons.rib_accessory, false) {
+            // Ajuste de accesorios
+        }
+        if draw_modern_ribbon_button(ui, "Animación...", false, &icons.rib_anim_constraint, false) {
+            // Animación constraint
+        }
+        if draw_modern_ribbon_button(ui, "Validación...", false, &icons.rib_ugc_validation, false) {
+            // Validación UGC
+        }
+
+        draw_modern_divider(ui);
+
+        // 4. Editores de Animación y Clips
+        if draw_modern_ribbon_button(ui, "Editor de clips", false, &icons.rib_layered, false) {
+            // Editor de clips
+        }
+        if draw_modern_ribbon_button(ui, "Editor de...", false, &icons.rib_remap_rig, false) {
+            // Editor de animaciones
+        }
     }
 
     // --- TEST RIBBON CON ICONOS REALES ---
