@@ -1,6 +1,6 @@
 use eframe::egui::{self, Color32, CursorIcon, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
 use crate::icons;
-use crate::unity_style::*;
+use crate::studio_style::*;
 use crate::roblox_icon_bytes;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -423,6 +423,40 @@ impl SceneHierarchyState {
     pub fn get_selected_item_mut(&mut self) -> Option<&mut ExplorerItem> {
         let id = self.selected_id?;
         self.find_item_mut(id)
+    }
+
+    pub fn insert_child_into_selected_or_workspace(&mut self, class: RobloxClass, name: String) -> usize {
+        let id = self.next_id;
+        self.next_id += 1;
+        let new_item = ExplorerItem {
+            id,
+            name: name.clone(),
+            class: class.clone(),
+            is_active: true,
+            is_expanded: false,
+            properties: InstanceProperties::default_for(&class, "Workspace"),
+            children: vec![],
+        };
+
+        if let Some(target_id) = self.selected_id {
+            if let Some(parent_item) = self.find_item_mut(target_id) {
+                if matches!(parent_item.class, RobloxClass::Workspace | RobloxClass::Model | RobloxClass::Folder) {
+                    parent_item.children.push(new_item);
+                    parent_item.is_expanded = true;
+                    self.selected_id = Some(id);
+                    return id;
+                }
+            }
+        }
+
+        if let Some(ws) = self.find_item_mut(10) {
+            ws.children.push(new_item);
+            ws.is_expanded = true;
+        } else if let Some(first) = self.items.first_mut() {
+            first.children.push(new_item);
+        }
+        self.selected_id = Some(id);
+        id
     }
 
     pub fn show(&mut self, ui: &mut egui::Ui) -> Option<String> {

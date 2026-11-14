@@ -408,3 +408,133 @@ pub fn scene_icon(painter: &Painter, rect: Rect) {
 pub fn audio_icon(painter: &Painter, center: Pos2, size: f32, _color: Color32) {
     roblox_sound(painter, center, size);
 }
+
+// =========================================================================
+// ICONOS DE LA BARRA DE HERRAMIENTAS RIBBON DE ROBLOX STUDIO
+// =========================================================================
+
+/// Herramienta SELECT (Cursor flecha clásica)
+pub fn ribbon_select(painter: &Painter, center: Pos2, size: f32, color: Color32) {
+    let s = size * 0.45;
+    let p1 = Pos2::new(center.x - s * 0.7, center.y - s);
+    let p2 = Pos2::new(center.x - s * 0.7, center.y + s * 0.8);
+    let p3 = Pos2::new(center.x - s * 0.1, center.y + s * 0.3);
+    let p4 = Pos2::new(center.x + s * 0.6, center.y + s * 0.8);
+    let p5 = Pos2::new(center.x + s * 0.8, center.y + s * 0.5);
+    let p6 = Pos2::new(center.x + s * 0.1, center.y);
+    let p7 = Pos2::new(center.x + s * 0.6, center.y - s * 0.1);
+    painter.add(egui::Shape::convex_polygon(vec![p1, p2, p3, p4, p5, p6, p7], color, Stroke::new(1.0, Color32::from_rgb(20, 20, 20))));
+}
+
+/// Herramienta MOVE (4 flechas cardinales)
+pub fn ribbon_move(painter: &Painter, center: Pos2, size: f32, color: Color32) {
+    let s = size * 0.42;
+    let stroke = Stroke::new(1.8, color);
+    // Cruz central
+    painter.line_segment([Pos2::new(center.x - s, center.y), Pos2::new(center.x + s, center.y)], stroke);
+    painter.line_segment([Pos2::new(center.x, center.y - s), Pos2::new(center.x, center.y + s)], stroke);
+    // Puntas de flecha
+    let head = s * 0.4;
+    // Izquierda
+    painter.line_segment([Pos2::new(center.x - s + head, center.y - head), Pos2::new(center.x - s, center.y)], stroke);
+    painter.line_segment([Pos2::new(center.x - s + head, center.y + head), Pos2::new(center.x - s, center.y)], stroke);
+    // Derecha
+    painter.line_segment([Pos2::new(center.x + s - head, center.y - head), Pos2::new(center.x + s, center.y)], stroke);
+    painter.line_segment([Pos2::new(center.x + s - head, center.y + head), Pos2::new(center.x + s, center.y)], stroke);
+    // Arriba
+    painter.line_segment([Pos2::new(center.x - head, center.y - s + head), Pos2::new(center.x, center.y - s)], stroke);
+    painter.line_segment([Pos2::new(center.x + head, center.y - s + head), Pos2::new(center.x, center.y - s)], stroke);
+    // Abajo
+    painter.line_segment([Pos2::new(center.x - head, center.y + s - head), Pos2::new(center.x, center.y + s)], stroke);
+    painter.line_segment([Pos2::new(center.x + head, center.y + s - head), Pos2::new(center.x, center.y + s)], stroke);
+}
+
+/// Herramienta ROTATE (Círculo de rotación con flecha)
+pub fn ribbon_rotate(painter: &Painter, center: Pos2, size: f32, color: Color32) {
+    let r = size * 0.38;
+    painter.circle_stroke(center, r, Stroke::new(1.8, color));
+    // Flecha indicadora de giro
+    let head_pos = Pos2::new(center.x + r * 0.8, center.y - r * 0.5);
+    let p1 = Pos2::new(head_pos.x - 3.0, head_pos.y - 4.0);
+    let p2 = Pos2::new(head_pos.x + 3.0, head_pos.y - 1.0);
+    let p3 = Pos2::new(head_pos.x - 1.0, head_pos.y + 4.0);
+    painter.add(egui::Shape::convex_polygon(vec![p1, p2, p3], color, Stroke::NONE));
+}
+
+/// Herramienta SCALE (Cubo con caja delimitadora de escalado)
+pub fn ribbon_scale(painter: &Painter, center: Pos2, size: f32, color: Color32) {
+    let s = size * 0.36;
+    let rect = Rect::from_center_size(center, Vec2::new(s * 1.5, s * 1.5));
+    painter.rect_stroke(rect, Rounding::same(1.0), Stroke::new(1.4, color));
+    // Puntos de escala en las esquinas
+    let handle_s = 3.5;
+    for corner in [rect.left_top(), rect.right_top(), rect.left_bottom(), rect.right_bottom()] {
+        painter.rect_filled(Rect::from_center_size(corner, Vec2::new(handle_s, handle_s)), 0.5, Color32::from_rgb(0, 162, 255));
+    }
+}
+
+/// Herramienta PART (Bloque isométrico con stud circular)
+pub fn ribbon_part(painter: &Painter, center: Pos2, size: f32) {
+    roblox_part(painter, center, size);
+}
+
+/// Herramienta TERRAIN (Montañas y colinas)
+pub fn ribbon_terrain(painter: &Painter, center: Pos2, size: f32) {
+    roblox_terrain(painter, center, size);
+}
+
+/// Herramienta TOOLBOX (Caja de herramientas naranja de Studio)
+pub fn ribbon_toolbox(painter: &Painter, center: Pos2, size: f32) {
+    let s = size * 0.42;
+    // Caja naranja
+    let box_rect = Rect::from_min_max(Pos2::new(center.x - s, center.y - s * 0.4), Pos2::new(center.x + s, center.y + s * 0.8));
+    painter.rect_filled(box_rect, Rounding::same(2.0), Color32::from_rgb(235, 120, 30));
+    painter.rect_stroke(box_rect, Rounding::same(2.0), Stroke::new(1.0, Color32::from_rgb(180, 80, 10)));
+    // Asa superior
+    let handle_rect = Rect::from_min_max(Pos2::new(center.x - s * 0.45, center.y - s * 0.8), Pos2::new(center.x + s * 0.45, center.y - s * 0.3));
+    painter.rect_stroke(handle_rect, Rounding::same(2.0), Stroke::new(1.5, Color32::from_rgb(220, 220, 220)));
+    // Broche metálico central
+    painter.rect_filled(Rect::from_center_size(Pos2::new(center.x, center.y + s * 0.1), Vec2::new(4.0, 5.0)), 1.0, Color32::from_rgb(240, 240, 240));
+}
+
+/// Herramienta ANCHOR (Ancla náutica de anclaje de física)
+pub fn ribbon_anchor(painter: &Painter, center: Pos2, size: f32, is_anchored: bool) {
+    let color = if is_anchored { Color32::from_rgb(0, 162, 255) } else { Color32::from_rgb(190, 190, 190) };
+    let s = size * 0.38;
+    // Anillo superior
+    painter.circle_stroke(Pos2::new(center.x, center.y - s * 0.7), s * 0.28, Stroke::new(1.4, color));
+    // Eje vertical
+    painter.line_segment([Pos2::new(center.x, center.y - s * 0.4), Pos2::new(center.x, center.y + s * 0.6)], Stroke::new(1.8, color));
+    // Barra transversal
+    painter.line_segment([Pos2::new(center.x - s * 0.5, center.y - s * 0.1), Pos2::new(center.x + s * 0.5, center.y - s * 0.1)], Stroke::new(1.5, color));
+    // Arco inferior
+    let p_left = Pos2::new(center.x - s * 0.75, center.y + s * 0.3);
+    let p_mid = Pos2::new(center.x, center.y + s * 0.75);
+    let p_right = Pos2::new(center.x + s * 0.75, center.y + s * 0.3);
+    painter.line_segment([p_left, p_mid], Stroke::new(1.8, color));
+    painter.line_segment([p_mid, p_right], Stroke::new(1.8, color));
+}
+
+/// Herramienta GAME SETTINGS (Engranaje)
+pub fn ribbon_settings(painter: &Painter, center: Pos2, size: f32, color: Color32) {
+    let r = size * 0.38;
+    painter.circle_stroke(center, r, Stroke::new(2.2, color));
+    painter.circle_filled(center, r * 0.35, Color32::from_rgb(37, 37, 38));
+    for i in 0..6 {
+        let angle = (i as f32) * std::f32::consts::PI / 3.0;
+        let d = Pos2::new(center.x + angle.cos() * (r + 2.0), center.y + angle.sin() * (r + 2.0));
+        painter.circle_filled(d, 1.8, color);
+    }
+}
+
+/// Botón PLAY de simulación (Triángulo verde con fondo redondo/cuadrado)
+pub fn ribbon_play(painter: &Painter, center: Pos2, size: f32) {
+    let r = size * 0.45;
+    painter.circle_filled(center, r, Color32::from_rgb(16, 165, 85));
+    // Triángulo play blanco
+    let s = r * 0.55;
+    let p1 = Pos2::new(center.x - s * 0.6, center.y - s);
+    let p2 = Pos2::new(center.x + s * 0.8, center.y);
+    let p3 = Pos2::new(center.x - s * 0.6, center.y + s);
+    painter.add(egui::Shape::convex_polygon(vec![p1, p2, p3], Color32::WHITE, Stroke::NONE));
+}
