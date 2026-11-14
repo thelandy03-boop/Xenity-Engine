@@ -1,4 +1,8 @@
-use eframe::egui::{self, Color32, FontId, Painter, Pos2, Rect, Stroke, Vec2};
+use eframe::egui::{self, Color32, FontId, Painter, Pos2, Rect, Rounding, Stroke, Vec2};
+
+// =========================================================================
+// RUNTIME CONTROLS
+// =========================================================================
 
 pub fn play(painter: &Painter, rect: Rect, color: Color32) {
     let center = rect.center();
@@ -35,8 +39,12 @@ pub fn step(painter: &Painter, rect: Rect, color: Color32) {
     painter.line_segment([Pos2::new(center.x + s * 0.8, center.y - s), Pos2::new(center.x + s * 0.8, center.y + s)], Stroke::new(1.5, color));
 }
 
+// =========================================================================
+// NAVEGACIÓN Y FLECHAS DE ÁRBOL
+// =========================================================================
+
 pub fn foldout_arrow(painter: &Painter, center: Pos2, is_expanded: bool, color: Color32) {
-    let s = 3.5;
+    let s = 3.2;
     if is_expanded {
         // Flecha hacia abajo ▼ sólida y nítida
         let p1 = Pos2::new(center.x - s, center.y - s * 0.4);
@@ -52,9 +60,29 @@ pub fn foldout_arrow(painter: &Painter, center: Pos2, is_expanded: bool, color: 
     }
 }
 
-/// Icono oficial de Prefab de Unity: cubo sólido cian con perspectiva 3D
-pub fn prefab_glyph(painter: &Painter, center: Pos2, size: f32, base_color: Color32) {
-    let s = size * 0.48;
+// =========================================================================
+// ICONOS DE CLASE OFICIALES DE ROBLOX STUDIO (Explorer ClassIcons)
+// =========================================================================
+
+/// 🌍 Workspace: Globo terráqueo azul con continentes verdes y meridianos
+pub fn roblox_workspace(painter: &Painter, center: Pos2, size: f32) {
+    let r = size * 0.46;
+    // Océano azul profundo
+    painter.circle_filled(center, r, Color32::from_rgb(38, 128, 235));
+    // Mancha de continente verde
+    painter.circle_filled(Pos2::new(center.x - r * 0.25, center.y - r * 0.2), r * 0.5, Color32::from_rgb(72, 190, 105));
+    painter.circle_filled(Pos2::new(center.x + r * 0.35, center.y + r * 0.25), r * 0.4, Color32::from_rgb(72, 190, 105));
+    // Anillo exterior y ecuador sutil
+    painter.circle_stroke(center, r, Stroke::new(1.0, Color32::from_rgb(20, 80, 160)));
+    painter.line_segment(
+        [Pos2::new(center.x - r * 0.85, center.y), Pos2::new(center.x + r * 0.85, center.y)],
+        Stroke::new(0.8, Color32::from_rgba_unmultiplied(255, 255, 255, 120)),
+    );
+}
+
+/// 📦 Model: Cubo isométrico 3D azul cian icónico de Roblox Studio
+pub fn roblox_model(painter: &Painter, center: Pos2, size: f32) {
+    let s = size * 0.46;
     let top = Pos2::new(center.x, center.y - s);
     let bottom = Pos2::new(center.x, center.y + s);
     let left = Pos2::new(center.x - s * 0.86, center.y - s * 0.5);
@@ -62,52 +90,212 @@ pub fn prefab_glyph(painter: &Painter, center: Pos2, size: f32, base_color: Colo
     let bl = Pos2::new(center.x - s * 0.86, center.y + s * 0.5);
     let br = Pos2::new(center.x + s * 0.86, center.y + s * 0.5);
 
-    let col_top = Color32::from_rgb(
-        (base_color.r() as f32 * 1.25).min(255.0) as u8,
-        (base_color.g() as f32 * 1.25).min(255.0) as u8,
-        (base_color.b() as f32 * 1.25).min(255.0) as u8,
-    );
-    let col_left = base_color;
-    let col_right = Color32::from_rgb(
-        (base_color.r() as f32 * 0.75) as u8,
-        (base_color.g() as f32 * 0.75) as u8,
-        (base_color.b() as f32 * 0.75) as u8,
-    );
+    let col_top = Color32::from_rgb(70, 195, 255);    // Cara superior cian brillante
+    let col_left = Color32::from_rgb(32, 145, 235);   // Cara izquierda azul medio
+    let col_right = Color32::from_rgb(18, 105, 185);  // Cara derecha azul oscuro
 
-    let stroke = Stroke::new(0.8, Color32::from_black_alpha(120));
-    painter.add(egui::Shape::convex_polygon(vec![center, top, right, br], col_top, stroke));
-    painter.add(egui::Shape::convex_polygon(vec![center, top, left, bl], col_left, stroke));
-    painter.add(egui::Shape::convex_polygon(vec![center, bl, bottom, br], col_right, stroke));
+    let edge_stroke = Stroke::new(0.9, Color32::from_rgb(12, 70, 130));
+    painter.add(egui::Shape::convex_polygon(vec![center, top, right, br], col_top, edge_stroke));
+    painter.add(egui::Shape::convex_polygon(vec![center, top, left, bl], col_left, edge_stroke));
+    painter.add(egui::Shape::convex_polygon(vec![center, bl, bottom, br], col_right, edge_stroke));
 }
 
-/// Icono de Escena de Unity: Clapperboard / Claqueta de cine nítida
-pub fn scene_clapper(painter: &Painter, center: Pos2, size: f32, color: Color32) {
-    let w = size;
-    let h = size * 0.82;
-    let slate_rect = Rect::from_center_size(Pos2::new(center.x, center.y + h * 0.15), Vec2::new(w, h * 0.65));
-    painter.rect_filled(slate_rect, 1.0, color);
+/// 🧱 Part: Ladrillo gris clásico de Roblox con studs en la cara superior
+pub fn roblox_part(painter: &Painter, center: Pos2, size: f32) {
+    let s = size * 0.44;
+    let top = Pos2::new(center.x, center.y - s);
+    let bottom = Pos2::new(center.x, center.y + s);
+    let left = Pos2::new(center.x - s * 0.86, center.y - s * 0.5);
+    let right = Pos2::new(center.x + s * 0.86, center.y - s * 0.5);
+    let bl = Pos2::new(center.x - s * 0.86, center.y + s * 0.5);
+    let br = Pos2::new(center.x + s * 0.86, center.y + s * 0.5);
 
-    // Barra superior de la claqueta
-    let bar_rect = Rect::from_center_size(Pos2::new(center.x, center.y - h * 0.3), Vec2::new(w, h * 0.35));
-    painter.rect_filled(bar_rect, 1.0, Color32::from_rgb(45, 45, 45));
-    painter.rect_stroke(bar_rect, 1.0, Stroke::new(1.0, color));
+    let col_top = Color32::from_rgb(205, 210, 218);
+    let col_left = Color32::from_rgb(155, 160, 172);
+    let col_right = Color32::from_rgb(115, 120, 132);
 
-    // Rayas diagonales en la barra superior
-    for dx in [-3.0, 0.0, 3.0] {
+    let edge_stroke = Stroke::new(0.9, Color32::from_rgb(80, 85, 95));
+    painter.add(egui::Shape::convex_polygon(vec![center, top, right, br], col_top, edge_stroke));
+    painter.add(egui::Shape::convex_polygon(vec![center, top, left, bl], col_left, edge_stroke));
+    painter.add(egui::Shape::convex_polygon(vec![center, bl, bottom, br], col_right, edge_stroke));
+
+    // Studs circulares en la cara superior
+    let stud_pos1 = Pos2::new(center.x - s * 0.25, center.y - s * 0.5);
+    let stud_pos2 = Pos2::new(center.x + s * 0.25, center.y - s * 0.2);
+    painter.circle_filled(stud_pos1, s * 0.18, Color32::from_rgb(230, 235, 245));
+    painter.circle_filled(stud_pos2, s * 0.18, Color32::from_rgb(230, 235, 245));
+}
+
+/// 💎 MeshPart: Gema/malla 3D púrpura geométrica oficial de Roblox Studio
+pub fn roblox_mesh_part(painter: &Painter, center: Pos2, size: f32) {
+    let s = size * 0.46;
+    let top = Pos2::new(center.x, center.y - s);
+    let bottom = Pos2::new(center.x, center.y + s);
+    let left = Pos2::new(center.x - s * 0.86, center.y - s * 0.5);
+    let right = Pos2::new(center.x + s * 0.86, center.y - s * 0.5);
+    let bl = Pos2::new(center.x - s * 0.86, center.y + s * 0.5);
+    let br = Pos2::new(center.x + s * 0.86, center.y + s * 0.5);
+
+    let col_top = Color32::from_rgb(195, 125, 255);   // Púrpura claro
+    let col_left = Color32::from_rgb(148, 65, 235);   // Púrpura medio
+    let col_right = Color32::from_rgb(95, 28, 175);   // Púrpura oscuro
+
+    let edge_stroke = Stroke::new(0.9, Color32::from_rgb(60, 15, 115));
+    painter.add(egui::Shape::convex_polygon(vec![center, top, right, br], col_top, edge_stroke));
+    painter.add(egui::Shape::convex_polygon(vec![center, top, left, bl], col_left, edge_stroke));
+    painter.add(egui::Shape::convex_polygon(vec![center, bl, bottom, br], col_right, edge_stroke));
+}
+
+/// 📷 Camera: Cámara de estudio oscura con lente cian
+pub fn roblox_camera(painter: &Painter, center: Pos2, size: f32) {
+    let body_w = size * 0.72;
+    let body_h = size * 0.52;
+    let body = Rect::from_center_size(Pos2::new(center.x - 1.0, center.y + 0.8), Vec2::new(body_w, body_h));
+    painter.rect_filled(body, 1.5, Color32::from_rgb(60, 65, 75));
+    painter.rect_stroke(body, 1.5, Stroke::new(0.8, Color32::from_rgb(35, 40, 48)));
+
+    // Visor superior
+    let top_notch = Rect::from_center_size(Pos2::new(center.x - 2.0, center.y - body_h * 0.5), Vec2::new(size * 0.3, size * 0.18));
+    painter.rect_filled(top_notch, 0.5, Color32::from_rgb(85, 90, 102));
+
+    // Lente circular cian brillante
+    let lens_pos = Pos2::new(center.x - 1.0, center.y + 0.8);
+    painter.circle_filled(lens_pos, size * 0.18, Color32::from_rgb(45, 195, 245));
+    painter.circle_filled(Pos2::new(lens_pos.x - 0.8, lens_pos.y - 0.8), size * 0.07, Color32::WHITE);
+}
+
+/// 💡 Lighting / Sun / Lightbulb: Bombilla/sol amarillo brillante con resplandor
+pub fn roblox_light(painter: &Painter, center: Pos2, size: f32) {
+    let r = size * 0.28;
+    // Resplandor exterior cálido
+    painter.circle_filled(center, r * 1.55, Color32::from_rgba_unmultiplied(255, 215, 60, 45));
+    // Bombilla central dorada
+    painter.circle_filled(center, r, Color32::from_rgb(255, 210, 45));
+    painter.circle_stroke(center, r, Stroke::new(1.0, Color32::from_rgb(220, 160, 20)));
+
+    // Destellos cardinales
+    let ray_len = size * 0.44;
+    let stroke = Stroke::new(1.2, Color32::from_rgb(255, 215, 65));
+    for (dx, dy) in [(0.0, -ray_len), (0.0, ray_len), (-ray_len, 0.0), (ray_len, 0.0)] {
         painter.line_segment(
-            [Pos2::new(bar_rect.center().x + dx - 1.5, bar_rect.max.y), Pos2::new(bar_rect.center().x + dx + 1.5, bar_rect.min.y)],
-            Stroke::new(1.0, color),
+            [Pos2::new(center.x + dx * 0.65, center.y + dy * 0.65), Pos2::new(center.x + dx, center.y + dy)],
+            stroke,
         );
     }
 }
 
-/// Icono vector de Ojo (Visibilidad) con modo tachado
+/// ⛰️ Terrain: Bloque voxel con hierba verde brillante arriba y roca marrón abajo
+pub fn roblox_terrain(painter: &Painter, center: Pos2, size: f32) {
+    let s = size * 0.44;
+    let top = Pos2::new(center.x, center.y - s);
+    let bottom = Pos2::new(center.x, center.y + s);
+    let left = Pos2::new(center.x - s * 0.86, center.y - s * 0.5);
+    let right = Pos2::new(center.x + s * 0.86, center.y - s * 0.5);
+    let bl = Pos2::new(center.x - s * 0.86, center.y + s * 0.5);
+    let br = Pos2::new(center.x + s * 0.86, center.y + s * 0.5);
+
+    // Cara superior: Hierba verde brillante
+    let col_grass = Color32::from_rgb(75, 200, 75);
+    // Caras laterales: Tierra/roca marrón
+    let col_soil_l = Color32::from_rgb(145, 95, 55);
+    let col_soil_r = Color32::from_rgb(105, 65, 35);
+
+    let edge_stroke = Stroke::new(0.9, Color32::from_black_alpha(120));
+    painter.add(egui::Shape::convex_polygon(vec![center, top, right, br], col_grass, edge_stroke));
+    painter.add(egui::Shape::convex_polygon(vec![center, top, left, bl], col_soil_l, edge_stroke));
+    painter.add(egui::Shape::convex_polygon(vec![center, bl, bottom, br], col_soil_r, edge_stroke));
+}
+
+/// 📜 Script: Documento de código blanco con líneas de código azules
+pub fn roblox_script(painter: &Painter, center: Pos2, size: f32) {
+    let w = size * 0.64;
+    let h = size * 0.82;
+    let rect = Rect::from_center_size(center, Vec2::new(w, h));
+    painter.rect_filled(rect, 1.5, Color32::from_rgb(245, 245, 248));
+    painter.rect_stroke(rect, 1.5, Stroke::new(0.9, Color32::from_rgb(180, 185, 195)));
+
+    // Líneas de código coloreadas
+    let line_col1 = Color32::from_rgb(45, 125, 225);
+    let line_col2 = Color32::from_rgb(105, 110, 125);
+    let start_x = rect.min.x + 2.5;
+    for (dy, col, len) in [(3.0, line_col1, w * 0.6), (6.0, line_col2, w * 0.72), (9.0, line_col1, w * 0.45)] {
+        painter.line_segment(
+            [Pos2::new(start_x, rect.min.y + dy), Pos2::new(start_x + len, rect.min.y + dy)],
+            Stroke::new(1.1, col),
+        );
+    }
+}
+
+/// 🔊 Sound: Altavoz azul con ondas acústicas
+pub fn roblox_sound(painter: &Painter, center: Pos2, size: f32) {
+    let stroke = Stroke::new(1.3, Color32::from_rgb(45, 160, 245));
+    let s = size * 0.32;
+    // Cono de altavoz relleno
+    let p_back_top = Pos2::new(center.x - s * 0.9, center.y - s * 0.5);
+    let p_back_bot = Pos2::new(center.x - s * 0.9, center.y + s * 0.5);
+    let p_mid_top = Pos2::new(center.x - s * 0.2, center.y - s * 0.5);
+    let p_mid_bot = Pos2::new(center.x - s * 0.2, center.y + s * 0.5);
+    let p_front_top = Pos2::new(center.x + s * 0.4, center.y - s);
+    let p_front_bot = Pos2::new(center.x + s * 0.4, center.y + s);
+
+    painter.add(egui::Shape::convex_polygon(
+        vec![p_back_top, p_mid_top, p_front_top, p_front_bot, p_mid_bot, p_back_bot],
+        Color32::from_rgb(45, 160, 245),
+        Stroke::NONE,
+    ));
+
+    // Ondas sonoras
+    painter.line_segment([Pos2::new(center.x + s * 0.8, center.y - s * 0.6), Pos2::new(center.x + s * 0.8, center.y + s * 0.6)], stroke);
+    painter.line_segment([Pos2::new(center.x + s * 1.25, center.y - s * 0.9), Pos2::new(center.x + s * 1.25, center.y + s * 0.9)], stroke);
+}
+
+/// 👤 Humanoid: Avatar humanoide con cabeza y torso
+pub fn roblox_humanoid(painter: &Painter, center: Pos2, size: f32) {
+    // Cabeza
+    painter.circle_filled(Pos2::new(center.x, center.y - size * 0.24), size * 0.18, Color32::from_rgb(115, 205, 255));
+    // Torso y hombros
+    let torso_rect = Rect::from_center_size(Pos2::new(center.x, center.y + size * 0.2), Vec2::new(size * 0.68, size * 0.42));
+    painter.rect_filled(torso_rect, 1.5, Color32::from_rgb(70, 165, 240));
+}
+
+/// 📁 Folder: Carpeta dorada icónica de Roblox Studio
+pub fn roblox_folder(painter: &Painter, center: Pos2, size: f32) {
+    let w = size * 0.82;
+    let h = size * 0.62;
+    let rect = Rect::from_center_size(center, Vec2::new(w, h));
+    let tab_w = w * 0.45;
+    let tab_h = h * 0.32;
+
+    let col_tab = Color32::from_rgb(220, 175, 45);
+    let col_body = Color32::from_rgb(245, 195, 60);
+
+    // Pestaña
+    let tab_rect = Rect::from_min_max(rect.min, Pos2::new(rect.min.x + tab_w, rect.min.y + tab_h));
+    painter.rect_filled(tab_rect, 1.0, col_tab);
+    // Cuerpo
+    let body_rect = Rect::from_min_max(Pos2::new(rect.min.x, rect.min.y + tab_h * 0.6), rect.max);
+    painter.rect_filled(body_rect, 1.5, col_body);
+    painter.rect_stroke(body_rect, 1.5, Stroke::new(0.8, Color32::from_rgb(190, 145, 25)));
+}
+
+// =========================================================================
+// UTILIDADES VECTORIALES COMPARTIDAS
+// =========================================================================
+
+pub fn magnifying_glass(painter: &Painter, center: Pos2, radius: f32, color: Color32) {
+    let stroke = Stroke::new(1.3, color);
+    let c = Pos2::new(center.x - 1.0, center.y - 1.0);
+    painter.circle_stroke(c, radius, stroke);
+    let p1 = Pos2::new(c.x + radius * 0.707, c.y + radius * 0.707);
+    let p2 = Pos2::new(center.x + radius * 1.5, center.y + radius * 1.5);
+    painter.line_segment([p1, p2], stroke);
+}
+
 pub fn eye_icon(painter: &Painter, center: Pos2, is_visible: bool, color: Color32) {
     let stroke = Stroke::new(1.1, color);
     let w = 5.0;
     let h = 2.8;
 
-    // Arco superior
     let p_left = Pos2::new(center.x - w, center.y);
     let p_right = Pos2::new(center.x + w, center.y);
     let p_top = Pos2::new(center.x, center.y - h);
@@ -118,11 +306,9 @@ pub fn eye_icon(painter: &Painter, center: Pos2, is_visible: bool, color: Color3
     painter.line_segment([p_left, p_bot], stroke);
     painter.line_segment([p_bot, p_right], stroke);
 
-    // Pupila
     if is_visible {
         painter.circle_filled(center, 1.4, color);
     } else {
-        // Línea diagonal que tacha el ojo si está oculto
         painter.line_segment(
             [Pos2::new(center.x - w * 0.9, center.y - h * 1.2), Pos2::new(center.x + w * 0.9, center.y + h * 1.2)],
             Stroke::new(1.3, color),
@@ -130,14 +316,11 @@ pub fn eye_icon(painter: &Painter, center: Pos2, is_visible: bool, color: Color3
     }
 }
 
-/// Icono vector de Candado (Lock / Picking)
 pub fn padlock(painter: &Painter, center: Pos2, is_locked: bool, color: Color32) {
     let stroke = Stroke::new(1.1, color);
-    // Cuerpo del candado (rectángulo)
     let body_rect = Rect::from_center_size(Pos2::new(center.x, center.y + 1.5), Vec2::new(7.0, 5.5));
     painter.rect_filled(body_rect, 1.0, color);
 
-    // Arco superior del candado
     let arc_top = if is_locked { center.y - 3.5 } else { center.y - 4.5 };
     let shackle_left = Pos2::new(center.x - 2.0, body_rect.min.y);
     let shackle_right = if is_locked {
@@ -150,192 +333,35 @@ pub fn padlock(painter: &Painter, center: Pos2, is_locked: bool, color: Color32)
     painter.line_segment([Pos2::new(shackle_right.x, arc_top), shackle_right], stroke);
 }
 
-/// Menú de 3 puntos verticales `⋮` limpio
 pub fn kebab_menu(painter: &Painter, center: Pos2, color: Color32) {
     for dy in [-3.2, 0.0, 3.2] {
         painter.circle_filled(Pos2::new(center.x, center.y + dy), 1.1, color);
     }
 }
 
-/// Carpeta sólida clásica de Unity
 pub fn solid_folder(painter: &Painter, rect: Rect, color: Color32) {
-    let tab_w = rect.width() * 0.45;
-    let tab_h = rect.height() * 0.28;
-
-    let tab_p1 = rect.min;
-    let tab_p2 = Pos2::new(rect.min.x + tab_w, rect.min.y);
-    let tab_p3 = Pos2::new(rect.min.x + tab_w + 3.0, rect.min.y + tab_h);
-    let tab_p4 = Pos2::new(rect.min.x, rect.min.y + tab_h);
-    let darker = Color32::from_rgb(
-        (color.r() as f32 * 0.82) as u8,
-        (color.g() as f32 * 0.82) as u8,
-        (color.b() as f32 * 0.82) as u8,
-    );
-    painter.add(egui::Shape::convex_polygon(vec![tab_p1, tab_p2, tab_p3, tab_p4], darker, Stroke::NONE));
-
-    let body_rect = Rect::from_min_max(
-        Pos2::new(rect.min.x, rect.min.y + tab_h * 0.8),
-        rect.max,
-    );
-    painter.rect_filled(body_rect, 1.5, color);
+    roblox_folder(painter, rect.center(), rect.width());
 }
 
-/// Esfera de material 3D con sombreado difuso y brillo especular
 pub fn material_ball(painter: &Painter, center: Pos2, radius: f32, base_color: Color32) {
     painter.circle_filled(center, radius, base_color);
     painter.circle_stroke(center, radius, Stroke::new(1.0, Color32::from_black_alpha(80)));
-
     let spec_pos = Pos2::new(center.x - radius * 0.32, center.y - radius * 0.32);
     let spec_r = radius * 0.35;
     painter.circle_filled(spec_pos, spec_r, Color32::from_white_alpha(150));
     painter.circle_filled(spec_pos, spec_r * 0.45, Color32::from_white_alpha(220));
 }
 
-/// Documento de script de Unity / C++ con esquina doblada
 pub fn script_file(painter: &Painter, rect: Rect) {
-    let fold = (rect.width() * 0.32).min(8.0);
-    let p_tl = rect.min;
-    let p_tr_cut = Pos2::new(rect.max.x - fold, rect.min.y);
-    let p_tr_fold = Pos2::new(rect.max.x, rect.min.y + fold);
-    let p_br = rect.max;
-    let p_bl = Pos2::new(rect.min.x, rect.max.y);
-
-    let paper_color = Color32::from_rgb(238, 238, 238);
-    painter.add(egui::Shape::convex_polygon(
-        vec![p_tl, p_tr_cut, p_tr_fold, p_br, p_bl],
-        paper_color,
-        Stroke::new(1.0, Color32::from_rgb(180, 180, 180)),
-    ));
-
-    let p_inner = Pos2::new(rect.max.x - fold, rect.min.y + fold);
-    painter.add(egui::Shape::convex_polygon(
-        vec![p_tr_cut, p_inner, p_tr_fold],
-        Color32::from_rgb(200, 200, 200),
-        Stroke::NONE,
-    ));
-
-    painter.text(
-        rect.center(),
-        egui::Align2::CENTER_CENTER,
-        "C++",
-        FontId::monospace(rect.height() * 0.28),
-        Color32::from_rgb(45, 110, 185),
-    );
+    roblox_script(painter, rect.center(), rect.width());
 }
 
-/// Modelo 3D isométrico con caras iluminadas
-pub fn shaded_model(painter: &Painter, rect: Rect, base_color: Color32) {
-    let c = rect.center();
-    let s = rect.width() * 0.46;
-
-    let top = Pos2::new(c.x, c.y - s);
-    let bottom = Pos2::new(c.x, c.y + s);
-    let left = Pos2::new(c.x - s * 0.86, c.y - s * 0.5);
-    let right = Pos2::new(c.x + s * 0.86, c.y - s * 0.5);
-    let bl = Pos2::new(c.x - s * 0.86, c.y + s * 0.5);
-    let br = Pos2::new(c.x + s * 0.86, c.y + s * 0.5);
-
-    let col_top = Color32::from_rgb(
-        (base_color.r() as f32 * 1.15).min(255.0) as u8,
-        (base_color.g() as f32 * 1.15).min(255.0) as u8,
-        (base_color.b() as f32 * 1.15).min(255.0) as u8,
-    );
-    let col_left = base_color;
-    let col_right = Color32::from_rgb(
-        (base_color.r() as f32 * 0.72) as u8,
-        (base_color.g() as f32 * 0.72) as u8,
-        (base_color.b() as f32 * 0.72) as u8,
-    );
-
-    let edge_stroke = Stroke::new(1.0, Color32::from_black_alpha(100));
-
-    painter.add(egui::Shape::convex_polygon(vec![c, top, right, br], col_top, edge_stroke));
-    painter.add(egui::Shape::convex_polygon(vec![c, top, left, bl], col_left, edge_stroke));
-    painter.add(egui::Shape::convex_polygon(vec![c, bl, bottom, br], col_right, edge_stroke));
+pub fn shaded_model(painter: &Painter, rect: Rect, _base_color: Color32) {
+    roblox_model(painter, rect.center(), rect.width());
 }
 
-pub fn cube(painter: &Painter, rect: Rect, color: Color32) {
-    let c = rect.center();
-    let s = rect.width() * 0.38;
-    let stroke = Stroke::new(1.3, color);
-
-    let top = Pos2::new(c.x, c.y - s);
-    let bottom = Pos2::new(c.x, c.y + s);
-    let left = Pos2::new(c.x - s * 0.86, c.y - s * 0.5);
-    let right = Pos2::new(c.x + s * 0.86, c.y - s * 0.5);
-    let bottom_left = Pos2::new(c.x - s * 0.86, c.y + s * 0.5);
-    let bottom_right = Pos2::new(c.x + s * 0.86, c.y + s * 0.5);
-
-    painter.line_segment([top, right], stroke);
-    painter.line_segment([right, bottom_right], stroke);
-    painter.line_segment([bottom_right, bottom], stroke);
-    painter.line_segment([bottom, bottom_left], stroke);
-    painter.line_segment([bottom_left, left], stroke);
-    painter.line_segment([left, top], stroke);
-    painter.line_segment([c, top], stroke);
-    painter.line_segment([c, bottom_left], stroke);
-    painter.line_segment([c, bottom_right], stroke);
-}
-
-pub fn magnifying_glass(painter: &Painter, center: Pos2, radius: f32, color: Color32) {
-    let stroke = Stroke::new(1.3, color);
-    let c = Pos2::new(center.x - 1.0, center.y - 1.0);
-    painter.circle_stroke(c, radius, stroke);
-    let p1 = Pos2::new(c.x + radius * 0.707, c.y + radius * 0.707);
-    let p2 = Pos2::new(center.x + radius * 1.5, center.y + radius * 1.5);
-    painter.line_segment([p1, p2], stroke);
-}
-
-pub fn camera_glyph(painter: &Painter, center: Pos2, color: Color32) {
-    let stroke = Stroke::new(1.1, color);
-    let body = Rect::from_center_size(Pos2::new(center.x, center.y + 0.8), Vec2::new(10.0, 7.0));
-    painter.rect_stroke(body, 1.0, stroke);
-    // Lente superior / visor
-    let top_notch = Rect::from_center_size(Pos2::new(center.x, center.y - 3.2), Vec2::new(4.0, 1.8));
-    painter.rect_filled(top_notch, 0.5, color);
-    // Pupila / lente central
-    painter.circle_filled(body.center(), 1.6, color);
-}
-
-pub fn light_glyph(painter: &Painter, center: Pos2, color: Color32) {
-    let stroke = Stroke::new(1.1, color);
-    painter.circle_filled(center, 2.2, color);
-    for (dx, dy) in [(0.0, -4.5), (0.0, 4.5), (-4.5, 0.0), (4.5, 0.0)] {
-        painter.line_segment(
-            [Pos2::new(center.x + dx * 0.65, center.y + dy * 0.65), Pos2::new(center.x + dx, center.y + dy)],
-            stroke,
-        );
-    }
-}
-
-pub fn mesh_glyph(painter: &Painter, center: Pos2, color: Color32) {
-    let stroke = Stroke::new(1.0, color);
-    let s = 3.8;
-    let top = Pos2::new(center.x, center.y - s);
-    let bottom = Pos2::new(center.x, center.y + s);
-    let left = Pos2::new(center.x - s * 0.86, center.y - s * 0.5);
-    let right = Pos2::new(center.x + s * 0.86, center.y - s * 0.5);
-    let bl = Pos2::new(center.x - s * 0.86, center.y + s * 0.5);
-    let br = Pos2::new(center.x + s * 0.86, center.y + s * 0.5);
-
-    painter.line_segment([top, right], stroke);
-    painter.line_segment([right, br], stroke);
-    painter.line_segment([br, bottom], stroke);
-    painter.line_segment([bottom, bl], stroke);
-    painter.line_segment([bl, left], stroke);
-    painter.line_segment([left, top], stroke);
-    painter.line_segment([center, top], stroke);
-    painter.line_segment([center, bl], stroke);
-    painter.line_segment([center, br], stroke);
-}
-
-pub fn group_glyph(painter: &Painter, center: Pos2, color: Color32) {
-    let stroke = Stroke::new(1.1, color);
-    let w = 8.5;
-    let h = 6.5;
-    let rect = Rect::from_center_size(center, Vec2::new(w, h));
-    painter.rect_stroke(rect, 1.0, stroke);
-    painter.line_segment([Pos2::new(rect.min.x + 2.5, rect.min.y), Pos2::new(rect.min.x + 2.5, rect.max.y)], stroke);
+pub fn cube(painter: &Painter, rect: Rect, _color: Color32) {
+    roblox_part(painter, rect.center(), rect.width());
 }
 
 pub fn star(painter: &Painter, center: Pos2, radius: f32, color: Color32) {
@@ -371,17 +397,14 @@ pub fn target_picker(painter: &Painter, center: Pos2, radius: f32, color: Color3
     painter.circle_filled(center, radius * 0.4, color);
 }
 
-pub fn scene_icon(painter: &Painter, rect: Rect) {
-    scene_clapper(painter, rect.center(), rect.width() * 0.85, Color32::from_rgb(85, 170, 245));
+pub fn scene_clapper(painter: &Painter, center: Pos2, size: f32, color: Color32) {
+    roblox_workspace(painter, center, size);
 }
 
-pub fn audio_icon(painter: &Painter, center: Pos2, radius: f32, color: Color32) {
-    let stroke = Stroke::new(1.5, color);
-    let s = radius * 0.7;
-    painter.line_segment([Pos2::new(center.x - s, center.y - s * 0.5), Pos2::new(center.x - s * 0.2, center.y - s * 0.5)], stroke);
-    painter.line_segment([Pos2::new(center.x - s * 0.2, center.y - s * 0.5), Pos2::new(center.x + s * 0.4, center.y - s)], stroke);
-    painter.line_segment([Pos2::new(center.x + s * 0.4, center.y - s), Pos2::new(center.x + s * 0.4, center.y + s)], stroke);
-    painter.line_segment([Pos2::new(center.x + s * 0.4, center.y + s), Pos2::new(center.x - s * 0.2, center.y + s * 0.5)], stroke);
-    painter.line_segment([Pos2::new(center.x - s * 0.2, center.y + s * 0.5), Pos2::new(center.x - s, center.y + s * 0.5)], stroke);
-    painter.line_segment([Pos2::new(center.x - s, center.y + s * 0.5), Pos2::new(center.x - s, center.y - s * 0.5)], stroke);
+pub fn scene_icon(painter: &Painter, rect: Rect) {
+    roblox_workspace(painter, rect.center(), rect.width());
+}
+
+pub fn audio_icon(painter: &Painter, center: Pos2, size: f32, _color: Color32) {
+    roblox_sound(painter, center, size);
 }
