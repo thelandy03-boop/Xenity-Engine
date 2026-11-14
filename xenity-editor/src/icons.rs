@@ -279,11 +279,63 @@ pub fn cube(painter: &Painter, rect: Rect, color: Color32) {
 
 pub fn magnifying_glass(painter: &Painter, center: Pos2, radius: f32, color: Color32) {
     let stroke = Stroke::new(1.3, color);
-    let c = Pos2::new(center.x - 1.2, center.y - 1.2);
+    let c = Pos2::new(center.x - 1.0, center.y - 1.0);
     painter.circle_stroke(c, radius, stroke);
-    let p1 = Pos2::new(c.x + radius * 0.7, c.y + radius * 0.7);
+    let p1 = Pos2::new(c.x + radius * 0.707, c.y + radius * 0.707);
     let p2 = Pos2::new(center.x + radius * 1.5, center.y + radius * 1.5);
     painter.line_segment([p1, p2], stroke);
+}
+
+pub fn camera_glyph(painter: &Painter, center: Pos2, color: Color32) {
+    let stroke = Stroke::new(1.1, color);
+    let body = Rect::from_center_size(Pos2::new(center.x, center.y + 0.8), Vec2::new(10.0, 7.0));
+    painter.rect_stroke(body, 1.0, stroke);
+    // Lente superior / visor
+    let top_notch = Rect::from_center_size(Pos2::new(center.x, center.y - 3.2), Vec2::new(4.0, 1.8));
+    painter.rect_filled(top_notch, 0.5, color);
+    // Pupila / lente central
+    painter.circle_filled(body.center(), 1.6, color);
+}
+
+pub fn light_glyph(painter: &Painter, center: Pos2, color: Color32) {
+    let stroke = Stroke::new(1.1, color);
+    painter.circle_filled(center, 2.2, color);
+    for (dx, dy) in [(0.0, -4.5), (0.0, 4.5), (-4.5, 0.0), (4.5, 0.0)] {
+        painter.line_segment(
+            [Pos2::new(center.x + dx * 0.65, center.y + dy * 0.65), Pos2::new(center.x + dx, center.y + dy)],
+            stroke,
+        );
+    }
+}
+
+pub fn mesh_glyph(painter: &Painter, center: Pos2, color: Color32) {
+    let stroke = Stroke::new(1.0, color);
+    let s = 3.8;
+    let top = Pos2::new(center.x, center.y - s);
+    let bottom = Pos2::new(center.x, center.y + s);
+    let left = Pos2::new(center.x - s * 0.86, center.y - s * 0.5);
+    let right = Pos2::new(center.x + s * 0.86, center.y - s * 0.5);
+    let bl = Pos2::new(center.x - s * 0.86, center.y + s * 0.5);
+    let br = Pos2::new(center.x + s * 0.86, center.y + s * 0.5);
+
+    painter.line_segment([top, right], stroke);
+    painter.line_segment([right, br], stroke);
+    painter.line_segment([br, bottom], stroke);
+    painter.line_segment([bottom, bl], stroke);
+    painter.line_segment([bl, left], stroke);
+    painter.line_segment([left, top], stroke);
+    painter.line_segment([center, top], stroke);
+    painter.line_segment([center, bl], stroke);
+    painter.line_segment([center, br], stroke);
+}
+
+pub fn group_glyph(painter: &Painter, center: Pos2, color: Color32) {
+    let stroke = Stroke::new(1.1, color);
+    let w = 8.5;
+    let h = 6.5;
+    let rect = Rect::from_center_size(center, Vec2::new(w, h));
+    painter.rect_stroke(rect, 1.0, stroke);
+    painter.line_segment([Pos2::new(rect.min.x + 2.5, rect.min.y), Pos2::new(rect.min.x + 2.5, rect.max.y)], stroke);
 }
 
 pub fn star(painter: &Painter, center: Pos2, radius: f32, color: Color32) {
