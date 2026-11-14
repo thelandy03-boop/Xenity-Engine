@@ -5,6 +5,7 @@ mod unity_style;
 mod unity_widgets;
 mod hierarchy_window;
 mod project_browser;
+pub mod roblox_icon_bytes;
 
 use eframe::egui::{self, Color32, CursorIcon, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
 use unity_style::*;

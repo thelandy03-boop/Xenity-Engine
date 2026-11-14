@@ -1,6 +1,7 @@
 use eframe::egui::{self, Color32, CursorIcon, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
 use crate::icons;
 use crate::unity_style::*;
+use crate::roblox_icon_bytes;
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum RobloxClass {
@@ -27,19 +28,54 @@ pub struct ExplorerItem {
     pub children: Vec<ExplorerItem>,
 }
 
+pub struct RobloxIconTextures {
+    pub workspace: egui::TextureHandle,
+    pub model: egui::TextureHandle,
+    pub part: egui::TextureHandle,
+    pub meshpart: egui::TextureHandle,
+    pub camera: egui::TextureHandle,
+    pub lighting: egui::TextureHandle,
+    pub terrain: egui::TextureHandle,
+    pub script: egui::TextureHandle,
+    pub sound: egui::TextureHandle,
+    pub humanoid: egui::TextureHandle,
+    pub folder: egui::TextureHandle,
+}
+
+impl RobloxIconTextures {
+    pub fn new(ctx: &egui::Context) -> Self {
+        let opt = egui::TextureOptions::NEAREST;
+        Self {
+            workspace: ctx.load_texture("rbx_workspace", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::WORKSPACE_RGBA), opt),
+            model: ctx.load_texture("rbx_model", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::MODEL_RGBA), opt),
+            part: ctx.load_texture("rbx_part", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::PART_RGBA), opt),
+            meshpart: ctx.load_texture("rbx_meshpart", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::MESHPART_RGBA), opt),
+            camera: ctx.load_texture("rbx_camera", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::CAMERA_RGBA), opt),
+            lighting: ctx.load_texture("rbx_lighting", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::LIGHTING_RGBA), opt),
+            terrain: ctx.load_texture("rbx_terrain", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::TERRAIN_RGBA), opt),
+            script: ctx.load_texture("rbx_script", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::SCRIPT_RGBA), opt),
+            sound: ctx.load_texture("rbx_sound", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::SOUND_RGBA), opt),
+            humanoid: ctx.load_texture("rbx_humanoid", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::HUMANOID_RGBA), opt),
+            folder: ctx.load_texture("rbx_folder", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::FOLDER_RGBA), opt),
+        }
+    }
+}
+
 pub struct SceneHierarchyState {
     pub search_query: String,
     pub selected_id: Option<usize>,
     pub items: Vec<ExplorerItem>,
     pub next_id: usize,
+    pub textures: Option<RobloxIconTextures>,
 }
 
 impl Default for SceneHierarchyState {
     fn default() -> Self {
         Self {
             search_query: String::new(),
-            selected_id: Some(3), // Player seleccionado
+            selected_id: Some(3), // Player seleccionado por defecto
             next_id: 100,
+            textures: None,
             items: vec![
                 ExplorerItem {
                     id: 10,
@@ -214,10 +250,10 @@ impl Default for SceneHierarchyState {
     }
 }
 
-// Colores de Roblox Studio Dark Theme
-pub const STUDIO_BG: Color32 = Color32::from_rgb(37, 37, 38);          // #252526 (Fondo paneles)
-pub const STUDIO_TREE_BG: Color32 = Color32::from_rgb(30, 30, 30);     // #1E1E1E (Fondo del árbol)
-pub const STUDIO_SELECTION: Color32 = Color32::from_rgb(0, 122, 204);   // #007ACC (Azul selección oficial Studio)
+// Colores exactos de Roblox Studio Dark Theme
+pub const STUDIO_BG: Color32 = Color32::from_rgb(37, 37, 38);          // #252526
+pub const STUDIO_TREE_BG: Color32 = Color32::from_rgb(30, 30, 30);     // #1E1E1E
+pub const STUDIO_SELECTION: Color32 = Color32::from_rgb(0, 122, 204);   // #007ACC (Azul oficial Studio)
 pub const STUDIO_HOVER: Color32 = Color32::from_rgb(46, 46, 50);       // #2E2E32
 pub const STUDIO_BORDER: Color32 = Color32::from_rgb(45, 45, 48);      // #2D2D30
 pub const STUDIO_TEXT: Color32 = Color32::from_rgb(204, 204, 204);     // #CCCCCC
@@ -227,7 +263,12 @@ impl SceneHierarchyState {
     pub fn show(&mut self, ui: &mut egui::Ui) -> Option<String> {
         let mut clicked_object_name = None;
 
-        // 1. PESTAÑA SUPERIOR [ Explorer ] (Estilo moderno Studio)
+        // Cargar texturas oficiales de Roblox Studio si no están inicializadas
+        if self.textures.is_none() {
+            self.textures = Some(RobloxIconTextures::new(ui.ctx()));
+        }
+
+        // 1. PESTAÑA SUPERIOR [ Explorer ]
         let tab_h = 26.0;
         let (tab_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), tab_h), Sense::hover());
         ui.painter().rect_filled(tab_rect, 0.0, STUDIO_BG);
@@ -246,7 +287,6 @@ impl SceneHierarchyState {
             Color32::WHITE,
         );
 
-        // Menú de opciones de la ventana a la derecha
         let menu_pos = Pos2::new(tab_rect.max.x - 12.0, tab_rect.center().y);
         icons::kebab_menu(ui.painter(), menu_pos, Color32::from_rgb(140, 140, 140));
 
@@ -255,7 +295,7 @@ impl SceneHierarchyState {
             Stroke::new(1.0, STUDIO_BORDER),
         );
 
-        // 2. SUB-BARRA DE BÚSQUEDA (Filter Workspace de Roblox Studio)
+        // 2. SUB-BARRA DE BÚSQUEDA (Filter Workspace)
         let toolbar_h = 32.0;
         let (toolbar_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), toolbar_h), Sense::hover());
         ui.painter().rect_filled(toolbar_rect, 0.0, STUDIO_BG);
@@ -304,9 +344,11 @@ impl SceneHierarchyState {
             Stroke::new(1.0, STUDIO_BORDER),
         );
 
-        // 3. ÁREA DEL ÁRBOL DE EXPLORER
+        // 3. ÁREA DEL ÁRBOL
         let tree_rect = Rect::from_min_size(ui.cursor().min, ui.available_size());
         ui.painter().rect_filled(tree_rect, 0.0, STUDIO_TREE_BG);
+
+        let textures_ref = self.textures.as_ref();
 
         egui::ScrollArea::vertical()
             .id_salt("roblox_explorer_scroll")
@@ -321,6 +363,7 @@ impl SceneHierarchyState {
                         &mut self.selected_id,
                         &self.search_query,
                         &mut clicked_object_name,
+                        textures_ref,
                     );
                 }
                 self.items = items;
@@ -336,6 +379,7 @@ impl SceneHierarchyState {
         selected_id: &mut Option<usize>,
         search_filter: &str,
         clicked_name: &mut Option<String>,
+        textures: Option<&RobloxIconTextures>,
     ) {
         let is_selected = *selected_id == Some(node.id);
         let has_children = !node.children.is_empty();
@@ -344,7 +388,7 @@ impl SceneHierarchyState {
 
         let (row_rect, row_resp) = ui.allocate_exact_size(Vec2::new(avail_w, row_h), Sense::click());
 
-        // Highlight oficial de selección de Studio: #007ACC a todo lo ancho
+        // Highlight oficial de selección de Studio: #007ACC
         if is_selected {
             ui.painter().rect_filled(row_rect, 0.0, STUDIO_SELECTION);
         } else if row_resp.hovered() {
@@ -365,24 +409,31 @@ impl SceneHierarchyState {
             icons::foldout_arrow(ui.painter(), arrow_pos, node.is_expanded, arrow_col);
         }
 
-        // ICONO DE CLASE OFICIAL DE ROBLOX STUDIO (16x16px nítido)
-        let icon_center = Pos2::new(indent_x + 18.0, row_rect.center().y);
-        let icon_s = 14.0;
-        match node.class {
-            RobloxClass::Workspace => icons::roblox_workspace(ui.painter(), icon_center, icon_s),
-            RobloxClass::Model => icons::roblox_model(ui.painter(), icon_center, icon_s),
-            RobloxClass::Part => icons::roblox_part(ui.painter(), icon_center, icon_s),
-            RobloxClass::MeshPart => icons::roblox_mesh_part(ui.painter(), icon_center, icon_s),
-            RobloxClass::Camera => icons::roblox_camera(ui.painter(), icon_center, icon_s),
-            RobloxClass::Light => icons::roblox_light(ui.painter(), icon_center, icon_s),
-            RobloxClass::Terrain => icons::roblox_terrain(ui.painter(), icon_center, icon_s),
-            RobloxClass::Script => icons::roblox_script(ui.painter(), icon_center, icon_s),
-            RobloxClass::Sound => icons::roblox_sound(ui.painter(), icon_center, icon_s),
-            RobloxClass::Humanoid => icons::roblox_humanoid(ui.painter(), icon_center, icon_s),
-            RobloxClass::Folder => icons::roblox_folder(ui.painter(), icon_center, icon_s),
+        // ICONO OFICIAL DE ROBLOX STUDIO EXTRAÍDO DE ClassImages.PNG (16x16px perfecto)
+        let icon_rect = Rect::from_center_size(Pos2::new(indent_x + 19.0, row_rect.center().y), Vec2::new(16.0, 16.0));
+        if let Some(texs) = textures {
+            let tex = match node.class {
+                RobloxClass::Workspace => &texs.workspace,
+                RobloxClass::Model => &texs.model,
+                RobloxClass::Part => &texs.part,
+                RobloxClass::MeshPart => &texs.meshpart,
+                RobloxClass::Camera => &texs.camera,
+                RobloxClass::Light => &texs.lighting,
+                RobloxClass::Terrain => &texs.terrain,
+                RobloxClass::Script => &texs.script,
+                RobloxClass::Sound => &texs.sound,
+                RobloxClass::Humanoid => &texs.humanoid,
+                RobloxClass::Folder => &texs.folder,
+            };
+            ui.painter().image(
+                tex.id(),
+                icon_rect,
+                Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                Color32::WHITE,
+            );
         }
 
-        // TEXTO DEL NOMBRE DE LA INSTANCIA
+        // Texto del nombre de la instancia
         let text_color = if is_selected {
             Color32::WHITE
         } else {
@@ -390,28 +441,28 @@ impl SceneHierarchyState {
         };
 
         ui.painter().text(
-            Pos2::new(indent_x + 30.0, row_rect.center().y),
+            Pos2::new(indent_x + 32.0, row_rect.center().y),
             egui::Align2::LEFT_CENTER,
             &node.name,
             FontId::proportional(12.0),
             text_color,
         );
 
-        // BOTÓN `+` (Insert Object) CARACTERÍSTICO DE ROBLOX STUDIO AL PASAR EL RATÓN (HOVER)
+        // Botón circular [+] (Insert Object) al hacer hover
         if row_resp.hovered() || is_selected {
             let plus_pos = Pos2::new(row_rect.max.x - 14.0, row_rect.center().y);
             let plus_rect = Rect::from_center_size(plus_pos, Vec2::new(15.0, 15.0));
             let plus_resp = ui.interact(plus_rect, ui.id().with(node.id).with("plus_insert"), Sense::click());
 
             let plus_bg = if plus_resp.hovered() {
-                Color32::from_rgb(60, 60, 68)
+                Color32::from_rgb(65, 65, 75)
             } else {
-                Color32::from_rgb(45, 45, 52)
+                Color32::from_rgb(48, 48, 56)
             };
             ui.painter().circle_filled(plus_pos, 7.0, plus_bg);
-            ui.painter().circle_stroke(plus_pos, 7.0, Stroke::new(1.0, Color32::from_rgb(70, 70, 80)));
+            ui.painter().circle_stroke(plus_pos, 7.0, Stroke::new(1.0, Color32::from_rgb(75, 75, 85)));
 
-            let stroke = Stroke::new(1.3, if plus_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(200, 200, 200) });
+            let stroke = Stroke::new(1.3, if plus_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(210, 210, 210) });
             ui.painter().line_segment([Pos2::new(plus_pos.x - 3.0, plus_pos.y), Pos2::new(plus_pos.x + 3.0, plus_pos.y)], stroke);
             ui.painter().line_segment([Pos2::new(plus_pos.x, plus_pos.y - 3.0), Pos2::new(plus_pos.x, plus_pos.y + 3.0)], stroke);
 
@@ -426,7 +477,7 @@ impl SceneHierarchyState {
         // Hijos
         if has_children && node.is_expanded {
             for child in &mut node.children {
-                Self::draw_explorer_node(ui, child, depth + 1, selected_id, search_filter, clicked_name);
+                Self::draw_explorer_node(ui, child, depth + 1, selected_id, search_filter, clicked_name, textures);
             }
         }
     }
