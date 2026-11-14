@@ -1,4 +1,4 @@
-use eframe::egui::{self, Color32, CursorIcon, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
+use eframe::egui::{self, Color32, CursorIcon, FontId, Pos2, Rect, Rounding, Sense, Stroke, TextureHandle, Vec2};
 use crate::studio_style::*;
 use crate::studio_textures::StudioIcons;
 use crate::icons;
@@ -17,8 +17,9 @@ pub enum RibbonTab {
 pub enum StudioTool {
     Select,
     Move,
-    Rotate,
     Scale,
+    Rotate,
+    Transform,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -254,15 +255,24 @@ impl StudioRibbonState {
         // =====================================================================
         // 3. CUERPO DEL RIBBON (HERRAMIENTAS CON ICONOS REALES)
         // =====================================================================
-        let ribbon_body_h = 84.0;
+        let ribbon_body_h = 60.0;
         let (body_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), ribbon_body_h), Sense::hover());
         ui.painter().rect_filled(body_rect, 0.0, STUDIO_TAB_ACTIVE);
 
-        let mut child_ui = ui.child_ui(body_rect, egui::Layout::left_to_right(egui::Align::Min), None);
+        let mut child_ui = ui.child_ui(body_rect, egui::Layout::left_to_right(egui::Align::Center), None);
 
         match self.current_tab {
             RibbonTab::Home => {
-                self.draw_home_ribbon(&mut child_ui, icons, is_playing, is_paused, toolbox_visible, &mut action);
+                self.draw_home_ribbon(
+                    &mut child_ui,
+                    icons,
+                    is_playing,
+                    is_paused,
+                    toolbox_visible,
+                    explorer_visible,
+                    properties_visible,
+                    &mut action,
+                );
             }
             RibbonTab::Model => {
                 self.draw_model_ribbon(&mut child_ui, icons, &mut action);
@@ -300,130 +310,123 @@ impl StudioRibbonState {
         action
     }
 
-    // --- HOME RIBBON CON ICONOS REALES ---
+    // --- HOME RIBBON CON ICONOS OFICIALES Y DISEÑO IDÉNTICO A ROBLOX STUDIO ---
     fn draw_home_ribbon(
         &mut self,
         ui: &mut egui::Ui,
         icons: &StudioIcons,
         is_playing: bool,
-        is_paused: bool,
+        _is_paused: bool,
         toolbox_visible: bool,
+        explorer_visible: bool,
+        properties_visible: bool,
         action: &mut RibbonAction,
     ) {
-        ui.add_space(8.0);
+        ui.add_space(4.0);
 
-        // 1. Tools Group (Select, Move, Rotate, Scale) - ICONOS REALES
+        // 1. Herramientas de Transformación (Seleccionar, Mover, Escalar, Girar, Transformar)
+        if draw_modern_ribbon_button(ui, "Seleccionar", self.current_tool == StudioTool::Select, &icons.rib_select, false) {
+            self.current_tool = StudioTool::Select;
+            *action = RibbonAction::ChangeTool(StudioTool::Select);
+        }
+        if draw_modern_ribbon_button(ui, "Mover", self.current_tool == StudioTool::Move, &icons.rib_move, false) {
+            self.current_tool = StudioTool::Move;
+            *action = RibbonAction::ChangeTool(StudioTool::Move);
+        }
+        if draw_modern_ribbon_button(ui, "Escalar", self.current_tool == StudioTool::Scale, &icons.rib_scale, false) {
+            self.current_tool = StudioTool::Scale;
+            *action = RibbonAction::ChangeTool(StudioTool::Scale);
+        }
+        if draw_modern_ribbon_button(ui, "Girar", self.current_tool == StudioTool::Rotate, &icons.rib_rotate, false) {
+            self.current_tool = StudioTool::Rotate;
+            *action = RibbonAction::ChangeTool(StudioTool::Rotate);
+        }
+        if draw_modern_ribbon_button(ui, "Transformar", self.current_tool == StudioTool::Transform, &icons.rib_transform, false) {
+            self.current_tool = StudioTool::Transform;
+            *action = RibbonAction::ChangeTool(StudioTool::Transform);
+        }
+
+        // 2. Geométrico + Snap Steppers
+        if draw_modern_ribbon_button(ui, "Geométrico", false, &icons.rib_geometric, true) {
+            // Dropdown de tipo de pivote geométrico
+        }
+
         ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                if draw_real_icon_button(ui, "Select", self.current_tool == StudioTool::Select, &icons.tool_select) {
-                    self.current_tool = StudioTool::Select;
-                    *action = RibbonAction::ChangeTool(StudioTool::Select);
-                }
-                if draw_real_icon_button(ui, "Move", self.current_tool == StudioTool::Move, &icons.tool_move) {
-                    self.current_tool = StudioTool::Move;
-                    *action = RibbonAction::ChangeTool(StudioTool::Move);
-                }
-                if draw_real_icon_button(ui, "Rotate", self.current_tool == StudioTool::Rotate, &icons.tool_rotate) {
-                    self.current_tool = StudioTool::Rotate;
-                    *action = RibbonAction::ChangeTool(StudioTool::Rotate);
-                }
-                if draw_real_icon_button(ui, "Scale", self.current_tool == StudioTool::Scale, &icons.tool_scale) {
-                    self.current_tool = StudioTool::Scale;
-                    *action = RibbonAction::ChangeTool(StudioTool::Scale);
-                }
-            });
-            draw_group_footer(ui, "Tools");
+            ui.add_space(8.0);
+            draw_snap_row(ui, &mut self.move_snap_enabled, &mut self.move_snap_studs, &icons.rib_move_spin, true);
+            ui.add_space(2.0);
+            draw_snap_row(ui, &mut self.rotate_snap_enabled, &mut self.rotate_snap_deg, &icons.rib_rotate_spin, false);
         });
 
-        draw_ribbon_divider(ui);
+        draw_modern_divider(ui);
 
-        // 2. Terrain Group - ICONO REAL
-        ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                if draw_real_icon_button(ui, "Editor", false, &icons.win_terrain) {
-                    *action = RibbonAction::InsertPart(PartShape::Block);
-                }
-            });
-            draw_group_footer(ui, "Terrain");
-        });
+        // 3. Insertar Objetos (Pieza ▾, Terreno, Personaje, GUI ▾, Script ▾, Importar)
+        if draw_modern_ribbon_button(ui, "Pieza", false, &icons.rib_part, true) {
+            *action = RibbonAction::InsertPart(PartShape::Block);
+        }
+        if draw_modern_ribbon_button(ui, "Terreno", false, &icons.rib_terrain, false) {
+            *action = RibbonAction::InsertPart(PartShape::Block);
+        }
+        if draw_modern_ribbon_button(ui, "Personaje", false, &icons.rib_character, false) {
+            // Rig builder
+        }
+        if draw_modern_ribbon_button(ui, "GUI", false, &icons.rib_gui, true) {
+            // GUI element insertion
+        }
+        if draw_modern_ribbon_button(ui, "Script", false, &icons.rib_script, true) {
+            // Script insertion
+        }
+        if draw_modern_ribbon_button(ui, "Importar", false, &icons.rib_import, false) {
+            // 3D Mesh / Model Import
+        }
 
-        draw_ribbon_divider(ui);
+        draw_modern_divider(ui);
 
-        // 3. Insert Group (Part, Toolbox) - ICONOS REALES
-        ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                if draw_real_icon_button(ui, "Part", false, &icons.insert_part) {
-                    *action = RibbonAction::InsertPart(PartShape::Block);
-                }
-                if draw_real_icon_button(ui, "Toolbox", toolbox_visible, &icons.win_toolbox) {
-                    *action = RibbonAction::ToggleToolbox;
-                }
-            });
-            draw_group_footer(ui, "Insert");
-        });
+        // 4. Edición y Estilo (Material ▾, Color ▾, Grupo ▾, Bloquear ▾, Anclar ▾)
+        if draw_modern_ribbon_button(ui, "Material", false, &icons.rib_material, true) {
+            // Material Picker
+        }
+        if draw_modern_ribbon_button(ui, "Color", false, &icons.rib_color, true) {
+            // Color Picker
+        }
+        if draw_modern_ribbon_button(ui, "Grupo", false, &icons.rib_group, true) {
+            // Group Objects
+        }
+        if draw_modern_ribbon_button(ui, "Bloquear", false, &icons.rib_lock, true) {
+            // Lock Objects
+        }
+        if draw_modern_ribbon_button(ui, "Anclar", false, &icons.rib_anchor, true) {
+            *action = RibbonAction::ToggleAnchor;
+        }
 
-        draw_ribbon_divider(ui);
+        draw_modern_divider(ui);
 
-        // 4. Edit Group (Color, Anchor, Collisions) - ICONOS REALES
-        ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    ui.add_space(4.0);
-                    let (btn_rect, btn_resp) = ui.allocate_exact_size(Vec2::new(36.0, 24.0), Sense::click());
-                    ui.painter().rect_filled(btn_rect, Rounding::same(3.0), Color32::from_rgb(163, 162, 165));
-                    ui.painter().rect_stroke(btn_rect, Rounding::same(3.0), Stroke::new(1.0, STUDIO_BORDER));
-                    if btn_resp.hovered() {
-                        ui.painter().rect_stroke(btn_rect, Rounding::same(3.0), Stroke::new(1.5, STUDIO_SELECTION));
-                    }
-                    ui.label(egui::RichText::new("Color").size(10.0).color(STUDIO_TEXT_MUTED));
-                });
+        // 5. Ventanas y Paneles (Explorador, Propiedades, Caja de..., Recursos)
+        if draw_modern_ribbon_button(ui, "Explorador", explorer_visible, &icons.rib_explorer, false) {
+            *action = RibbonAction::ToggleExplorer;
+        }
+        if draw_modern_ribbon_button(ui, "Propiedades", properties_visible, &icons.rib_properties, false) {
+            *action = RibbonAction::ToggleProperties;
+        }
+        if draw_modern_ribbon_button(ui, "Caja de...", toolbox_visible, &icons.rib_toolbox, false) {
+            *action = RibbonAction::ToggleToolbox;
+        }
+        if draw_modern_ribbon_button(ui, "Recursos", false, &icons.rib_assetmgr, false) {
+            // Asset Manager
+        }
 
-                if draw_real_icon_button(ui, "Anchor", false, &icons.action_anchor) {
-                    *action = RibbonAction::ToggleAnchor;
-                }
+        draw_modern_divider(ui);
 
-                ui.vertical(|ui| {
-                    ui.add_space(8.0);
-                    if ui.checkbox(&mut self.collisions_enabled, "Collisions").changed() {
-                        *action = RibbonAction::ToggleCollisions;
-                    }
-                    ui.checkbox(&mut self.join_surfaces, "Join Surfaces");
-                });
-            });
-            draw_group_footer(ui, "Edit");
-        });
-
-        draw_ribbon_divider(ui);
-
-        // 5. Simulation / Test Group - ICONOS REALES
-        ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                if draw_real_icon_button(ui, if is_playing { "Playing" } else { "Play" }, is_playing, &icons.sim_play) {
-                    *action = RibbonAction::PlaySimulation;
-                }
-
-                if is_playing {
-                    if draw_real_icon_button(ui, if is_paused { "Resume" } else { "Pause" }, is_paused, &icons.sim_pause) {
-                        *action = RibbonAction::PauseSimulation;
-                    }
-
-                    if draw_real_icon_button(ui, "Stop", false, &icons.sim_stop) {
-                        *action = RibbonAction::StopSimulation;
-                    }
-                }
-            });
-            draw_group_footer(ui, "Test");
-        });
-
-        draw_ribbon_divider(ui);
-
-        // 6. Settings Group - ICONO REAL
-        ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                draw_real_icon_button(ui, "Game Settings", false, &icons.action_gamesettings);
-            });
-            draw_group_footer(ui, "Settings");
-        });
+        // 6. Simulación y Prueba (Jugar ▾ / Detener)
+        if is_playing {
+            if draw_modern_ribbon_button(ui, "Detener", false, &icons.sim_stop, false) {
+                *action = RibbonAction::StopSimulation;
+            }
+        } else {
+            if draw_modern_ribbon_button(ui, "Jugar", false, &icons.sim_play, true) {
+                *action = RibbonAction::PlaySimulation;
+            }
+        }
     }
 
     // --- MODEL RIBBON CON ICONOS REALES ---
@@ -683,6 +686,169 @@ where
     );
 
     resp.clicked()
+}
+
+fn draw_modern_divider(ui: &mut egui::Ui) {
+    ui.add_space(2.0);
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(1.0, 50.0), Sense::hover());
+    let y_center = rect.center().y;
+    ui.painter().line_segment(
+        [Pos2::new(rect.min.x, y_center - 18.0), Pos2::new(rect.min.x, y_center + 18.0)],
+        Stroke::new(1.0, Color32::from_rgb(52, 54, 58)),
+    );
+    ui.add_space(2.0);
+}
+
+fn draw_modern_ribbon_button(
+    ui: &mut egui::Ui,
+    label: &str,
+    is_active: bool,
+    icon: &TextureHandle,
+    has_dropdown: bool,
+) -> bool {
+    let font_size = 9.5;
+    let galley = ui.painter().layout_no_wrap(label.to_string(), FontId::proportional(font_size), Color32::WHITE);
+    let text_w = galley.size().x;
+    let btn_w = (text_w + 14.0).max(44.0);
+    let btn_h = 52.0;
+
+    let (rect, resp) = ui.allocate_exact_size(Vec2::new(btn_w, btn_h), Sense::click());
+
+    // Background & Border
+    if is_active {
+        ui.painter().rect_filled(rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(0, 162, 255, 35));
+        ui.painter().rect_stroke(rect, Rounding::same(3.0), Stroke::new(1.0, Color32::from_rgb(0, 162, 255)));
+    } else if resp.hovered() {
+        ui.painter().rect_filled(rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 20));
+        ui.painter().rect_stroke(rect, Rounding::same(3.0), Stroke::new(1.0, Color32::from_rgba_unmultiplied(255, 255, 255, 35)));
+    }
+
+    let icon_size = Vec2::new(24.0, 24.0);
+    let center_x = rect.center().x;
+    let top_y = rect.min.y;
+
+    if has_dropdown {
+        // Icon shifted slightly left to make room for arrow on the right
+        let icon_center = Pos2::new(center_x - 3.0, top_y + 16.0);
+        let icon_rect = Rect::from_center_size(icon_center, icon_size);
+        ui.painter().image(icon.id(), icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
+
+        // Small dropdown arrow next to the icon
+        let arrow_x = center_x + 13.0;
+        let arrow_y = top_y + 16.0;
+        let p1 = Pos2::new(arrow_x - 2.5, arrow_y - 1.5);
+        let p2 = Pos2::new(arrow_x + 2.5, arrow_y - 1.5);
+        let p3 = Pos2::new(arrow_x, arrow_y + 2.0);
+        let arrow_color = if resp.hovered() || is_active { Color32::WHITE } else { Color32::from_rgb(180, 180, 185) };
+        ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], arrow_color, Stroke::NONE));
+    } else {
+        let icon_center = Pos2::new(center_x, top_y + 16.0);
+        let icon_rect = Rect::from_center_size(icon_center, icon_size);
+        ui.painter().image(icon.id(), icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
+    }
+
+    // Text label centered below icon
+    let text_pos = Pos2::new(center_x, top_y + 39.0);
+    let text_color = if is_active || resp.hovered() {
+        Color32::WHITE
+    } else {
+        Color32::from_rgb(205, 205, 210)
+    };
+    ui.painter().text(text_pos, egui::Align2::CENTER_CENTER, label, FontId::proportional(font_size), text_color);
+
+    resp.on_hover_text(label).clicked()
+}
+
+fn draw_snap_row(
+    ui: &mut egui::Ui,
+    enabled: &mut bool,
+    value: &mut f32,
+    icon: &TextureHandle,
+    is_studs: bool,
+) {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing = Vec2::new(4.0, 0.0);
+
+        // 1. Checkbox
+        let (cb_rect, cb_resp) = ui.allocate_exact_size(Vec2::new(14.0, 14.0), Sense::click());
+        if cb_resp.clicked() {
+            *enabled = !*enabled;
+        }
+        let cb_bg = if *enabled { Color32::from_rgb(38, 40, 44) } else { Color32::from_rgb(28, 28, 32) };
+        let cb_stroke = if cb_resp.hovered() {
+            Stroke::new(1.0, Color32::from_rgb(0, 162, 255))
+        } else {
+            Stroke::new(1.0, Color32::from_rgb(70, 72, 78))
+        };
+        ui.painter().rect(cb_rect, Rounding::same(2.0), cb_bg, cb_stroke);
+        if *enabled {
+            ui.painter().text(
+                cb_rect.center(),
+                egui::Align2::CENTER_CENTER,
+                "✓",
+                FontId::proportional(10.0),
+                Color32::from_rgb(220, 220, 225),
+            );
+        }
+
+        // 2. Spinbox Field
+        let spin_size = Vec2::new(64.0, 18.0);
+        let (spin_rect, _spin_resp) = ui.allocate_exact_size(spin_size, Sense::hover());
+        let spin_bg = Color32::from_rgb(24, 25, 28);
+        let spin_stroke = Stroke::new(1.0, Color32::from_rgb(48, 50, 56));
+        ui.painter().rect(spin_rect, Rounding::same(2.0), spin_bg, spin_stroke);
+
+        // Icon inside spinbox (left side)
+        let icon_rect = Rect::from_min_size(
+            Pos2::new(spin_rect.min.x + 3.0, spin_rect.center().y - 6.0),
+            Vec2::new(12.0, 12.0),
+        );
+        ui.painter().image(icon.id(), icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
+
+        // Value text
+        let text_str = if is_studs {
+            format!("{:.0} st...", *value)
+        } else {
+            format!("{:.0}°", *value)
+        };
+        let text_pos = Pos2::new(spin_rect.min.x + 18.0, spin_rect.center().y);
+        ui.painter().text(
+            text_pos,
+            egui::Align2::LEFT_CENTER,
+            text_str,
+            FontId::proportional(9.5),
+            if *enabled { Color32::from_rgb(220, 220, 220) } else { Color32::from_rgb(120, 120, 125) },
+        );
+
+        // Up/down stepper buttons on the right side of spinbox
+        let steppers_rect = Rect::from_min_max(
+            Pos2::new(spin_rect.max.x - 12.0, spin_rect.min.y),
+            Pos2::new(spin_rect.max.x, spin_rect.max.y),
+        );
+        let up_rect = Rect::from_min_max(steppers_rect.min, Pos2::new(steppers_rect.max.x, steppers_rect.center().y));
+        let down_rect = Rect::from_min_max(Pos2::new(steppers_rect.min.x, steppers_rect.center().y), steppers_rect.max);
+
+        let up_resp = ui.interact(up_rect, ui.id().with((is_studs, "up")), Sense::click());
+        let down_resp = ui.interact(down_rect, ui.id().with((is_studs, "down")), Sense::click());
+
+        if up_resp.clicked() {
+            if is_studs {
+                *value = (*value + 1.0).clamp(0.2, 50.0);
+            } else {
+                *value = (*value + 15.0).clamp(5.0, 180.0);
+            }
+        }
+        if down_resp.clicked() {
+            if is_studs {
+                *value = (*value - 1.0).max(1.0);
+            } else {
+                *value = (*value - 15.0).max(5.0);
+            }
+        }
+
+        ui.painter().text(up_rect.center(), egui::Align2::CENTER_CENTER, "▴", FontId::proportional(7.0), Color32::from_rgb(160, 160, 165));
+        ui.painter().text(down_rect.center(), egui::Align2::CENTER_CENTER, "▾", FontId::proportional(7.0), Color32::from_rgb(160, 160, 165));
+    });
 }
 
 fn draw_group_footer(ui: &mut egui::Ui, label: &str) {

@@ -48,6 +48,34 @@ pub struct StudioIcons {
     pub out_more: TextureHandle,
     pub doc_place_cloud: TextureHandle,
 
+    // Official Modern Ribbon 24x24 Icons
+    pub rib_select: TextureHandle,
+    pub rib_move: TextureHandle,
+    pub rib_scale: TextureHandle,
+    pub rib_rotate: TextureHandle,
+    pub rib_transform: TextureHandle,
+    pub rib_geometric: TextureHandle,
+    pub rib_move_spin: TextureHandle,
+    pub rib_rotate_spin: TextureHandle,
+
+    pub rib_part: TextureHandle,
+    pub rib_terrain: TextureHandle,
+    pub rib_character: TextureHandle,
+    pub rib_gui: TextureHandle,
+    pub rib_script: TextureHandle,
+    pub rib_import: TextureHandle,
+
+    pub rib_material: TextureHandle,
+    pub rib_color: TextureHandle,
+    pub rib_group: TextureHandle,
+    pub rib_lock: TextureHandle,
+    pub rib_anchor: TextureHandle,
+
+    pub rib_explorer: TextureHandle,
+    pub rib_properties: TextureHandle,
+    pub rib_toolbox: TextureHandle,
+    pub rib_assetmgr: TextureHandle,
+
     // View Selector Cube
     pub view_front: TextureHandle,
     pub view_top: TextureHandle,
@@ -110,6 +138,33 @@ impl StudioIcons {
             out_clear: load_png(ctx, "rbx_out_clear", include_bytes!("../assets/icons/output_clear.png")),
             out_more: load_png(ctx, "rbx_out_more", include_bytes!("../assets/icons/output_more.png")),
             doc_place_cloud: load_png(ctx, "rbx_doc_place_cloud", include_bytes!("../assets/icons/place_cloud.png")),
+
+            rib_select: load_png(ctx, "rbx_rib_select", include_bytes!("../assets/icons/ribbon/RibbonSelect.png")),
+            rib_move: load_png(ctx, "rbx_rib_move", include_bytes!("../assets/icons/ribbon/RibbonMove.png")),
+            rib_scale: load_png(ctx, "rbx_rib_scale", include_bytes!("../assets/icons/ribbon/RibbonScale.png")),
+            rib_rotate: load_png(ctx, "rbx_rib_rotate", include_bytes!("../assets/icons/ribbon/RibbonRotate.png")),
+            rib_transform: load_png(ctx, "rbx_rib_transform", include_bytes!("../assets/icons/ribbon/RibbonTransform.png")),
+            rib_geometric: load_png(ctx, "rbx_rib_geometric", include_bytes!("../assets/icons/ribbon/Geometric.png")),
+            rib_move_spin: load_png(ctx, "rbx_rib_move_spin", include_bytes!("../assets/icons/ribbon/RibbonMoveSpinboxSmall.png")),
+            rib_rotate_spin: load_png(ctx, "rbx_rib_rotate_spin", include_bytes!("../assets/icons/ribbon/RibbonRotateSpinboxSmall.png")),
+
+            rib_part: load_png(ctx, "rbx_rib_part", include_bytes!("../assets/icons/ribbon/RibbonPart.png")),
+            rib_terrain: load_png(ctx, "rbx_rib_terrain", include_bytes!("../assets/icons/ribbon/RibbonTerrain.png")),
+            rib_character: load_png(ctx, "rbx_rib_character", include_bytes!("../assets/icons/ribbon/RibbonCharacter.png")),
+            rib_gui: load_png(ctx, "rbx_rib_gui", include_bytes!("../assets/icons/ribbon/RibbonGUI.png")),
+            rib_script: load_png(ctx, "rbx_rib_script", include_bytes!("../assets/icons/ribbon/RibbonScript.png")),
+            rib_import: load_png(ctx, "rbx_rib_import", include_bytes!("../assets/icons/ribbon/Ribbon3DImport.png")),
+
+            rib_material: load_png(ctx, "rbx_rib_material", include_bytes!("../assets/icons/ribbon/RibbonMaterial.png")),
+            rib_color: load_png(ctx, "rbx_rib_color", include_bytes!("../assets/icons/ribbon/RibbonColor.png")),
+            rib_group: load_png(ctx, "rbx_rib_group", include_bytes!("../assets/icons/ribbon/RibbonGroup.png")),
+            rib_lock: load_png(ctx, "rbx_rib_lock", include_bytes!("../assets/icons/ribbon/RibbonLock.png")),
+            rib_anchor: load_png(ctx, "rbx_rib_anchor", include_bytes!("../assets/icons/ribbon/RibbonAnchor.png")),
+
+            rib_explorer: load_png(ctx, "rbx_rib_explorer", include_bytes!("../assets/icons/ribbon/RibbonExplorer.png")),
+            rib_properties: load_png(ctx, "rbx_rib_properties", include_bytes!("../assets/icons/ribbon/RibbonProperties.png")),
+            rib_toolbox: load_png(ctx, "rbx_rib_toolbox", include_bytes!("../assets/icons/ribbon/RibbonToolbox.png")),
+            rib_assetmgr: load_png(ctx, "rbx_rib_assetmgr", include_bytes!("../assets/icons/ribbon/RibbonAssetManager.png")),
 
             view_front: load_png(ctx, "rbx_view_front", include_bytes!("../assets/icons/view_front.png")),
             view_top: load_png(ctx, "rbx_view_top", include_bytes!("../assets/icons/view_top.png")),

@@ -843,15 +843,11 @@ impl SceneHierarchyState {
 
         let (row_rect, row_resp) = ui.allocate_exact_size(Vec2::new(avail_w, row_h), Sense::click());
 
-        // Highlight de selección oficial Roblox Studio (azul profundo #0027B8 con esquinas redondeadas)
-        let row_box = Rect::from_min_max(
-            Pos2::new(row_rect.min.x + 2.0, row_rect.min.y + 1.0),
-            Pos2::new(row_rect.max.x - 2.0, row_rect.max.y - 1.0),
-        );
+        // Highlight de selección oficial Roblox Studio (azul #0074D9 / #007ACC en toda la fila)
         if is_selected {
-            ui.painter().rect_filled(row_box, Rounding::same(3.5), Color32::from_rgb(0, 39, 184));
+            ui.painter().rect_filled(row_rect, 0.0, Color32::from_rgb(0, 116, 217));
         } else if row_resp.hovered() {
-            ui.painter().rect_filled(row_box, Rounding::same(3.5), STUDIO_HOVER);
+            ui.painter().rect_filled(row_rect, 0.0, Color32::from_rgb(38, 40, 44));
         }
 
         let indent_x = row_rect.min.x + (depth as f32 * 14.0) + 4.0;
@@ -905,10 +901,9 @@ impl SceneHierarchyState {
         ui.painter().galley(Pos2::new(text_pos.x, text_pos.y - text_h * 0.5), text_galley, text_color);
 
         // Botón circular [+] (Insert Object) oficial de Roblox Studio (Add.png)
-        // Se ubica inmediatamente a la derecha del nombre del elemento, idéntico a la referencia
+        // Se ubica alineado a la derecha de la fila, idéntico a Roblox Studio oficial
         if row_resp.hovered() || is_selected {
-            let plus_x = (text_pos.x + text_w + 10.0).min(row_rect.max.x - 12.0);
-            let plus_pos = Pos2::new(plus_x, row_rect.center().y);
+            let plus_pos = Pos2::new(row_rect.max.x - 14.0, row_rect.center().y);
             let plus_rect = Rect::from_center_size(plus_pos, Vec2::new(14.0, 14.0));
             let plus_resp = ui.interact(plus_rect, ui.id().with(node.id).with("plus_insert"), Sense::click());
 
