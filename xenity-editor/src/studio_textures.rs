@@ -76,6 +76,14 @@ pub struct StudioIcons {
     pub rib_toolbox: TextureHandle,
     pub rib_assetmgr: TextureHandle,
 
+    // Top Right Official Studio Utility Icons
+    pub top_avatar: TextureHandle,
+    pub top_bell: TextureHandle,
+    pub top_cloud: TextureHandle,
+    pub top_share: TextureHandle,
+    pub top_collab: TextureHandle,
+    pub top_chat: TextureHandle,
+
     // View Selector Cube
     pub view_front: TextureHandle,
     pub view_top: TextureHandle,
@@ -165,6 +173,13 @@ impl StudioIcons {
             rib_properties: load_png(ctx, "rbx_rib_properties", include_bytes!("../assets/icons/ribbon/RibbonProperties.png")),
             rib_toolbox: load_png(ctx, "rbx_rib_toolbox", include_bytes!("../assets/icons/ribbon/RibbonToolbox.png")),
             rib_assetmgr: load_png(ctx, "rbx_rib_assetmgr", include_bytes!("../assets/icons/ribbon/RibbonAssetManager.png")),
+
+            top_avatar: load_png(ctx, "rbx_top_avatar", include_bytes!("../assets/icons/top_avatar.png")),
+            top_bell: load_png(ctx, "rbx_top_bell", include_bytes!("../assets/icons/top_bell.png")),
+            top_cloud: load_png(ctx, "rbx_top_cloud", include_bytes!("../assets/icons/top_cloud.png")),
+            top_share: load_png(ctx, "rbx_top_share", include_bytes!("../assets/icons/top_share.png")),
+            top_collab: load_png(ctx, "rbx_top_collab", include_bytes!("../assets/icons/top_collab.png")),
+            top_chat: load_png(ctx, "rbx_top_chat", include_bytes!("../assets/icons/top_chat.png")),
 
             view_front: load_png(ctx, "rbx_view_front", include_bytes!("../assets/icons/view_front.png")),
             view_top: load_png(ctx, "rbx_view_top", include_bytes!("../assets/icons/view_top.png")),

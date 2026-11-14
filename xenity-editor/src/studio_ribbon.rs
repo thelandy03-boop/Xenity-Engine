@@ -444,43 +444,77 @@ impl StudioRibbonState {
         );
         add_tab_resp.on_hover_text("Nueva pestaña");
 
-        // --- LADO DERECHO OFICIAL ROBLOX STUDIO: Acciones rápidas (Avatar, Colaborar, Notificaciones, etc.) ---
+        // --- LADO DERECHO OFICIAL ROBLOX STUDIO: Acciones rápidas con ICONOS REALES ---
         let mut r_x = tabs_rect.max.x - 18.0;
 
-        // Avatar de usuario circular
-        let user_av_center = Pos2::new(r_x, bar_center_y);
-        ui.painter().circle_filled(user_av_center, 10.0, Color32::from_rgb(45, 95, 170));
-        ui.painter().circle_stroke(user_av_center, 10.0, Stroke::new(1.2, Color32::from_rgb(70, 130, 210)));
-        ui.painter().text(user_av_center, egui::Align2::CENTER_CENTER, "👤", FontId::proportional(10.0), Color32::WHITE);
+        // 1. Avatar circular de usuario (Icono PNG Real)
+        let av_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(20.0, 20.0));
+        let av_resp = ui.interact(av_rect, ui.id().with("top_avatar_btn"), Sense::click());
+        if av_resp.hovered() {
+            ui.painter().rect_filled(av_rect, Rounding::same(10.0), Color32::from_rgba_unmultiplied(255, 255, 255, 20));
+        }
+        ui.painter().circle_filled(av_rect.center(), 10.0, Color32::from_rgb(35, 45, 60));
+        ui.painter().circle_stroke(av_rect.center(), 10.0, Stroke::new(1.2, Color32::from_rgb(0, 136, 255)));
+        let av_img_rect = Rect::from_center_size(av_rect.center(), Vec2::new(16.0, 16.0));
+        ui.painter().image(icons.top_avatar.id(), av_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
+        av_resp.on_hover_text("Perfil de usuario");
         r_x -= 24.0;
 
-        // Campana / Notificaciones 🔔
-        let bell_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(18.0, 18.0));
-        let bell_resp = ui.interact(bell_rect, ui.id().with("top_bell"), Sense::click());
-        if bell_resp.hovered() { ui.painter().rect_filled(bell_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18)); }
-        ui.painter().text(bell_rect.center(), egui::Align2::CENTER_CENTER, "🔔", FontId::proportional(11.0), Color32::from_rgb(160, 163, 172));
+        // 2. Campana de Notificaciones (Icono PNG Real con punto de alerta rojo)
+        let bell_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(20.0, 20.0));
+        let bell_resp = ui.interact(bell_rect, ui.id().with("top_bell_btn"), Sense::click());
+        if bell_resp.hovered() {
+            ui.painter().rect_filled(bell_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
+        }
+        let bell_img_rect = Rect::from_center_size(bell_rect.center(), Vec2::new(14.0, 14.0));
+        ui.painter().image(icons.top_bell.id(), bell_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
+        ui.painter().circle_filled(Pos2::new(bell_rect.center().x + 5.0, bell_rect.center().y - 4.5), 2.5, Color32::from_rgb(230, 50, 50));
+        bell_resp.on_hover_text("Notificaciones");
         r_x -= 24.0;
 
-        // Nube / Guardar ☁
-        let cloud_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(18.0, 18.0));
-        let cloud_resp = ui.interact(cloud_rect, ui.id().with("top_cloud"), Sense::click());
-        if cloud_resp.hovered() { ui.painter().rect_filled(cloud_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18)); }
-        ui.painter().text(cloud_rect.center(), egui::Align2::CENTER_CENTER, "☁", FontId::proportional(12.0), Color32::from_rgb(160, 163, 172));
+        // 3. Guardado en la Nube (Icono PNG Real)
+        let cloud_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(20.0, 20.0));
+        let cloud_resp = ui.interact(cloud_rect, ui.id().with("top_cloud_btn"), Sense::click());
+        if cloud_resp.hovered() {
+            ui.painter().rect_filled(cloud_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
+        }
+        let cloud_img_rect = Rect::from_center_size(cloud_rect.center(), Vec2::new(14.0, 14.0));
+        ui.painter().image(icons.top_cloud.id(), cloud_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
         if cloud_resp.clicked() { action = RibbonAction::SavePlace; }
+        cloud_resp.on_hover_text("Guardar en Roblox (Ctrl+S)");
         r_x -= 24.0;
 
-        // Compartir 🔗 / Colaborar
-        let share_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(18.0, 18.0));
-        let share_resp = ui.interact(share_rect, ui.id().with("top_share"), Sense::click());
-        if share_resp.hovered() { ui.painter().rect_filled(share_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18)); }
-        ui.painter().text(share_rect.center(), egui::Align2::CENTER_CENTER, "🔗", FontId::proportional(11.0), Color32::from_rgb(160, 163, 172));
+        // 4. Compartir Enlace (Icono PNG Real)
+        let share_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(20.0, 20.0));
+        let share_resp = ui.interact(share_rect, ui.id().with("top_share_btn"), Sense::click());
+        if share_resp.hovered() {
+            ui.painter().rect_filled(share_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
+        }
+        let share_img_rect = Rect::from_center_size(share_rect.center(), Vec2::new(14.0, 14.0));
+        ui.painter().image(icons.top_share.id(), share_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
+        share_resp.on_hover_text("Compartir");
         r_x -= 24.0;
 
-        // Chat 💬
-        let chat_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(18.0, 18.0));
-        let chat_resp = ui.interact(chat_rect, ui.id().with("top_chat"), Sense::click());
-        if chat_resp.hovered() { ui.painter().rect_filled(chat_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18)); }
-        ui.painter().text(chat_rect.center(), egui::Align2::CENTER_CENTER, "💬", FontId::proportional(11.0), Color32::from_rgb(160, 163, 172));
+        // 5. Chat del Equipo (Icono PNG Real)
+        let chat_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(20.0, 20.0));
+        let chat_resp = ui.interact(chat_rect, ui.id().with("top_chat_btn"), Sense::click());
+        if chat_resp.hovered() {
+            ui.painter().rect_filled(chat_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
+        }
+        let chat_img_rect = Rect::from_center_size(chat_rect.center(), Vec2::new(14.0, 14.0));
+        ui.painter().image(icons.top_chat.id(), chat_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
+        chat_resp.on_hover_text("Chat");
+        r_x -= 24.0;
+
+        // 6. Colaborar (Icono PNG Real)
+        let collab_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(20.0, 20.0));
+        let collab_resp = ui.interact(collab_rect, ui.id().with("top_collab_btn"), Sense::click());
+        if collab_resp.hovered() {
+            ui.painter().rect_filled(collab_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
+        }
+        let collab_img_rect = Rect::from_center_size(collab_rect.center(), Vec2::new(14.0, 14.0));
+        ui.painter().image(icons.top_collab.id(), collab_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
+        collab_resp.on_hover_text("Colaborar");
 
         ui.painter().line_segment(
             [Pos2::new(tabs_rect.min.x, tabs_rect.max.y), Pos2::new(tabs_rect.max.x, tabs_rect.max.y)],
