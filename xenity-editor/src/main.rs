@@ -669,8 +669,6 @@ impl eframe::App for XenityEditorApp {
 }
 
 fn main() -> eframe::Result<()> {
-    // Forzar DirectX 12 nativo en Windows para evitar advertencias de capas Vulkan de apps de terceros
-    unsafe { std::env::set_var("WGPU_BACKEND", "dx12"); }
     env_logger::init();
 
     let native_options = eframe::NativeOptions {
