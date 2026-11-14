@@ -38,6 +38,38 @@ pub enum RobloxClass {
     Folder,
 }
 
+impl RobloxClass {
+    /// Índice exacto de icono en el spritesheet oficial ClassImages.PNG (según ReflectionMetadata.xml)
+    pub fn explorer_image_index(&self) -> usize {
+        match self {
+            RobloxClass::Part => 1,
+            RobloxClass::Model => 2,
+            RobloxClass::Camera => 5,
+            RobloxClass::Script => 6,
+            RobloxClass::Humanoid => 9,
+            RobloxClass::Sound => 11,
+            RobloxClass::Lighting | RobloxClass::Light => 13,
+            RobloxClass::NetworkClient => 16,
+            RobloxClass::Workspace => 19,
+            RobloxClass::StarterPack => 20,
+            RobloxClass::Players => 21,
+            RobloxClass::Teams => 23,
+            RobloxClass::SoundService => 31,
+            RobloxClass::StarterGui => 46,
+            RobloxClass::Terrain => 65,
+            RobloxClass::ServerStorage => 69,
+            RobloxClass::ReplicatedFirst | RobloxClass::ReplicatedStorage => 70,
+            RobloxClass::ServerScriptService => 71,
+            RobloxClass::MeshPart => 73,
+            RobloxClass::Folder => 77,
+            RobloxClass::StarterCharacterScripts | RobloxClass::StarterPlayerScripts => 78,
+            RobloxClass::StarterPlayer => 79,
+            RobloxClass::MaterialService => 131,
+            RobloxClass::TextChatService => 143,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct InstanceProperties {
     pub class_name: String,
@@ -196,34 +228,25 @@ pub struct ExplorerItem {
 }
 
 pub struct RobloxIconTextures {
-    pub workspace: egui::TextureHandle,
-    pub model: egui::TextureHandle,
-    pub part: egui::TextureHandle,
-    pub meshpart: egui::TextureHandle,
-    pub camera: egui::TextureHandle,
-    pub lighting: egui::TextureHandle,
-    pub terrain: egui::TextureHandle,
-    pub script: egui::TextureHandle,
-    pub sound: egui::TextureHandle,
-    pub humanoid: egui::TextureHandle,
-    pub folder: egui::TextureHandle,
+    pub class_images: egui::TextureHandle,
 }
 
 impl RobloxIconTextures {
     pub fn new(ctx: &egui::Context) -> Self {
         let opt = egui::TextureOptions::NEAREST;
+        let img = image::load_from_memory_with_format(
+            include_bytes!("../assets/icons/ClassImages.PNG"),
+            image::ImageFormat::Png,
+        )
+        .expect("Valid Roblox Studio ClassImages.PNG")
+        .to_rgba8();
+        let (w, h) = img.dimensions();
         Self {
-            workspace: ctx.load_texture("rbx_workspace", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::WORKSPACE_RGBA), opt),
-            model: ctx.load_texture("rbx_model", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::MODEL_RGBA), opt),
-            part: ctx.load_texture("rbx_part", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::PART_RGBA), opt),
-            meshpart: ctx.load_texture("rbx_meshpart", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::MESHPART_RGBA), opt),
-            camera: ctx.load_texture("rbx_camera", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::CAMERA_RGBA), opt),
-            lighting: ctx.load_texture("rbx_lighting", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::LIGHTING_RGBA), opt),
-            terrain: ctx.load_texture("rbx_terrain", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::TERRAIN_RGBA), opt),
-            script: ctx.load_texture("rbx_script", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::SCRIPT_RGBA), opt),
-            sound: ctx.load_texture("rbx_sound", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::SOUND_RGBA), opt),
-            humanoid: ctx.load_texture("rbx_humanoid", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::HUMANOID_RGBA), opt),
-            folder: ctx.load_texture("rbx_folder", egui::ColorImage::from_rgba_unmultiplied([16, 16], &roblox_icon_bytes::FOLDER_RGBA), opt),
+            class_images: ctx.load_texture(
+                "rbx_class_images",
+                egui::ColorImage::from_rgba_unmultiplied([w as usize, h as usize], &img.into_raw()),
+                opt,
+            ),
         }
     }
 }
@@ -832,29 +855,18 @@ impl SceneHierarchyState {
             icons::foldout_arrow(ui.painter(), arrow_pos, node.is_expanded, arrow_col);
         }
 
-        // ICONOS CLÁSICOS OFICIALES (Pixel-art retro)
+        // ICONOS CLÁSICOS OFICIALES (Pixel-art retro 100% auténticos de ClassImages.PNG de Roblox Studio)
         let icon_rect = Rect::from_center_size(Pos2::new(indent_x + 18.0, row_rect.center().y), Vec2::new(16.0, 16.0));
         if let Some(texs) = textures {
-            let tex = match node.class {
-                RobloxClass::Workspace => &texs.workspace,
-                RobloxClass::Players | RobloxClass::Teams => &texs.humanoid,
-                RobloxClass::Lighting | RobloxClass::Light => &texs.lighting,
-                RobloxClass::MaterialService | RobloxClass::Terrain => &texs.terrain,
-                RobloxClass::NetworkClient => &texs.model,
-                RobloxClass::ServerScriptService | RobloxClass::StarterCharacterScripts | RobloxClass::StarterPlayerScripts | RobloxClass::Script => &texs.script,
-                RobloxClass::SoundService | RobloxClass::Sound => &texs.sound,
-                RobloxClass::TextChatService => &texs.script,
-                RobloxClass::ReplicatedFirst | RobloxClass::ReplicatedStorage | RobloxClass::ServerStorage | RobloxClass::StarterGui | RobloxClass::StarterPack | RobloxClass::StarterPlayer | RobloxClass::Folder => &texs.folder,
-                RobloxClass::Model => &texs.model,
-                RobloxClass::Part => &texs.part,
-                RobloxClass::MeshPart => &texs.meshpart,
-                RobloxClass::Camera => &texs.camera,
-                RobloxClass::Humanoid => &texs.humanoid,
-            };
+            let idx = node.class.explorer_image_index();
+            let total_icons = 147.0;
+            let u_min = (idx as f32) / total_icons;
+            let u_max = (idx as f32 + 1.0) / total_icons;
+            let uv = Rect::from_min_max(Pos2::new(u_min, 0.0), Pos2::new(u_max, 1.0));
             ui.painter().image(
-                tex.id(),
+                texs.class_images.id(),
                 icon_rect,
-                Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                uv,
                 Color32::WHITE,
             );
         }
