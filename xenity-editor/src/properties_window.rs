@@ -1,5 +1,6 @@
 use eframe::egui::{self, Color32, CursorIcon, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
 use crate::hierarchy_window::{ExplorerItem, RobloxClass, STUDIO_BG, STUDIO_BORDER, STUDIO_HOVER, STUDIO_INPUT_BG, STUDIO_SELECTION, STUDIO_TEXT, STUDIO_TREE_BG};
+use crate::studio_textures::StudioIcons;
 use crate::icons;
 
 pub const STUDIO_HEADER_BG: Color32 = Color32::from_rgb(42, 42, 45);     // #2A2A2D
@@ -42,22 +43,31 @@ impl PropertiesWindowState {
         &mut self,
         ui: &mut egui::Ui,
         selected_item: Option<&mut ExplorerItem>,
+        icons: &StudioIcons,
     ) {
         // 1. PESTAÑA SUPERIOR [ Properties - ClassName "ItemName" ]
         let tab_h = 26.0;
         let (tab_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), tab_h), Sense::hover());
         ui.painter().rect_filled(tab_rect, 0.0, STUDIO_BG);
 
-        let active_tab_rect = Rect::from_min_size(tab_rect.min, Vec2::new(96.0, tab_h));
+        let active_tab_rect = Rect::from_min_size(tab_rect.min, Vec2::new(104.0, tab_h));
         ui.painter().rect_filled(active_tab_rect, Rounding { nw: 3.0, ne: 3.0, sw: 0.0, se: 0.0 }, STUDIO_TREE_BG);
         ui.painter().line_segment(
             [Pos2::new(active_tab_rect.min.x, active_tab_rect.min.y), Pos2::new(active_tab_rect.max.x, active_tab_rect.min.y)],
             Stroke::new(2.0, STUDIO_SELECTION),
         );
 
+        let tab_icon_rect = Rect::from_center_size(Pos2::new(active_tab_rect.min.x + 16.0, active_tab_rect.center().y), Vec2::new(14.0, 14.0));
+        ui.painter().image(
+            icons.win_properties.id(),
+            tab_icon_rect,
+            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+            Color32::WHITE,
+        );
+
         ui.painter().text(
-            active_tab_rect.center(),
-            egui::Align2::CENTER_CENTER,
+            Pos2::new(active_tab_rect.min.x + 28.0, active_tab_rect.center().y),
+            egui::Align2::LEFT_CENTER,
             "Properties",
             FontId::proportional(11.5),
             Color32::WHITE,
@@ -72,34 +82,42 @@ impl PropertiesWindowState {
         );
 
         // 2. SUB-BARRA DE BÚSQUEDA (Filter Properties)
-        let toolbar_h = 32.0;
+        let toolbar_h = 30.0;
         let (toolbar_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), toolbar_h), Sense::hover());
         ui.painter().rect_filled(toolbar_rect, 0.0, STUDIO_BG);
 
         let search_h = 22.0;
         let search_y = toolbar_rect.min.y + (toolbar_h - search_h) * 0.5;
         let search_rect = Rect::from_min_size(
-            Pos2::new(toolbar_rect.min.x + 8.0, search_y),
-            Vec2::new(toolbar_rect.width() - 16.0, search_h),
+            Pos2::new(toolbar_rect.min.x + 6.0, search_y),
+            Vec2::new(toolbar_rect.width() - 12.0, search_h),
         );
 
         ui.painter().rect_filled(search_rect, Rounding::same(4.0), STUDIO_INPUT_BG);
         ui.painter().rect_stroke(search_rect, Rounding::same(4.0), Stroke::new(1.0, STUDIO_BORDER));
 
-        let mag_center = Pos2::new(search_rect.min.x + 12.0, search_rect.center().y);
-        icons::magnifying_glass(ui.painter(), mag_center, 3.8, Color32::from_rgb(140, 140, 140));
+        let mag_center = Pos2::new(search_rect.min.x + 13.0, search_rect.center().y);
+        let mag_rect = Rect::from_center_size(mag_center, Vec2::new(14.0, 14.0));
+        ui.painter().image(
+            icons.icon_search.id(),
+            mag_rect,
+            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+            Color32::from_rgb(160, 160, 160),
+        );
 
         let clear_w = if self.search_query.is_empty() { 0.0 } else { 18.0 };
         let text_rect = Rect::from_min_max(
-            Pos2::new(search_rect.min.x + 24.0, search_rect.min.y),
-            Pos2::new(search_rect.max.x - 6.0 - clear_w, search_rect.max.y),
+            Pos2::new(search_rect.min.x + 25.0, search_rect.min.y + 2.0),
+            Pos2::new(search_rect.max.x - 6.0 - clear_w, search_rect.max.y - 2.0),
         );
 
         let mut edit_ui = ui.child_ui(text_rect, egui::Layout::left_to_right(egui::Align::Center), None);
+        edit_ui.spacing_mut().item_spacing = Vec2::ZERO;
         edit_ui.add(
             egui::TextEdit::singleline(&mut self.search_query)
                 .hint_text("Filter Properties (Ctrl+Shift+P)")
                 .frame(false)
+                .margin(egui::Margin::symmetric(0.0, 1.0))
                 .font(FontId::proportional(11.5))
                 .desired_width(text_rect.width()),
         );

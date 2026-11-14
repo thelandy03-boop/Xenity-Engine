@@ -1,5 +1,6 @@
 use eframe::egui::{self, Color32, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
 use crate::studio_style::*;
+use crate::studio_textures::StudioIcons;
 use crate::icons;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -95,24 +96,27 @@ impl StudioOutputState {
     pub fn show(
         &mut self,
         ui: &mut egui::Ui,
+        icons: &StudioIcons,
         show_command_bar: bool,
     ) -> CommandBarResult {
         let mut result = CommandBarResult::None;
 
-        // 1. PESTAÑA SUPERIOR [ Output ]
+        // 1. PESTAÑA SUPERIOR [ Output ] CON ICONO REAL
         let tab_h = 26.0;
         let (tab_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), tab_h), Sense::hover());
         ui.painter().rect_filled(tab_rect, 0.0, STUDIO_BG);
 
-        let active_tab_rect = Rect::from_min_size(tab_rect.min, Vec2::new(80.0, tab_h));
+        let active_tab_rect = Rect::from_min_size(tab_rect.min, Vec2::new(90.0, tab_h));
         ui.painter().rect_filled(active_tab_rect, Rounding { nw: 3.0, ne: 3.0, sw: 0.0, se: 0.0 }, STUDIO_TREE_BG);
         ui.painter().line_segment(
             [Pos2::new(active_tab_rect.min.x, active_tab_rect.min.y), Pos2::new(active_tab_rect.max.x, active_tab_rect.min.y)],
             Stroke::new(2.0, STUDIO_SELECTION),
         );
-        ui.painter().text(active_tab_rect.center(), egui::Align2::CENTER_CENTER, "Output", FontId::proportional(11.5), Color32::WHITE);
 
-        // Kebab menu
+        let icon_rect = Rect::from_center_size(Pos2::new(active_tab_rect.min.x + 14.0, active_tab_rect.center().y), Vec2::new(14.0, 14.0));
+        ui.painter().image(icons.win_output.id(), icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
+        ui.painter().text(Pos2::new(active_tab_rect.min.x + 28.0, active_tab_rect.center().y), egui::Align2::LEFT_CENTER, "Output", FontId::proportional(11.5), Color32::WHITE);
+
         icons::kebab_menu(ui.painter(), Pos2::new(tab_rect.max.x - 12.0, tab_rect.center().y), STUDIO_TEXT_MUTED);
 
         ui.painter().line_segment(
@@ -169,7 +173,6 @@ impl StudioOutputState {
             .show(ui, |ui| {
                 ui.add_space(4.0);
                 for log in &self.logs {
-                    // Filtrado por nivel
                     let allow_level = match log.log_type {
                         LogType::Info => self.show_info,
                         LogType::Warning => self.show_warnings,
@@ -180,20 +183,16 @@ impl StudioOutputState {
                         continue;
                     }
 
-                    // Filtrado por texto
                     if !query.is_empty() && !log.message.to_lowercase().contains(&query) {
                         continue;
                     }
 
                     ui.horizontal(|ui| {
                         ui.add_space(8.0);
-                        // Timestamp
                         ui.label(egui::RichText::new(&log.timestamp).size(11.0).color(STUDIO_TEXT_MUTED));
-                        // Source
                         let src_str = format!("-- [{}]", log.source);
                         ui.label(egui::RichText::new(src_str).size(11.0).color(Color32::from_rgb(130, 160, 200)));
 
-                        // Message Text with authentic colors
                         let (txt_col, prefix) = match log.log_type {
                             LogType::Info => (Color32::from_rgb(220, 220, 225), ""),
                             LogType::Warning => (Color32::from_rgb(255, 210, 60), "⚠️ "),
@@ -207,7 +206,7 @@ impl StudioOutputState {
                 }
             });
 
-        // 4. ROBLOX STUDIO COMMAND BAR (Barra de comandos Luau)
+        // 4. ROBLOX STUDIO COMMAND BAR
         if show_command_bar {
             let (cmd_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 28.0), Sense::hover());
             ui.painter().rect_filled(cmd_rect, 0.0, STUDIO_INPUT_BG);
@@ -216,14 +215,9 @@ impl StudioOutputState {
                 Stroke::new(1.0, STUDIO_BORDER),
             );
 
-            // Prompt symbol "> "
-            ui.painter().text(
-                Pos2::new(cmd_rect.min.x + 12.0, cmd_rect.center().y),
-                egui::Align2::LEFT_CENTER,
-                ">",
-                FontId::proportional(14.0),
-                STUDIO_ACCENT_BLUE,
-            );
+            // Icono CommandBar real
+            let cmd_icon_rect = Rect::from_center_size(Pos2::new(cmd_rect.min.x + 14.0, cmd_rect.center().y), Vec2::new(14.0, 14.0));
+            ui.painter().image(icons.win_cmdbar.id(), cmd_icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
 
             let edit_rect = Rect::from_min_max(
                 Pos2::new(cmd_rect.min.x + 28.0, cmd_rect.min.y + 2.0),
@@ -268,7 +262,6 @@ impl StudioOutputState {
 }
 
 fn chrono_or_fallback_time() -> String {
-    // Generar timestamp limpio estilo Roblox Studio
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();

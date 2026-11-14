@@ -1,5 +1,6 @@
 use eframe::egui::{self, Color32, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
 use crate::studio_style::*;
+use crate::studio_textures::StudioIcons;
 use crate::icons;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -112,21 +113,24 @@ impl Default for StudioToolboxState {
 }
 
 impl StudioToolboxState {
-    pub fn show(&mut self, ui: &mut egui::Ui) -> Option<String> {
+    pub fn show(&mut self, ui: &mut egui::Ui, icons: &StudioIcons) -> Option<String> {
         let mut inserted_model = None;
 
-        // 1. PESTAÑA SUPERIOR [ Toolbox ]
+        // 1. PESTAÑA SUPERIOR [ Toolbox ] CON ICONO REAL DE STUDIO
         let tab_h = 26.0;
         let (tab_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), tab_h), Sense::hover());
         ui.painter().rect_filled(tab_rect, 0.0, STUDIO_BG);
 
-        let active_tab_rect = Rect::from_min_size(tab_rect.min, Vec2::new(88.0, tab_h));
+        let active_tab_rect = Rect::from_min_size(tab_rect.min, Vec2::new(96.0, tab_h));
         ui.painter().rect_filled(active_tab_rect, Rounding { nw: 3.0, ne: 3.0, sw: 0.0, se: 0.0 }, STUDIO_TREE_BG);
         ui.painter().line_segment(
             [Pos2::new(active_tab_rect.min.x, active_tab_rect.min.y), Pos2::new(active_tab_rect.max.x, active_tab_rect.min.y)],
             Stroke::new(2.0, STUDIO_SELECTION),
         );
-        ui.painter().text(active_tab_rect.center(), egui::Align2::CENTER_CENTER, "Toolbox", FontId::proportional(11.5), Color32::WHITE);
+
+        let tab_icon_rect = Rect::from_center_size(Pos2::new(active_tab_rect.min.x + 14.0, active_tab_rect.center().y), Vec2::new(14.0, 14.0));
+        ui.painter().image(icons.win_toolbox.id(), tab_icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
+        ui.painter().text(Pos2::new(active_tab_rect.min.x + 28.0, active_tab_rect.center().y), egui::Align2::LEFT_CENTER, "Toolbox", FontId::proportional(11.5), Color32::WHITE);
 
         let menu_pos = Pos2::new(tab_rect.max.x - 12.0, tab_rect.center().y);
         icons::kebab_menu(ui.painter(), menu_pos, STUDIO_TEXT_MUTED);
@@ -260,7 +264,7 @@ impl StudioToolboxState {
                         ui.horizontal(|ui| {
                             ui.add_space(6.0);
                             for item in row_items.drain(..) {
-                                if draw_asset_card(ui, item, card_w, card_h) {
+                                if draw_asset_card(ui, item, card_w, card_h, icons) {
                                     inserted_model = Some(item.name.to_string());
                                 }
                                 ui.add_space(6.0);
@@ -274,7 +278,7 @@ impl StudioToolboxState {
                     ui.horizontal(|ui| {
                         ui.add_space(6.0);
                         for item in row_items {
-                            if draw_asset_card(ui, item, card_w, card_h) {
+                            if draw_asset_card(ui, item, card_w, card_h, icons) {
                                 inserted_model = Some(item.name.to_string());
                             }
                             ui.add_space(6.0);
@@ -287,7 +291,7 @@ impl StudioToolboxState {
     }
 }
 
-fn draw_asset_card(ui: &mut egui::Ui, item: &ToolboxItem, w: f32, h: f32) -> bool {
+fn draw_asset_card(ui: &mut egui::Ui, item: &ToolboxItem, w: f32, h: f32, icons: &StudioIcons) -> bool {
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(w, h), Sense::click());
 
     let bg = if resp.hovered() { STUDIO_BTN_HOVER } else { Color32::from_rgb(38, 38, 42) };
@@ -299,9 +303,9 @@ fn draw_asset_card(ui: &mut egui::Ui, item: &ToolboxItem, w: f32, h: f32) -> boo
     let thumb_rect = Rect::from_min_size(Pos2::new(rect.min.x + 8.0, rect.min.y + 8.0), Vec2::new(w - 16.0, thumb_h));
     ui.painter().rect_filled(thumb_rect, Rounding::same(3.0), Color32::from_rgb(28, 28, 32));
 
-    // 3D Isometric Preview Box inside thumbnail
-    let box_center = thumb_rect.center();
-    icons::roblox_model(ui.painter(), box_center, thumb_h * 0.7);
+    // Icono real de Modelo dentro de la miniatura
+    let icon_rect = Rect::from_center_size(thumb_rect.center(), Vec2::new(28.0, 28.0));
+    ui.painter().image(icons.insert_model.id(), icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
 
     // Title label
     let title_y = thumb_rect.max.y + 6.0;

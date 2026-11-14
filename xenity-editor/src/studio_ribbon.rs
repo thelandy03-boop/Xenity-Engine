@@ -1,5 +1,6 @@
 use eframe::egui::{self, Color32, CursorIcon, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
 use crate::studio_style::*;
+use crate::studio_textures::StudioIcons;
 use crate::icons;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -93,6 +94,7 @@ impl StudioRibbonState {
     pub fn show(
         &mut self,
         ui: &mut egui::Ui,
+        icons: &StudioIcons,
         is_playing: bool,
         is_paused: bool,
         toolbox_visible: bool,
@@ -116,7 +118,7 @@ impl StudioRibbonState {
         let logo_center = Pos2::new(title_rect.min.x + 16.0, title_rect.center().y);
         draw_roblox_studio_logo(ui.painter(), logo_center, 14.0);
 
-        // Quick Access Icons: Save, Undo, Redo
+        // Quick Access Icons: Save, Undo, Redo (PNGs REALES)
         let mut qa_x = title_rect.min.x + 36.0;
 
         // Save
@@ -130,24 +132,26 @@ impl StudioRibbonState {
         save_resp.on_hover_text("Save to Roblox (Ctrl+S)");
         qa_x += 24.0;
 
-        // Undo
+        // Undo (PNG REAL DE STUDIO)
         let undo_rect = Rect::from_center_size(Pos2::new(qa_x, title_rect.center().y), Vec2::new(20.0, 20.0));
         let undo_resp = ui.interact(undo_rect, ui.id().with("qa_undo"), Sense::click());
         if undo_resp.hovered() {
             ui.painter().rect_filled(undo_rect, Rounding::same(2.0), STUDIO_BTN_HOVER);
         }
-        ui.painter().text(undo_rect.center(), egui::Align2::CENTER_CENTER, "↶", FontId::proportional(14.0), Color32::from_rgb(210, 210, 210));
+        let undo_img_rect = Rect::from_center_size(undo_rect.center(), Vec2::new(16.0, 16.0));
+        ui.painter().image(icons.qa_undo.id(), undo_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
         if undo_resp.clicked() { action = RibbonAction::Undo; }
         undo_resp.on_hover_text("Undo (Ctrl+Z)");
         qa_x += 24.0;
 
-        // Redo
+        // Redo (PNG REAL DE STUDIO)
         let redo_rect = Rect::from_center_size(Pos2::new(qa_x, title_rect.center().y), Vec2::new(20.0, 20.0));
         let redo_resp = ui.interact(redo_rect, ui.id().with("qa_redo"), Sense::click());
         if redo_resp.hovered() {
             ui.painter().rect_filled(redo_rect, Rounding::same(2.0), STUDIO_BTN_HOVER);
         }
-        ui.painter().text(redo_rect.center(), egui::Align2::CENTER_CENTER, "↷", FontId::proportional(14.0), Color32::from_rgb(150, 150, 150));
+        let redo_img_rect = Rect::from_center_size(redo_rect.center(), Vec2::new(16.0, 16.0));
+        ui.painter().image(icons.qa_redo.id(), redo_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
         if redo_resp.clicked() { action = RibbonAction::Redo; }
         redo_resp.on_hover_text("Redo (Ctrl+Y)");
 
@@ -155,35 +159,36 @@ impl StudioRibbonState {
         ui.painter().text(
             title_rect.center(),
             egui::Align2::CENTER_CENTER,
-            "Place1* - Roblox Studio [Xenity Engine 60 FPS]",
+            "Place1* - Roblox Studio [Official Icons Embedded]",
             FontId::proportional(11.5),
             Color32::from_rgb(180, 180, 180),
         );
 
-        // Lado derecho de la barra de título: Botón Collaborate + Avatar de Usuario
+        // Lado derecho: Botón Collaborate con icono real + Avatar
         let right_x = title_rect.max.x - 16.0;
 
-        // Avatar de usuario circular
+        // Avatar de usuario
         let avatar_center = Pos2::new(right_x - 10.0, title_rect.center().y);
         ui.painter().circle_filled(avatar_center, 9.0, Color32::from_rgb(50, 120, 220));
         ui.painter().circle_stroke(avatar_center, 9.0, Stroke::new(1.0, Color32::from_rgb(80, 150, 240)));
         ui.painter().text(avatar_center, egui::Align2::CENTER_CENTER, "👤", FontId::proportional(10.0), Color32::WHITE);
 
-        // Botón Collaborate azul de Roblox Studio
+        // Botón Collaborate azul con icono PNG real
         let collab_rect = Rect::from_min_max(Pos2::new(right_x - 130.0, title_rect.center().y - 11.0), Pos2::new(right_x - 30.0, title_rect.center().y + 11.0));
         let collab_resp = ui.interact(collab_rect, ui.id().with("btn_collaborate"), Sense::click());
         let collab_bg = if collab_resp.hovered() { Color32::from_rgb(28, 142, 230) } else { STUDIO_SELECTION };
         ui.painter().rect_filled(collab_rect, Rounding::same(4.0), collab_bg);
-        ui.painter().text(collab_rect.center(), egui::Align2::CENTER_CENTER, "👥 Collaborate", FontId::proportional(11.0), Color32::WHITE);
+        let collab_icon_rect = Rect::from_center_size(Pos2::new(collab_rect.min.x + 14.0, collab_rect.center().y), Vec2::new(14.0, 14.0));
+        ui.painter().image(icons.action_collab.id(), collab_icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
+        ui.painter().text(Pos2::new(collab_rect.min.x + 28.0, collab_rect.center().y), egui::Align2::LEFT_CENTER, "Collaborate", FontId::proportional(11.0), Color32::WHITE);
 
-        // Línea divisoria bajo el title bar
         ui.painter().line_segment(
             [Pos2::new(title_rect.min.x, title_rect.max.y), Pos2::new(title_rect.max.x, title_rect.max.y)],
             Stroke::new(1.0, STUDIO_DARK_BORDER),
         );
 
         // =====================================================================
-        // 2. PESTAÑAS DEL RIBBON (FILE, HOME, MODEL, AVATAR, TEST, VIEW, PLUGINS)
+        // 2. PESTAÑAS DEL RIBBON
         // =====================================================================
         let tabs_bar_h = 28.0;
         let (tabs_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), tabs_bar_h), Sense::hover());
@@ -191,7 +196,6 @@ impl StudioRibbonState {
 
         let mut tab_x = tabs_rect.min.x + 8.0;
 
-        // Botón FILE especial de Roblox Studio
         let file_rect = Rect::from_min_size(Pos2::new(tab_x, tabs_rect.min.y + 3.0), Vec2::new(48.0, 22.0));
         let file_resp = ui.interact(file_rect, ui.id().with("ribbon_tab_file"), Sense::click());
         let file_bg = if file_resp.hovered() { Color32::from_rgb(60, 60, 65) } else { Color32::from_rgb(48, 48, 52) };
@@ -225,7 +229,6 @@ impl StudioRibbonState {
             ui.painter().rect_filled(rect, Rounding { nw: 3.0, ne: 3.0, sw: 0.0, se: 0.0 }, bg);
 
             if is_active {
-                // Línea de acento azul superior
                 ui.painter().line_segment(
                     [Pos2::new(rect.min.x + 2.0, rect.min.y), Pos2::new(rect.max.x - 2.0, rect.min.y)],
                     Stroke::new(2.5, STUDIO_SELECTION),
@@ -248,7 +251,7 @@ impl StudioRibbonState {
         );
 
         // =====================================================================
-        // 3. CUERPO DEL RIBBON (ACCIONES Y HERRAMIENTAS CATEGORIZADAS)
+        // 3. CUERPO DEL RIBBON (HERRAMIENTAS CON ICONOS REALES)
         // =====================================================================
         let ribbon_body_h = 84.0;
         let (body_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), ribbon_body_h), Sense::hover());
@@ -258,20 +261,21 @@ impl StudioRibbonState {
 
         match self.current_tab {
             RibbonTab::Home => {
-                self.draw_home_ribbon(&mut child_ui, is_playing, is_paused, toolbox_visible, &mut action);
+                self.draw_home_ribbon(&mut child_ui, icons, is_playing, is_paused, toolbox_visible, &mut action);
             }
             RibbonTab::Model => {
-                self.draw_model_ribbon(&mut child_ui, &mut action);
+                self.draw_model_ribbon(&mut child_ui, icons, &mut action);
             }
             RibbonTab::Avatar => {
-                self.draw_avatar_ribbon(&mut child_ui);
+                self.draw_avatar_ribbon(&mut child_ui, icons);
             }
             RibbonTab::Test => {
-                self.draw_test_ribbon(&mut child_ui, is_playing, is_paused, &mut action);
+                self.draw_test_ribbon(&mut child_ui, icons, is_playing, is_paused, &mut action);
             }
             RibbonTab::View => {
                 self.draw_view_ribbon(
                     &mut child_ui,
+                    icons,
                     explorer_visible,
                     properties_visible,
                     toolbox_visible,
@@ -283,7 +287,7 @@ impl StudioRibbonState {
                 );
             }
             RibbonTab::Plugins => {
-                self.draw_plugins_ribbon(&mut child_ui);
+                self.draw_plugins_ribbon(&mut child_ui, icons);
             }
         }
 
@@ -295,10 +299,11 @@ impl StudioRibbonState {
         action
     }
 
-    // --- SUB-RIBBON: HOME ---
+    // --- HOME RIBBON CON ICONOS REALES ---
     fn draw_home_ribbon(
         &mut self,
         ui: &mut egui::Ui,
+        icons: &StudioIcons,
         is_playing: bool,
         is_paused: bool,
         toolbox_visible: bool,
@@ -306,33 +311,22 @@ impl StudioRibbonState {
     ) {
         ui.add_space(8.0);
 
-        // 1. Tools Group (Select, Move, Rotate, Scale)
+        // 1. Tools Group (Select, Move, Rotate, Scale) - ICONOS REALES
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                if draw_large_tool_button(ui, "Select", self.current_tool == StudioTool::Select, |p, r| {
-                    icons::ribbon_select(p, r.center(), 24.0, Color32::WHITE);
-                }) {
+                if draw_real_icon_button(ui, "Select", self.current_tool == StudioTool::Select, &icons.tool_select) {
                     self.current_tool = StudioTool::Select;
                     *action = RibbonAction::ChangeTool(StudioTool::Select);
                 }
-
-                if draw_large_tool_button(ui, "Move", self.current_tool == StudioTool::Move, |p, r| {
-                    icons::ribbon_move(p, r.center(), 22.0, Color32::WHITE);
-                }) {
+                if draw_real_icon_button(ui, "Move", self.current_tool == StudioTool::Move, &icons.tool_move) {
                     self.current_tool = StudioTool::Move;
                     *action = RibbonAction::ChangeTool(StudioTool::Move);
                 }
-
-                if draw_large_tool_button(ui, "Rotate", self.current_tool == StudioTool::Rotate, |p, r| {
-                    icons::ribbon_rotate(p, r.center(), 22.0, Color32::WHITE);
-                }) {
+                if draw_real_icon_button(ui, "Rotate", self.current_tool == StudioTool::Rotate, &icons.tool_rotate) {
                     self.current_tool = StudioTool::Rotate;
                     *action = RibbonAction::ChangeTool(StudioTool::Rotate);
                 }
-
-                if draw_large_tool_button(ui, "Scale", self.current_tool == StudioTool::Scale, |p, r| {
-                    icons::ribbon_scale(p, r.center(), 22.0, Color32::WHITE);
-                }) {
+                if draw_real_icon_button(ui, "Scale", self.current_tool == StudioTool::Scale, &icons.tool_scale) {
                     self.current_tool = StudioTool::Scale;
                     *action = RibbonAction::ChangeTool(StudioTool::Scale);
                 }
@@ -342,12 +336,10 @@ impl StudioRibbonState {
 
         draw_ribbon_divider(ui);
 
-        // 2. Terrain Group
+        // 2. Terrain Group - ICONO REAL
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                if draw_large_tool_button(ui, "Editor", false, |p, r| {
-                    icons::ribbon_terrain(p, r.center(), 24.0);
-                }) {
+                if draw_real_icon_button(ui, "Editor", false, &icons.win_terrain) {
                     *action = RibbonAction::InsertPart(PartShape::Block);
                 }
             });
@@ -356,18 +348,13 @@ impl StudioRibbonState {
 
         draw_ribbon_divider(ui);
 
-        // 3. Insert Group (Part dropdown, UI, Toolbox)
+        // 3. Insert Group (Part, Toolbox) - ICONOS REALES
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                if draw_large_tool_button(ui, "Part", false, |p, r| {
-                    icons::ribbon_part(p, r.center(), 24.0);
-                }) {
+                if draw_real_icon_button(ui, "Part", false, &icons.insert_part) {
                     *action = RibbonAction::InsertPart(PartShape::Block);
                 }
-
-                if draw_large_tool_button(ui, "Toolbox", toolbox_visible, |p, r| {
-                    icons::ribbon_toolbox(p, r.center(), 24.0);
-                }) {
+                if draw_real_icon_button(ui, "Toolbox", toolbox_visible, &icons.win_toolbox) {
                     *action = RibbonAction::ToggleToolbox;
                 }
             });
@@ -376,10 +363,9 @@ impl StudioRibbonState {
 
         draw_ribbon_divider(ui);
 
-        // 4. Edit Group (Material, Color, Group, Anchor, Collisions)
+        // 4. Edit Group (Color, Anchor, Collisions) - ICONOS REALES
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                // Color swatch
                 ui.vertical(|ui| {
                     ui.add_space(4.0);
                     let (btn_rect, btn_resp) = ui.allocate_exact_size(Vec2::new(36.0, 24.0), Sense::click());
@@ -391,14 +377,10 @@ impl StudioRibbonState {
                     ui.label(egui::RichText::new("Color").size(10.0).color(STUDIO_TEXT_MUTED));
                 });
 
-                // Anchor button
-                if draw_large_tool_button(ui, "Anchor", false, |p, r| {
-                    icons::ribbon_anchor(p, r.center(), 24.0, false);
-                }) {
+                if draw_real_icon_button(ui, "Anchor", false, &icons.action_anchor) {
                     *action = RibbonAction::ToggleAnchor;
                 }
 
-                // Collisions checkbox
                 ui.vertical(|ui| {
                     ui.add_space(8.0);
                     if ui.checkbox(&mut self.collisions_enabled, "Collisions").changed() {
@@ -412,25 +394,19 @@ impl StudioRibbonState {
 
         draw_ribbon_divider(ui);
 
-        // 5. Simulation / Test Group (Play, Pause, Stop)
+        // 5. Simulation / Test Group - ICONOS REALES
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                // Big Play Button
-                if draw_play_button(ui, is_playing) {
+                if draw_real_icon_button(ui, if is_playing { "Playing" } else { "Play" }, is_playing, &icons.sim_play) {
                     *action = RibbonAction::PlaySimulation;
                 }
 
                 if is_playing {
-                    let pause_col = if is_paused { STUDIO_SELECTION } else { Color32::from_rgb(220, 220, 220) };
-                    if draw_large_tool_button(ui, if is_paused { "Resume" } else { "Pause" }, is_paused, |p, r| {
-                        icons::pause(p, r, pause_col);
-                    }) {
+                    if draw_real_icon_button(ui, if is_paused { "Resume" } else { "Pause" }, is_paused, &icons.sim_pause) {
                         *action = RibbonAction::PauseSimulation;
                     }
 
-                    if draw_large_tool_button(ui, "Stop", false, |p, r| {
-                        icons::stop(p, r, STUDIO_RED);
-                    }) {
+                    if draw_real_icon_button(ui, "Stop", false, &icons.sim_stop) {
                         *action = RibbonAction::StopSimulation;
                     }
                 }
@@ -440,51 +416,39 @@ impl StudioRibbonState {
 
         draw_ribbon_divider(ui);
 
-        // 6. Settings Group
+        // 6. Settings Group - ICONO REAL
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                draw_large_tool_button(ui, "Game Settings", false, |p, r| {
-                    icons::ribbon_settings(p, r.center(), 22.0, STUDIO_TEXT);
-                });
+                draw_real_icon_button(ui, "Game Settings", false, &icons.action_gamesettings);
             });
             draw_group_footer(ui, "Settings");
         });
     }
 
-    // --- SUB-RIBBON: MODEL ---
-    fn draw_model_ribbon(&mut self, ui: &mut egui::Ui, action: &mut RibbonAction) {
+    // --- MODEL RIBBON CON ICONOS REALES ---
+    fn draw_model_ribbon(&mut self, ui: &mut egui::Ui, icons: &StudioIcons, action: &mut RibbonAction) {
         ui.add_space(8.0);
-
-        // Tools
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                if draw_large_tool_button(ui, "Select", self.current_tool == StudioTool::Select, |p, r| {
-                    icons::ribbon_select(p, r.center(), 22.0, Color32::WHITE);
-                }) {
+                if draw_real_icon_button(ui, "Select", self.current_tool == StudioTool::Select, &icons.tool_select) {
                     self.current_tool = StudioTool::Select;
                 }
-                if draw_large_tool_button(ui, "Move", self.current_tool == StudioTool::Move, |p, r| {
-                    icons::ribbon_move(p, r.center(), 22.0, Color32::WHITE);
-                }) {
+                if draw_real_icon_button(ui, "Move", self.current_tool == StudioTool::Move, &icons.tool_move) {
                     self.current_tool = StudioTool::Move;
                 }
-                if draw_large_tool_button(ui, "Rotate", self.current_tool == StudioTool::Rotate, |p, r| {
-                    icons::ribbon_rotate(p, r.center(), 22.0, Color32::WHITE);
-                }) {
+                if draw_real_icon_button(ui, "Rotate", self.current_tool == StudioTool::Rotate, &icons.tool_rotate) {
                     self.current_tool = StudioTool::Rotate;
                 }
-                if draw_large_tool_button(ui, "Scale", self.current_tool == StudioTool::Scale, |p, r| {
-                    icons::ribbon_scale(p, r.center(), 22.0, Color32::WHITE);
-                }) {
+                if draw_real_icon_button(ui, "Scale", self.current_tool == StudioTool::Scale, &icons.tool_scale) {
                     self.current_tool = StudioTool::Scale;
                 }
+                if draw_real_icon_button(ui, "Transform", false, &icons.tool_transform) {}
             });
             draw_group_footer(ui, "Tools");
         });
 
         draw_ribbon_divider(ui);
 
-        // Snap to Grid settings
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
@@ -504,63 +468,34 @@ impl StudioRibbonState {
 
         draw_ribbon_divider(ui);
 
-        // Solid Modeling (Union, Negate, Separate)
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                draw_large_tool_button(ui, "Union", false, |p, r| {
-                    p.rect_filled(Rect::from_center_size(r.center(), Vec2::new(16.0, 16.0)), 2.0, Color32::from_rgb(0, 162, 255));
-                });
-                draw_large_tool_button(ui, "Negate", false, |p, r| {
-                    p.rect_filled(Rect::from_center_size(r.center(), Vec2::new(16.0, 16.0)), 2.0, Color32::from_rgb(220, 60, 60));
-                });
-                draw_large_tool_button(ui, "Separate", false, |p, r| {
-                    p.rect_stroke(Rect::from_center_size(r.center(), Vec2::new(16.0, 16.0)), Rounding::same(2.0), Stroke::new(1.5, Color32::WHITE));
-                });
-            });
-            draw_group_footer(ui, "Solid Modeling");
-        });
-
-        draw_ribbon_divider(ui);
-
-        // Gameplay
-        ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                if draw_large_tool_button(ui, "Spawn", false, |p, r| {
-                    icons::roblox_part(p, r.center(), 22.0);
-                }) {
+                if draw_real_icon_button(ui, "Spawn", false, &icons.insert_spawn) {
                     *action = RibbonAction::InsertPart(PartShape::Block);
                 }
-                draw_large_tool_button(ui, "Effects", false, |p, r| {
-                    p.circle_filled(r.center(), 8.0, Color32::from_rgb(255, 200, 50));
-                });
+                draw_real_icon_button(ui, "PointLight", false, &icons.insert_light);
             });
             draw_group_footer(ui, "Gameplay");
         });
     }
 
-    // --- SUB-RIBBON: AVATAR ---
-    fn draw_avatar_ribbon(&mut self, ui: &mut egui::Ui) {
+    // --- AVATAR RIBBON CON ICONOS REALES ---
+    fn draw_avatar_ribbon(&mut self, ui: &mut egui::Ui, icons: &StudioIcons) {
         ui.add_space(8.0);
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                draw_large_tool_button(ui, "Rig Builder", false, |p, r| {
-                    icons::roblox_humanoid(p, r.center(), 22.0);
-                });
-                draw_large_tool_button(ui, "Animation Editor", false, |p, r| {
-                    p.rect_filled(Rect::from_center_size(r.center(), Vec2::new(18.0, 12.0)), 2.0, Color32::from_rgb(100, 180, 240));
-                });
-                draw_large_tool_button(ui, "Avatar Setup", false, |p, r| {
-                    p.circle_stroke(r.center(), 9.0, Stroke::new(1.5, STUDIO_TEXT));
-                });
+                draw_real_icon_button(ui, "Rig Builder", false, &icons.win_buildrig);
+                draw_real_icon_button(ui, "Animation Editor", false, &icons.win_animeditor);
             });
             draw_group_footer(ui, "Rig & Animation");
         });
     }
 
-    // --- SUB-RIBBON: TEST ---
+    // --- TEST RIBBON CON ICONOS REALES ---
     fn draw_test_ribbon(
         &mut self,
         ui: &mut egui::Ui,
+        icons: &StudioIcons,
         is_playing: bool,
         is_paused: bool,
         action: &mut RibbonAction,
@@ -568,30 +503,22 @@ impl StudioRibbonState {
         ui.add_space(8.0);
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                if draw_play_button(ui, is_playing) {
+                if draw_real_icon_button(ui, if is_playing { "Playing" } else { "Play" }, is_playing, &icons.sim_play) {
                     *action = RibbonAction::PlaySimulation;
                 }
-                if draw_large_tool_button(ui, "Play Here", false, |p, r| {
-                    p.circle_filled(r.center(), 9.0, Color32::from_rgb(30, 180, 100));
-                }) {
+                if draw_real_icon_button(ui, "Play Here", false, &icons.sim_playhere) {
                     *action = RibbonAction::PlaySimulation;
                 }
-                if draw_large_tool_button(ui, "Run", false, |p, r| {
-                    p.rect_filled(Rect::from_center_size(r.center(), Vec2::new(16.0, 16.0)), 2.0, Color32::from_rgb(40, 160, 220));
-                }) {
+                if draw_real_icon_button(ui, "Run", false, &icons.sim_run) {
                     *action = RibbonAction::PlaySimulation;
                 }
 
                 if is_playing {
-                    if draw_large_tool_button(ui, if is_paused { "Resume" } else { "Pause" }, is_paused, |p, r| {
-                        icons::pause(p, r, Color32::WHITE);
-                    }) {
+                    if draw_real_icon_button(ui, if is_paused { "Resume" } else { "Pause" }, is_paused, &icons.sim_pause) {
                         *action = RibbonAction::PauseSimulation;
                     }
 
-                    if draw_large_tool_button(ui, "Stop", false, |p, r| {
-                        icons::stop(p, r, STUDIO_RED);
-                    }) {
+                    if draw_real_icon_button(ui, "Stop", false, &icons.sim_stop) {
                         *action = RibbonAction::StopSimulation;
                     }
                 }
@@ -603,21 +530,17 @@ impl StudioRibbonState {
 
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                draw_large_tool_button(ui, "Device", false, |p, r| {
-                    p.rect_stroke(Rect::from_center_size(r.center(), Vec2::new(14.0, 20.0)), Rounding::same(2.0), Stroke::new(1.4, STUDIO_TEXT));
-                });
-                draw_large_tool_button(ui, "Clients and Servers", false, |p, r| {
-                    p.text(r.center(), egui::Align2::CENTER_CENTER, "🌐", FontId::proportional(14.0), Color32::WHITE);
-                });
+                draw_real_icon_button(ui, "Team Create", false, &icons.win_teamcreate);
             });
-            draw_group_footer(ui, "Emulation & Network");
+            draw_group_footer(ui, "Collaboration");
         });
     }
 
-    // --- SUB-RIBBON: VIEW (CONMUTADORES DE VENTANAS ACTIVAS DE ROBLOX STUDIO) ---
+    // --- VIEW RIBBON CON ICONOS REALES ---
     fn draw_view_ribbon(
         &mut self,
         ui: &mut egui::Ui,
+        icons: &StudioIcons,
         explorer_vis: bool,
         properties_vis: bool,
         toolbox_vis: bool,
@@ -631,41 +554,22 @@ impl StudioRibbonState {
 
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                // Explorer toggle
-                if draw_large_tool_button(ui, "Explorer", explorer_vis, |p, r| {
-                    icons::roblox_workspace(p, r.center(), 22.0);
-                }) {
+                if draw_real_icon_button(ui, "Explorer", explorer_vis, &icons.win_explorer) {
                     *action = RibbonAction::ToggleExplorer;
                 }
-
-                // Properties toggle
-                if draw_large_tool_button(ui, "Properties", properties_vis, |p, r| {
-                    p.rect_stroke(Rect::from_center_size(r.center(), Vec2::new(16.0, 16.0)), Rounding::same(2.0), Stroke::new(1.4, Color32::WHITE));
-                    p.line_segment([Pos2::new(r.center().x - 4.0, r.center().y), Pos2::new(r.center().x + 4.0, r.center().y)], Stroke::new(1.2, Color32::WHITE));
-                }) {
+                if draw_real_icon_button(ui, "Properties", properties_vis, &icons.win_properties) {
                     *action = RibbonAction::ToggleProperties;
                 }
-
-                // Toolbox toggle
-                if draw_large_tool_button(ui, "Toolbox", toolbox_vis, |p, r| {
-                    icons::ribbon_toolbox(p, r.center(), 22.0);
-                }) {
+                if draw_real_icon_button(ui, "Toolbox", toolbox_vis, &icons.win_toolbox) {
                     *action = RibbonAction::ToggleToolbox;
                 }
-
-                // Output toggle
-                if draw_large_tool_button(ui, "Output", output_vis, |p, r| {
-                    p.text(r.center(), egui::Align2::CENTER_CENTER, "🖵", FontId::proportional(16.0), Color32::WHITE);
-                }) {
+                if draw_real_icon_button(ui, "Output", output_vis, &icons.win_output) {
                     *action = RibbonAction::ToggleOutput;
                 }
-
-                // Command Bar toggle
-                if draw_large_tool_button(ui, "Command Bar", command_bar_vis, |p, r| {
-                    p.text(r.center(), egui::Align2::CENTER_CENTER, ">_", FontId::proportional(13.0), Color32::WHITE);
-                }) {
+                if draw_real_icon_button(ui, "Command Bar", command_bar_vis, &icons.win_cmdbar) {
                     *action = RibbonAction::ToggleCommandBar;
                 }
+                if draw_real_icon_button(ui, "Asset Mgr", false, &icons.win_assetmgr) {}
             });
             draw_group_footer(ui, "Studio Windows");
         });
@@ -674,14 +578,9 @@ impl StudioRibbonState {
 
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                // View Selector Cube toggle
-                if draw_large_tool_button(ui, "View Selector", view_selector_vis, |p, r| {
-                    p.rect_filled(Rect::from_center_size(r.center(), Vec2::new(14.0, 14.0)), 1.0, Color32::from_rgb(0, 162, 255));
-                }) {
+                if draw_real_icon_button(ui, "View Selector", view_selector_vis, &icons.view_front) {
                     *action = RibbonAction::ToggleViewSelector;
                 }
-
-                // Grid toggle
                 if draw_large_tool_button(ui, "Grid", grid_vis, |p, r| {
                     icons::grid_icon(p, r, Color32::WHITE);
                 }) {
@@ -692,17 +591,12 @@ impl StudioRibbonState {
         });
     }
 
-    // --- SUB-RIBBON: PLUGINS ---
-    fn draw_plugins_ribbon(&mut self, ui: &mut egui::Ui) {
+    // --- PLUGINS RIBBON CON ICONOS REALES ---
+    fn draw_plugins_ribbon(&mut self, ui: &mut egui::Ui, icons: &StudioIcons) {
         ui.add_space(8.0);
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                draw_large_tool_button(ui, "Manage Plugins", false, |p, r| {
-                    p.text(r.center(), egui::Align2::CENTER_CENTER, "🔌", FontId::proportional(16.0), Color32::WHITE);
-                });
-                draw_large_tool_button(ui, "Plugins Folder", false, |p, r| {
-                    p.text(r.center(), egui::Align2::CENTER_CENTER, "📁", FontId::proportional(16.0), Color32::WHITE);
-                });
+                draw_real_icon_button(ui, "Manage Plugins", false, &icons.win_plugins);
             });
             draw_group_footer(ui, "Plugin Tools");
         });
@@ -710,19 +604,16 @@ impl StudioRibbonState {
 }
 
 // =========================================================================
-// WIDGETS AUXILIARES DEL RIBBON DE ROBLOX STUDIO
+// RENDERIZADO DE BOTONES CON ICONOS REALES DE ROBLOX STUDIO
 // =========================================================================
 
-fn draw_large_tool_button<F>(ui: &mut egui::Ui, label: &str, is_active: bool, draw_icon: F) -> bool
-where
-    F: FnOnce(&egui::Painter, Rect),
-{
-    let btn_w = 46.0;
+fn draw_real_icon_button(ui: &mut egui::Ui, label: &str, is_active: bool, tex: &egui::TextureHandle) -> bool {
+    let btn_w = 48.0;
     let btn_h = 56.0;
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(btn_w, btn_h), Sense::click());
 
     let bg = if is_active {
-        Color32::from_rgb(40, 65, 95) // Active blue tint
+        Color32::from_rgb(38, 65, 95) // Active blue tint
     } else if resp.hovered() {
         STUDIO_BTN_HOVER
     } else {
@@ -735,11 +626,16 @@ where
         ui.painter().rect_stroke(rect, Rounding::same(3.0), Stroke::new(1.0, STUDIO_SELECTION));
     }
 
-    // Icon area
-    let icon_rect = Rect::from_min_size(rect.min, Vec2::new(btn_w, 34.0));
-    draw_icon(ui.painter(), icon_rect);
+    // Renderizar imagen PNG real centrada (22x22 px)
+    let icon_rect = Rect::from_center_size(Pos2::new(rect.center().x, rect.min.y + 18.0), Vec2::new(22.0, 22.0));
+    ui.painter().image(
+        tex.id(),
+        icon_rect,
+        Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+        Color32::WHITE,
+    );
 
-    // Label area
+    // Label de la herramienta
     let label_rect = Rect::from_min_size(Pos2::new(rect.min.x, rect.min.y + 36.0), Vec2::new(btn_w, 18.0));
     ui.painter().text(
         label_rect.center(),
@@ -752,34 +648,37 @@ where
     resp.clicked()
 }
 
-fn draw_play_button(ui: &mut egui::Ui, is_playing: bool) -> bool {
+fn draw_large_tool_button<F>(ui: &mut egui::Ui, label: &str, is_active: bool, draw_icon: F) -> bool
+where
+    F: FnOnce(&egui::Painter, Rect),
+{
     let btn_w = 46.0;
     let btn_h = 56.0;
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(btn_w, btn_h), Sense::click());
 
-    let bg = if resp.hovered() {
-        Color32::from_rgb(25, 185, 95)
+    let bg = if is_active {
+        Color32::from_rgb(40, 65, 95)
+    } else if resp.hovered() {
+        STUDIO_BTN_HOVER
     } else {
-        STUDIO_GREEN
+        Color32::TRANSPARENT
     };
 
     ui.painter().rect_filled(rect, Rounding::same(3.0), bg);
+    if is_active {
+        ui.painter().rect_stroke(rect, Rounding::same(3.0), Stroke::new(1.0, STUDIO_SELECTION));
+    }
 
-    let icon_center = Pos2::new(rect.center().x, rect.min.y + 18.0);
-    // Triángulo play blanco
-    let s = 8.0;
-    let p1 = Pos2::new(icon_center.x - s * 0.5, icon_center.y - s);
-    let p2 = Pos2::new(icon_center.x + s * 0.7, icon_center.y);
-    let p3 = Pos2::new(icon_center.x - s * 0.5, icon_center.y + s);
-    ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], Color32::WHITE, Stroke::NONE));
+    let icon_rect = Rect::from_min_size(rect.min, Vec2::new(btn_w, 34.0));
+    draw_icon(ui.painter(), icon_rect);
 
-    let label_y = rect.min.y + 42.0;
+    let label_rect = Rect::from_min_size(Pos2::new(rect.min.x, rect.min.y + 36.0), Vec2::new(btn_w, 18.0));
     ui.painter().text(
-        Pos2::new(rect.center().x, label_y),
+        label_rect.center(),
         egui::Align2::CENTER_CENTER,
-        if is_playing { "Playing" } else { "Play" },
-        FontId::proportional(11.0),
-        Color32::WHITE,
+        label,
+        FontId::proportional(10.0),
+        if is_active { Color32::WHITE } else { STUDIO_TEXT },
     );
 
     resp.clicked()
@@ -804,8 +703,7 @@ fn draw_ribbon_divider(ui: &mut egui::Ui) {
 
 fn draw_roblox_studio_logo(painter: &egui::Painter, center: Pos2, size: f32) {
     let s = size * 0.5;
-    // Cuadrado inclinado azul icónico de Roblox Studio
-    let angle: f32 = -0.26; // ~15 grados
+    let angle: f32 = -0.26;
     let cos_a = angle.cos();
     let sin_a = angle.sin();
 
@@ -824,7 +722,6 @@ fn draw_roblox_studio_logo(painter: &egui::Painter, center: Pos2, size: f32) {
         Stroke::NONE,
     ));
 
-    // Agujero cuadrado central
     let h = s * 0.45;
     let h1 = rotate_pt(-h, -h);
     let h2 = rotate_pt(h, -h);

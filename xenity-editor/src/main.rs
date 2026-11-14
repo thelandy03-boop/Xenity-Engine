@@ -2,6 +2,7 @@
 
 mod icons;
 mod studio_style;
+mod studio_textures;
 mod studio_ribbon;
 mod studio_viewport;
 mod studio_toolbox;
@@ -12,6 +13,7 @@ pub mod roblox_icon_bytes;
 
 use eframe::egui::{self, Color32, CursorIcon, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
 use studio_style::*;
+use studio_textures::StudioIcons;
 use studio_ribbon::*;
 use studio_viewport::*;
 use studio_toolbox::*;
@@ -20,6 +22,9 @@ use hierarchy_window::{ExplorerItem, RobloxClass, SceneHierarchyState};
 use properties_window::PropertiesWindowState;
 
 struct RobloxStudioApp {
+    // Studio Icons & Assets
+    icons: Option<StudioIcons>,
+
     // Studio Windows & Components
     ribbon: StudioRibbonState,
     viewport: StudioViewportState,
@@ -50,6 +55,7 @@ struct RobloxStudioApp {
 impl Default for RobloxStudioApp {
     fn default() -> Self {
         Self {
+            icons: None,
             ribbon: StudioRibbonState::default(),
             viewport: StudioViewportState::default(),
             toolbox: StudioToolboxState::default(),
@@ -80,6 +86,11 @@ impl eframe::App for RobloxStudioApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         apply_roblox_studio_theme(ctx);
 
+        if self.icons.is_none() {
+            self.icons = Some(StudioIcons::new(ctx));
+        }
+        let icons = self.icons.as_ref().unwrap();
+
         // =====================================================================
         // 1. RIBBON BAR SUPERIOR COMPLETO DE ROBLOX STUDIO
         // =====================================================================
@@ -88,6 +99,7 @@ impl eframe::App for RobloxStudioApp {
             .show(ctx, |ui| {
                 let action = self.ribbon.show(
                     ui,
+                    icons,
                     self.is_playing,
                     self.is_paused,
                     self.show_toolbox,
@@ -180,7 +192,7 @@ impl eframe::App for RobloxStudioApp {
                 .max_height(600.0)
                 .frame(egui::Frame::none().fill(STUDIO_BG).inner_margin(egui::Margin::same(0.0)))
                 .show(ctx, |ui| {
-                    let cmd_result = self.output.show(ui, self.show_command_bar);
+                    let cmd_result = self.output.show(ui, icons, self.show_command_bar);
                     match cmd_result {
                         CommandBarResult::SpawnPart => {
                             self.hierarchy.insert_child_into_selected_or_workspace(RobloxClass::Part, "Part".into());
@@ -204,7 +216,7 @@ impl eframe::App for RobloxStudioApp {
                 .max_width(450.0)
                 .frame(egui::Frame::none().fill(STUDIO_BG).inner_margin(egui::Margin::same(0.0)))
                 .show(ctx, |ui| {
-                    if let Some(model_name) = self.toolbox.show(ui) {
+                    if let Some(model_name) = self.toolbox.show(ui, icons) {
                         let id = self.hierarchy.insert_child_into_selected_or_workspace(RobloxClass::Model, model_name.clone());
                         self.output.add_log(LogType::Info, "Toolbox", format!("Inserted '{}' into Workspace (id: {}).", model_name, id));
                     }
@@ -233,7 +245,7 @@ impl eframe::App for RobloxStudioApp {
                         // Explorer (Mitad Superior)
                         let explorer_rect = Rect::from_min_max(full_rect.min, Pos2::new(full_rect.max.x, split_y - 2.0));
                         let mut explorer_ui = ui.child_ui(explorer_rect, egui::Layout::top_down(egui::Align::Min), None);
-                        if let Some(clicked_name) = self.hierarchy.show(&mut explorer_ui) {
+                        if let Some(clicked_name) = self.hierarchy.show(&mut explorer_ui, icons) {
                             self.output.add_log(LogType::Info, "Explorer", format!("Selected: {}", clicked_name));
                         }
 
@@ -256,16 +268,16 @@ impl eframe::App for RobloxStudioApp {
                         let properties_rect = Rect::from_min_max(Pos2::new(full_rect.min.x, split_y + 2.0), full_rect.max);
                         let mut prop_ui = ui.child_ui(properties_rect, egui::Layout::top_down(egui::Align::Min), None);
                         let selected_item = self.hierarchy.get_selected_item_mut();
-                        self.properties.show(&mut prop_ui, selected_item);
+                        self.properties.show(&mut prop_ui, selected_item, icons);
                     } else if self.show_explorer {
                         // Solo Explorer ocupa todo el panel
-                        if let Some(clicked_name) = self.hierarchy.show(ui) {
+                        if let Some(clicked_name) = self.hierarchy.show(ui, icons) {
                             self.output.add_log(LogType::Info, "Explorer", format!("Selected: {}", clicked_name));
                         }
                     } else if self.show_properties {
                         // Solo Properties ocupa todo el panel
                         let selected_item = self.hierarchy.get_selected_item_mut();
-                        self.properties.show(ui, selected_item);
+                        self.properties.show(ui, selected_item, icons);
                     }
                 });
         }
@@ -278,6 +290,7 @@ impl eframe::App for RobloxStudioApp {
             .show(ctx, |ui| {
                 self.viewport.show(
                     ui,
+                    icons,
                     self.is_playing,
                     self.show_grid,
                     self.show_view_selector,
