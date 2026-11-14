@@ -229,6 +229,7 @@ pub struct ExplorerItem {
 
 pub struct RobloxIconTextures {
     pub class_images: egui::TextureHandle,
+    pub icon_add: egui::TextureHandle,
 }
 
 impl RobloxIconTextures {
@@ -241,11 +242,25 @@ impl RobloxIconTextures {
         .expect("Valid Roblox Studio ClassImages.PNG")
         .to_rgba8();
         let (w, h) = img.dimensions();
+
+        let add_img = image::load_from_memory_with_format(
+            include_bytes!("../assets/icons/explorer_add.png"),
+            image::ImageFormat::Png,
+        )
+        .expect("Valid Roblox Studio explorer_add.png")
+        .to_rgba8();
+        let (add_w, add_h) = add_img.dimensions();
+
         Self {
             class_images: ctx.load_texture(
                 "rbx_class_images",
                 egui::ColorImage::from_rgba_unmultiplied([w as usize, h as usize], &img.into_raw()),
                 opt,
+            ),
+            icon_add: ctx.load_texture(
+                "rbx_explorer_add",
+                egui::ColorImage::from_rgba_unmultiplied([add_w as usize, add_h as usize], &add_img.into_raw()),
+                egui::TextureOptions::LINEAR,
             ),
         }
     }
@@ -828,11 +843,15 @@ impl SceneHierarchyState {
 
         let (row_rect, row_resp) = ui.allocate_exact_size(Vec2::new(avail_w, row_h), Sense::click());
 
-        // Highlight de selección oficial Roblox Studio (ancho completo, azul vibrante #007ACC)
+        // Highlight de selección oficial Roblox Studio (azul profundo #0027B8 con esquinas redondeadas)
+        let row_box = Rect::from_min_max(
+            Pos2::new(row_rect.min.x + 2.0, row_rect.min.y + 1.0),
+            Pos2::new(row_rect.max.x - 2.0, row_rect.max.y - 1.0),
+        );
         if is_selected {
-            ui.painter().rect_filled(row_rect, 0.0, STUDIO_SELECTION);
+            ui.painter().rect_filled(row_box, Rounding::same(3.5), Color32::from_rgb(0, 39, 184));
         } else if row_resp.hovered() {
-            ui.painter().rect_filled(row_rect, 0.0, STUDIO_HOVER);
+            ui.painter().rect_filled(row_box, Rounding::same(3.5), STUDIO_HOVER);
         }
 
         let indent_x = row_rect.min.x + (depth as f32 * 14.0) + 4.0;
@@ -878,40 +897,36 @@ impl SceneHierarchyState {
             STUDIO_TEXT
         };
 
-        ui.painter().text(
-            Pos2::new(indent_x + 30.0, row_rect.center().y),
-            egui::Align2::LEFT_CENTER,
-            &node.name,
-            FontId::proportional(12.0),
-            text_color,
-        );
+        let font_id = FontId::proportional(12.0);
+        let text_pos = Pos2::new(indent_x + 30.0, row_rect.center().y);
+        let text_galley = ui.painter().layout_no_wrap(node.name.clone(), font_id, text_color);
+        let text_w = text_galley.rect.width();
+        let text_h = text_galley.rect.height();
+        ui.painter().galley(Pos2::new(text_pos.x, text_pos.y - text_h * 0.5), text_galley, text_color);
 
-        // Botón circular [+] (Insert Object) oficial de Roblox Studio
+        // Botón circular [+] (Insert Object) oficial de Roblox Studio (Add.png)
+        // Se ubica inmediatamente a la derecha del nombre del elemento, idéntico a la referencia
         if row_resp.hovered() || is_selected {
-            let plus_pos = Pos2::new(row_rect.max.x - 14.0, row_rect.center().y);
-            let plus_rect = Rect::from_center_size(plus_pos, Vec2::new(16.0, 16.0));
+            let plus_x = (text_pos.x + text_w + 10.0).min(row_rect.max.x - 12.0);
+            let plus_pos = Pos2::new(plus_x, row_rect.center().y);
+            let plus_rect = Rect::from_center_size(plus_pos, Vec2::new(14.0, 14.0));
             let plus_resp = ui.interact(plus_rect, ui.id().with(node.id).with("plus_insert"), Sense::click());
 
-            let (circle_bg, cross_col) = if is_selected {
-                if plus_resp.hovered() {
-                    (Color32::from_rgb(0, 95, 175), Color32::WHITE)
+            if let Some(texs) = textures {
+                let tint = if plus_resp.hovered() {
+                    Color32::WHITE
+                } else if is_selected {
+                    Color32::from_rgb(235, 235, 240)
                 } else {
-                    (Color32::from_rgb(0, 105, 190), Color32::from_rgb(240, 240, 245))
-                }
-            } else {
-                if plus_resp.hovered() {
-                    (Color32::from_rgb(60, 60, 68), Color32::WHITE)
-                } else {
-                    (Color32::from_rgb(38, 38, 44), Color32::from_rgb(200, 200, 205))
-                }
-            };
-
-            ui.painter().circle_filled(plus_pos, 7.5, circle_bg);
-            ui.painter().circle_stroke(plus_pos, 7.5, Stroke::new(1.0, Color32::from_rgb(70, 70, 80)));
-
-            let stroke = Stroke::new(1.4, cross_col);
-            ui.painter().line_segment([Pos2::new(plus_pos.x - 3.2, plus_pos.y), Pos2::new(plus_pos.x + 3.2, plus_pos.y)], stroke);
-            ui.painter().line_segment([Pos2::new(plus_pos.x, plus_pos.y - 3.2), Pos2::new(plus_pos.x, plus_pos.y + 3.2)], stroke);
+                    Color32::from_rgb(200, 200, 205)
+                };
+                ui.painter().image(
+                    texs.icon_add.id(),
+                    plus_rect,
+                    Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                    tint,
+                );
+            }
 
             plus_resp.on_hover_text("Insert Object");
         }
