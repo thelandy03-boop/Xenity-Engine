@@ -46,6 +46,7 @@ struct RobloxStudioApp {
     right_split_ratio: f32, // Explorer vs Properties (mitad y mitad: 0.5)
     bottom_height: f32,     // Altura de Output
     left_width: f32,        // Ancho de Toolbox
+    right_width: f32,       // Ancho del panel derecho (Explorer / Properties)
 
     // Simulation Runtime
     is_playing: bool,
@@ -75,6 +76,7 @@ impl Default for RobloxStudioApp {
             right_split_ratio: 0.48,
             bottom_height: 200.0,
             left_width: 250.0,
+            right_width: 330.0,
 
             is_playing: false,
             is_paused: false,
@@ -234,15 +236,37 @@ impl eframe::App for RobloxStudioApp {
         // 4. PANEL DERECHO: DOCK DE EXPLORER Y PROPERTIES
         // =====================================================================
         if self.show_explorer || self.show_properties {
+            let right_dock_w = self.right_width.clamp(200.0, (ctx.screen_rect().width() - 250.0).max(200.0));
             egui::SidePanel::right("studio_right_dock")
-                .resizable(true)
-                .default_width(330.0)
-                .min_width(200.0)
-                .max_width(900.0)
+                .resizable(false)
+                .exact_width(right_dock_w)
                 .frame(egui::Frame::none().fill(STUDIO_BG).inner_margin(egui::Margin::same(0.0)))
                 .show(ctx, |ui| {
                     let full_rect = ui.available_rect_before_wrap();
                     let total_h = full_rect.height();
+
+                    // Zona de agarre interactiva en el borde izquierdo para redimensionar el panel horizontalmente
+                    let border_grab = Rect::from_min_max(
+                        Pos2::new(full_rect.min.x - 5.0, full_rect.min.y),
+                        Pos2::new(full_rect.min.x + 5.0, full_rect.max.y),
+                    );
+                    let border_resp = ui.interact(border_grab, ui.id().with("dock_width_grab"), Sense::click_and_drag());
+                    if border_resp.hovered() || border_resp.dragged() {
+                        ui.ctx().set_cursor_icon(CursorIcon::ResizeHorizontal);
+                    }
+                    if border_resp.dragged() {
+                        let dx = border_resp.drag_delta().x;
+                        self.right_width = (self.right_width - dx).clamp(200.0, 950.0);
+                    }
+                    let border_col = if border_resp.dragged() || border_resp.hovered() {
+                        Color32::from_rgb(0, 162, 255)
+                    } else {
+                        STUDIO_BORDER
+                    };
+                    ui.painter().line_segment(
+                        [Pos2::new(full_rect.min.x, full_rect.min.y), Pos2::new(full_rect.min.x, full_rect.max.y)],
+                        Stroke::new(1.0, border_col),
+                    );
 
                     if self.show_explorer && self.show_properties {
                         // Ambas ventanas visibles: divididas por splitter interactivo que adapta ambas ventanas
@@ -308,6 +332,8 @@ impl eframe::App for RobloxStudioApp {
                             self.show_properties = false;
                         }
                     }
+
+                    ui.allocate_rect(full_rect, Sense::hover());
                 });
         }
 
