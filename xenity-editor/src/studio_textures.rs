@@ -85,6 +85,15 @@ pub struct StudioIcons {
     pub rib_layered: TextureHandle,
     pub rib_remap_rig: TextureHandle,
 
+    // Official Ribbon UI Tab Icons
+    pub rib_ui_frame: TextureHandle,
+    pub rib_ui_label: TextureHandle,
+    pub rib_ui_entry: TextureHandle,
+    pub rib_ui_appearance: TextureHandle,
+    pub rib_ui_layout: TextureHandle,
+    pub rib_ui_constraint: TextureHandle,
+    pub rib_ui_style_editor: TextureHandle,
+
     // Top Right Official Studio Utility Icons
     pub top_avatar: TextureHandle,
     pub top_bell: TextureHandle,
@@ -190,6 +199,14 @@ impl StudioIcons {
             rib_ugc_validation: load_png(ctx, "rbx_rib_ugc_validation", include_bytes!("../assets/icons/ribbon/RibbonUGCValidation.png")),
             rib_layered: load_png(ctx, "rbx_rib_layered", include_bytes!("../assets/icons/ribbon/RibbonLayered.png")),
             rib_remap_rig: load_png(ctx, "rbx_rib_remap_rig", include_bytes!("../assets/icons/ribbon/RibbonRemapRig.png")),
+
+            rib_ui_frame: load_png(ctx, "rbx_rib_ui_frame", include_bytes!("../assets/icons/ribbon/RibbonFrame.png")),
+            rib_ui_label: load_png(ctx, "rbx_rib_ui_label", include_bytes!("../assets/icons/ribbon/RibbonImageLabel.png")),
+            rib_ui_entry: load_png(ctx, "rbx_rib_ui_entry", include_bytes!("../assets/icons/ribbon/RibbonImageButton.png")),
+            rib_ui_appearance: load_png(ctx, "rbx_rib_ui_appearance", include_bytes!("../assets/icons/ribbon/RibbonCanvasGroup.png")),
+            rib_ui_layout: load_png(ctx, "rbx_rib_ui_layout", include_bytes!("../assets/icons/ribbon/RibbonUITableLayout.png")),
+            rib_ui_constraint: load_png(ctx, "rbx_rib_ui_constraint", include_bytes!("../assets/icons/ribbon/RibbonUISizeConstraint.png")),
+            rib_ui_style_editor: load_png(ctx, "rbx_rib_ui_style_editor", include_bytes!("../assets/icons/ribbon/RibbonStyleEditor.png")),
 
             top_avatar: load_png(ctx, "rbx_top_avatar", include_bytes!("../assets/icons/top_avatar.png")),
             top_bell: load_png(ctx, "rbx_top_bell", include_bytes!("../assets/icons/top_bell.png")),

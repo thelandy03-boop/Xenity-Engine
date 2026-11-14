@@ -480,18 +480,7 @@ impl StudioRibbonState {
                 self.draw_avatar_ribbon(&mut child_ui, icons, &mut action);
             }
             RibbonTab::UI => {
-                self.draw_view_ribbon(
-                    &mut child_ui,
-                    icons,
-                    explorer_visible,
-                    properties_visible,
-                    toolbox_visible,
-                    output_visible,
-                    command_bar_visible,
-                    view_selector_visible,
-                    grid_visible,
-                    &mut action,
-                );
+                self.draw_ui_ribbon(&mut child_ui, icons, &mut action);
             }
             RibbonTab::Script => {
                 self.draw_view_ribbon(
@@ -763,6 +752,41 @@ impl StudioRibbonState {
         }
         if draw_modern_ribbon_button(ui, "Editor de...", false, &icons.rib_remap_rig, false) {
             // Editor de animaciones
+        }
+    }
+
+    // --- UI RIBBON CON ICONOS OFICIALES REALES (Idéntico a Imagen 2 de Referencia) ---
+    fn draw_ui_ribbon(&mut self, ui: &mut egui::Ui, icons: &StudioIcons, _action: &mut RibbonAction) {
+        ui.add_space(4.0);
+
+        // 1. Elementos y Contenedores UI (Todos con flecha desplegable ▾)
+        if draw_modern_ribbon_button(ui, "GUI", false, &icons.rib_gui, true) {
+            // Dropdown ScreenGui / SurfaceGui / BillboardGui
+        }
+        if draw_modern_ribbon_button(ui, "Cuadro", false, &icons.rib_ui_frame, true) {
+            // Dropdown Frame / ScrollingFrame / CanvasGroup
+        }
+        if draw_modern_ribbon_button(ui, "Etiqueta", false, &icons.rib_ui_label, true) {
+            // Dropdown TextLabel / ImageLabel
+        }
+        if draw_modern_ribbon_button(ui, "Entrada", false, &icons.rib_ui_entry, true) {
+            // Dropdown TextBox / TextButton / ImageButton
+        }
+        if draw_modern_ribbon_button(ui, "Apariencia", false, &icons.rib_ui_appearance, true) {
+            // Dropdown UICorner / UIGradient / UIStroke
+        }
+        if draw_modern_ribbon_button(ui, "Diseño", false, &icons.rib_ui_layout, true) {
+            // Dropdown UIListLayout / UIGridLayout / UITableLayout
+        }
+        if draw_modern_ribbon_button(ui, "Restricción", false, &icons.rib_ui_constraint, true) {
+            // Dropdown UIAspectRatioConstraint / UISizeConstraint
+        }
+
+        draw_modern_divider(ui);
+
+        // 2. Editor de Estilos
+        if draw_modern_ribbon_button(ui, "Editor de...", false, &icons.rib_ui_style_editor, false) {
+            // Style Editor
         }
     }
 
