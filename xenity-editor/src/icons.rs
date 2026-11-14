@@ -538,3 +538,37 @@ pub fn ribbon_play(painter: &Painter, center: Pos2, size: f32) {
     let p3 = Pos2::new(center.x - s * 0.6, center.y + s);
     painter.add(egui::Shape::convex_polygon(vec![p1, p2, p3], Color32::WHITE, Stroke::NONE));
 }
+
+/// Ícono de pestaña Explorer (dock tab)
+pub fn tab_explorer_icon(painter: &Painter, center: Pos2, color: Color32) {
+    let r = Rect::from_center_size(center, Vec2::new(13.0, 13.0));
+    painter.rect_stroke(r, Rounding::same(1.5), Stroke::new(1.1, color));
+    // Header bar
+    painter.line_segment([Pos2::new(r.min.x, r.min.y + 3.5), Pos2::new(r.max.x, r.min.y + 3.5)], Stroke::new(0.9, color));
+    // Line 1
+    painter.circle_filled(Pos2::new(r.min.x + 3.0, r.min.y + 6.5), 0.9, color);
+    painter.line_segment([Pos2::new(r.min.x + 5.5, r.min.y + 6.5), Pos2::new(r.max.x - 2.5, r.min.y + 6.5)], Stroke::new(0.9, color));
+    // Line 2
+    painter.circle_filled(Pos2::new(r.min.x + 3.0, r.min.y + 9.5), 0.9, color);
+    painter.line_segment([Pos2::new(r.min.x + 5.5, r.min.y + 9.5), Pos2::new(r.max.x - 2.5, r.min.y + 9.5)], Stroke::new(0.9, color));
+}
+
+/// Ícono de pestaña Properties (dock tab)
+pub fn tab_properties_icon(painter: &Painter, center: Pos2, color: Color32) {
+    let r = Rect::from_center_size(center, Vec2::new(13.0, 13.0));
+    painter.rect_stroke(r, Rounding::same(1.5), Stroke::new(1.1, color));
+    // 3 bullet lines
+    for i in 0..3 {
+        let y = r.min.y + 3.5 + (i as f32 * 3.2);
+        painter.circle_filled(Pos2::new(r.min.x + 3.0, y), 0.8, color);
+        painter.line_segment([Pos2::new(r.min.x + 5.5, y), Pos2::new(r.max.x - 2.5, y)], Stroke::new(0.9, color));
+    }
+}
+
+/// Botón de tres puntos verticales (Options ⋮)
+pub fn three_dots_vertical(painter: &Painter, center: Pos2, color: Color32) {
+    let r = 1.3;
+    painter.circle_filled(Pos2::new(center.x, center.y - 4.0), r, color);
+    painter.circle_filled(center, r, color);
+    painter.circle_filled(Pos2::new(center.x, center.y + 4.0), r, color);
+}

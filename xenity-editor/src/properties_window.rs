@@ -29,8 +29,8 @@ impl Default for PropertiesWindowState {
         Self {
             search_query: String::new(),
             data_expanded: true,
-            tags_expanded: true,
-            attributes_expanded: true,
+            tags_expanded: false,
+            attributes_expanded: false,
             appearance_expanded: true,
             transform_expanded: true,
             collision_expanded: true,
@@ -53,71 +53,66 @@ impl PropertiesWindowState {
         let mut close_requested = false;
 
         // =====================================================================
-        // 1. HEADER DE PANEL DESACOPLABLE (Roblox Studio Header)
-        // Ejemplo imagen 2: Propiedades - StarterCharacterScripts "StarterCharacterScripts"
+        // 1. DOCK TAB BAR OFICIAL (Properties Tab con acento cian #00A2FF y botón ⋮)
         // =====================================================================
         let header_h = 26.0;
         let (header_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), header_h), Sense::hover());
         ui.painter().rect_filled(header_rect, 0.0, STUDIO_BG);
 
-        let title_text = match &selected_item {
-            Some(item) => format!("Propiedades - {} \"{}\"", item.properties.class_name, item.name),
-            None => "Propiedades".to_string(),
-        };
+        // Pestaña activa Properties
+        let tab_w = 100.0;
+        let tab_rect = Rect::from_min_size(header_rect.min, Vec2::new(tab_w, header_h));
+        ui.painter().rect_filled(tab_rect, 0.0, Color32::from_rgb(40, 40, 44));
 
-        let max_text_w = (header_rect.width() - 56.0).max(40.0);
-        let font = FontId::proportional(11.5);
+        // Franja superior cian activo (Cyan Roblox Studio #00A2FF)
+        ui.painter().line_segment(
+            [tab_rect.min, Pos2::new(tab_rect.max.x, tab_rect.min.y)],
+            Stroke::new(2.0, Color32::from_rgb(0, 162, 255)),
+        );
+
+        // Borde derecho de la pestaña
+        ui.painter().line_segment(
+            [Pos2::new(tab_rect.max.x, tab_rect.min.y), tab_rect.max],
+            Stroke::new(1.0, STUDIO_BORDER),
+        );
+
+        // Ícono de la pestaña Properties
+        let icon_center = Pos2::new(tab_rect.min.x + 13.0, tab_rect.center().y);
+        icons::tab_properties_icon(ui.painter(), icon_center, Color32::from_rgb(215, 215, 220));
+
+        // Texto de la pestaña "Properties"
         ui.painter().text(
-            Pos2::new(header_rect.min.x + 8.0, header_rect.center().y),
+            Pos2::new(tab_rect.min.x + 25.0, tab_rect.center().y),
             egui::Align2::LEFT_CENTER,
-            title_text,
-            font,
-            Color32::from_rgb(220, 220, 225),
+            "Properties",
+            FontId::proportional(12.0),
+            Color32::from_rgb(235, 235, 240),
         );
 
-        // Botones derecha: ⤢ y ✕
-        let undock_center = Pos2::new(header_rect.max.x - 26.0, header_rect.center().y);
-        let undock_rect = Rect::from_center_size(undock_center, Vec2::new(16.0, 16.0));
-        let undock_resp = ui.interact(undock_rect, ui.id().with("prop_undock_btn"), Sense::click());
-        if undock_resp.hovered() {
-            ui.painter().rect_filled(undock_rect, Rounding::same(2.0), STUDIO_HOVER);
+        // Botón derecho: ⋮ (Options / Menú de ventana)
+        let opt_center = Pos2::new(header_rect.max.x - 12.0, header_rect.center().y);
+        let opt_rect = Rect::from_center_size(opt_center, Vec2::new(18.0, 18.0));
+        let opt_resp = ui.interact(opt_rect, ui.id().with("prop_dock_menu"), Sense::click());
+        if opt_resp.hovered() {
+            ui.painter().rect_filled(opt_rect, Rounding::same(2.0), STUDIO_HOVER);
         }
-        ui.painter().text(
-            undock_center,
-            egui::Align2::CENTER_CENTER,
-            "⤢",
-            FontId::proportional(11.0),
-            if undock_resp.hovered() { Color32::WHITE } else { STUDIO_TEXT_MUTED },
+        icons::three_dots_vertical(
+            ui.painter(),
+            opt_center,
+            if opt_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 150, 155) },
         );
-        undock_resp.on_hover_text("Desacoplar / Flotar ventana");
+        opt_resp.on_hover_text("Options");
 
-        let close_center = Pos2::new(header_rect.max.x - 10.0, header_rect.center().y);
-        let close_rect = Rect::from_center_size(close_center, Vec2::new(16.0, 16.0));
-        let close_resp = ui.interact(close_rect, ui.id().with("prop_close_btn"), Sense::click());
-        if close_resp.clicked() {
-            close_requested = true;
-        }
-        if close_resp.hovered() {
-            ui.painter().rect_filled(close_rect, Rounding::same(2.0), Color32::from_rgb(180, 40, 40));
-        }
-        ui.painter().text(
-            close_center,
-            egui::Align2::CENTER_CENTER,
-            "✕",
-            FontId::proportional(10.0),
-            if close_resp.hovered() { Color32::WHITE } else { STUDIO_TEXT_MUTED },
-        );
-        close_resp.on_hover_text("Cerrar ventana");
-
+        // Separador inferior de cabecera
         ui.painter().line_segment(
             [Pos2::new(header_rect.min.x, header_rect.max.y), Pos2::new(header_rect.max.x, header_rect.max.y)],
             Stroke::new(1.0, STUDIO_BORDER),
         );
 
         // =====================================================================
-        // 2. SUB-BARRA DE BÚSQUEDA (Propiedades del filtro: (Control+Mayúsculas+P)  ▾)
+        // 2. SEARCH BAR: Filter Properties (Ctrl+Shift+P)
         // =====================================================================
-        let toolbar_h = 28.0;
+        let toolbar_h = 30.0;
         let (toolbar_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), toolbar_h), Sense::hover());
         ui.painter().rect_filled(toolbar_rect, 0.0, STUDIO_BG);
 
@@ -128,40 +123,30 @@ impl PropertiesWindowState {
             Vec2::new(toolbar_rect.width() - 12.0, search_h),
         );
 
-        ui.painter().rect_filled(search_rect, Rounding::same(3.0), STUDIO_INPUT_BG);
-        ui.painter().rect_stroke(search_rect, Rounding::same(3.0), Stroke::new(1.0, STUDIO_BORDER));
+        ui.painter().rect_filled(search_rect, Rounding::same(3.5), STUDIO_INPUT_BG);
+        ui.painter().rect_stroke(search_rect, Rounding::same(3.5), Stroke::new(1.0, STUDIO_BORDER));
 
-        // Botón flecha hacia abajo ▾ a la derecha (como en la imagen 2)
-        let dropdown_center = Pos2::new(search_rect.max.x - 12.0, search_rect.center().y);
-        let dropdown_rect = Rect::from_center_size(dropdown_center, Vec2::new(14.0, 14.0));
-        let dropdown_resp = ui.interact(dropdown_rect, ui.id().with("prop_filter_dropdown"), Sense::click());
-        if dropdown_resp.hovered() {
-            ui.painter().rect_filled(dropdown_rect, Rounding::same(2.0), STUDIO_HOVER);
-        }
-        ui.painter().text(
-            dropdown_center,
-            egui::Align2::CENTER_CENTER,
-            "▾",
-            FontId::proportional(11.0),
-            if dropdown_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(160, 160, 165) },
+        // Ícono de lupa alineado
+        let mag_center = Pos2::new(search_rect.min.x + 13.0, search_rect.center().y);
+        let mag_rect = Rect::from_center_size(mag_center, Vec2::new(13.0, 13.0));
+        ui.painter().image(
+            icons.icon_search.id(),
+            mag_rect,
+            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+            Color32::from_rgb(160, 160, 160),
         );
-        dropdown_resp.on_hover_text("Opciones de filtro de propiedades");
 
-        let mut right_w = 24.0;
-        if !self.search_query.is_empty() {
-            right_w += 18.0;
-        }
-
+        let right_reserve = if self.search_query.is_empty() { 6.0 } else { 22.0 };
         let text_rect = Rect::from_min_max(
-            Pos2::new(search_rect.min.x + 8.0, search_rect.min.y + 2.0),
-            Pos2::new(search_rect.max.x - right_w, search_rect.max.y - 2.0),
+            Pos2::new(search_rect.min.x + 25.0, search_rect.min.y + 2.0),
+            Pos2::new(search_rect.max.x - right_reserve, search_rect.max.y - 2.0),
         );
 
         let mut edit_ui = ui.child_ui(text_rect, egui::Layout::left_to_right(egui::Align::Center), None);
         edit_ui.spacing_mut().item_spacing = Vec2::ZERO;
         edit_ui.add(
             egui::TextEdit::singleline(&mut self.search_query)
-                .hint_text("Propiedades del filtro: (Control+Mayúsculas+P)")
+                .hint_text("Filter Properties (Ctrl+Shift+P)")
                 .frame(false)
                 .margin(egui::Margin::symmetric(0.0, 1.0))
                 .font(FontId::proportional(11.5))
@@ -169,7 +154,7 @@ impl PropertiesWindowState {
         );
 
         if !self.search_query.is_empty() {
-            let clear_center = Pos2::new(search_rect.max.x - 28.0, search_rect.center().y);
+            let clear_center = Pos2::new(search_rect.max.x - 11.0, search_rect.center().y);
             let clear_rect = Rect::from_center_size(clear_center, Vec2::new(14.0, 14.0));
             let clear_resp = ui.interact(clear_rect, ui.id().with("clear_prop_search"), Sense::click());
             let clear_col = if clear_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 150, 150) };
@@ -204,27 +189,23 @@ impl PropertiesWindowState {
         };
 
         let filter = self.search_query.to_lowercase();
-        let col_name_w = 120.0;
+        let col_name_w = (ui.available_width() * 0.44).clamp(110.0, 180.0);
 
         egui::ScrollArea::vertical()
             .id_salt("roblox_properties_scroll")
             .show(ui, |ui| {
-                // --- CATEGORÍA: DATOS (Data) ---
+                // --- CATEGORÍA 1: DATA (Exactamente como en la imagen 1 de Roblox Studio) ---
                 let show_data = filter.is_empty()
-                    || "datos".contains(&filter)
                     || "data".contains(&filter)
-                    || "archivable".contains(&filter)
+                    || "datos".contains(&filter)
                     || "classname".contains(&filter)
                     || "name".contains(&filter)
                     || "parent".contains(&filter)
-                    || "uniqueid".contains(&filter);
+                    || "archivable".contains(&filter);
 
                 if show_data {
-                    draw_category_header(ui, "Datos", &mut self.data_expanded, false);
+                    draw_category_header(ui, "Data", &mut self.data_expanded, false);
                     if self.data_expanded {
-                        if filter.is_empty() || "archivable".contains(&filter) {
-                            draw_bool_row(ui, col_name_w, "Archivable", &mut item.properties.archivable);
-                        }
                         if filter.is_empty() || "classname".contains(&filter) {
                             draw_read_only_dimmed_row(ui, col_name_w, "ClassName", &item.properties.class_name);
                         }
@@ -234,91 +215,24 @@ impl PropertiesWindowState {
                         if filter.is_empty() || "parent".contains(&filter) {
                             draw_read_only_dimmed_row(ui, col_name_w, "Parent", &item.properties.parent_name);
                         }
-                        if filter.is_empty() || "uniqueid".contains(&filter) {
-                            draw_read_only_dimmed_row(ui, col_name_w, "UniqueId", &item.properties.unique_id);
+                        if filter.is_empty() || "archivable".contains(&filter) {
+                            draw_bool_row(ui, col_name_w, "Archivable", &mut item.properties.archivable);
                         }
                     }
                 }
 
-                // --- CATEGORÍA: ETIQUETAS (Tags) con botón [+] ---
-                let show_tags = filter.is_empty() || "etiquetas".contains(&filter) || "tags".contains(&filter);
-                if show_tags {
-                    let plus_clicked = draw_category_header(ui, "Etiquetas", &mut self.tags_expanded, true);
-                    if plus_clicked {
-                        item.properties.tags.push(format!("Tag_{}", item.properties.tags.len() + 1));
-                    }
-                    if self.tags_expanded {
-                        if item.properties.tags.is_empty() {
-                            draw_empty_placeholder_row(ui, "Todavía no se han agregado etiquetas");
-                        } else {
-                            for tag in &item.properties.tags {
-                                draw_read_only_dimmed_row(ui, col_name_w, "Tag", tag);
-                            }
-                        }
-                    }
-                }
-
-                // --- CATEGORÍA: ATRIBUTOS (Attributes) con botón [+] ---
-                let show_attr = filter.is_empty() || "atributos".contains(&filter) || "attributes".contains(&filter);
-                if show_attr {
-                    let plus_clicked = draw_category_header(ui, "Atributos", &mut self.attributes_expanded, true);
-                    if plus_clicked {
-                        item.properties.attributes.push((format!("Attr_{}", item.properties.attributes.len() + 1), "Value".into()));
-                    }
-                    if self.attributes_expanded {
-                        if item.properties.attributes.is_empty() {
-                            draw_empty_placeholder_row(ui, "No se ha añadido ningún atributo todavía");
-                        } else {
-                            for (attr_name, attr_val) in &item.properties.attributes {
-                                draw_read_only_dimmed_row(ui, col_name_w, attr_name, attr_val);
-                            }
-                        }
-                    }
-                }
-
-                // --- CATEGORÍA: APPEARANCE (Para Part, MeshPart, Model, Terrain) ---
-                let is_part_like = matches!(item.class, RobloxClass::Part | RobloxClass::MeshPart | RobloxClass::Terrain);
-                if is_part_like {
-                    let show_app = filter.is_empty()
-                        || "color".contains(&filter)
-                        || "material".contains(&filter)
-                        || "transparency".contains(&filter)
-                        || "reflectance".contains(&filter)
-                        || "castshadow".contains(&filter);
-
-                    if show_app {
-                        draw_category_header(ui, "Apariencia", &mut self.appearance_expanded, false);
-                        if self.appearance_expanded {
-                            if filter.is_empty() || "color".contains(&filter) {
-                                draw_color_row(ui, col_name_w, "Color", &mut item.properties.color);
-                            }
-                            if filter.is_empty() || "material".contains(&filter) {
-                                draw_material_dropdown_row(ui, col_name_w, "Material", &mut item.properties.material);
-                            }
-                            if filter.is_empty() || "reflectance".contains(&filter) {
-                                draw_float_row(ui, col_name_w, "Reflectance", &mut item.properties.reflectance, 0.0..=1.0, 0.02);
-                            }
-                            if filter.is_empty() || "transparency".contains(&filter) {
-                                draw_float_row(ui, col_name_w, "Transparency", &mut item.properties.transparency, 0.0..=1.0, 0.02);
-                            }
-                            if filter.is_empty() || "castshadow".contains(&filter) {
-                                draw_bool_row(ui, col_name_w, "CastShadow", &mut item.properties.cast_shadow);
-                            }
-                        }
-                    }
-                }
-
-                // --- CATEGORÍA: TRANSFORM (Part, MeshPart, Model, Camera) ---
+                // --- CATEGORÍA 2: TRANSFORM (Inmediatamente después de Data como en la imagen 1) ---
                 let has_transform = matches!(item.class, RobloxClass::Part | RobloxClass::MeshPart | RobloxClass::Model | RobloxClass::Camera);
                 if has_transform {
                     let show_trans = filter.is_empty()
+                        || "transform".contains(&filter)
                         || "position".contains(&filter)
                         || "orientation".contains(&filter)
                         || "size".contains(&filter)
                         || "cframe".contains(&filter);
 
                     if show_trans {
-                        draw_category_header(ui, "Transformación", &mut self.transform_expanded, false);
+                        draw_category_header(ui, "Transform", &mut self.transform_expanded, false);
                         if self.transform_expanded {
                             if filter.is_empty() || "position".contains(&filter) {
                                 draw_vector3_expandable_row(
@@ -354,16 +268,51 @@ impl PropertiesWindowState {
                     }
                 }
 
-                // --- CATEGORÍA: COLLISION (Part, MeshPart) ---
+                // --- CATEGORÍA 3: APPEARANCE (Para Part, MeshPart, Model, Terrain) ---
+                let is_part_like = matches!(item.class, RobloxClass::Part | RobloxClass::MeshPart | RobloxClass::Terrain);
+                if is_part_like {
+                    let show_app = filter.is_empty()
+                        || "appearance".contains(&filter)
+                        || "apariencia".contains(&filter)
+                        || "color".contains(&filter)
+                        || "material".contains(&filter)
+                        || "transparency".contains(&filter)
+                        || "reflectance".contains(&filter)
+                        || "castshadow".contains(&filter);
+
+                    if show_app {
+                        draw_category_header(ui, "Appearance", &mut self.appearance_expanded, false);
+                        if self.appearance_expanded {
+                            if filter.is_empty() || "color".contains(&filter) {
+                                draw_color_row(ui, col_name_w, "Color", &mut item.properties.color);
+                            }
+                            if filter.is_empty() || "material".contains(&filter) {
+                                draw_material_dropdown_row(ui, col_name_w, "Material", &mut item.properties.material);
+                            }
+                            if filter.is_empty() || "reflectance".contains(&filter) {
+                                draw_float_row(ui, col_name_w, "Reflectance", &mut item.properties.reflectance, 0.0..=1.0, 0.02);
+                            }
+                            if filter.is_empty() || "transparency".contains(&filter) {
+                                draw_float_row(ui, col_name_w, "Transparency", &mut item.properties.transparency, 0.0..=1.0, 0.02);
+                            }
+                            if filter.is_empty() || "castshadow".contains(&filter) {
+                                draw_bool_row(ui, col_name_w, "CastShadow", &mut item.properties.cast_shadow);
+                            }
+                        }
+                    }
+                }
+
+                // --- CATEGORÍA 4: COLLISION (Part, MeshPart) ---
                 if is_part_like {
                     let show_col = filter.is_empty()
+                        || "collision".contains(&filter)
                         || "cancollide".contains(&filter)
                         || "cantouch".contains(&filter)
                         || "canquery".contains(&filter)
                         || "collisiongroup".contains(&filter);
 
                     if show_col {
-                        draw_category_header(ui, "Colisión", &mut self.collision_expanded, false);
+                        draw_category_header(ui, "Collision", &mut self.collision_expanded, false);
                         if self.collision_expanded {
                             if filter.is_empty() || "cancollide".contains(&filter) {
                                 draw_bool_row(ui, col_name_w, "CanCollide", &mut item.properties.can_collide);
@@ -381,15 +330,16 @@ impl PropertiesWindowState {
                     }
                 }
 
-                // --- CATEGORÍA: ASSEMBLY (Part, MeshPart) ---
+                // --- CATEGORÍA 5: ASSEMBLY (Part, MeshPart) ---
                 if is_part_like {
                     let show_asm = filter.is_empty()
+                        || "assembly".contains(&filter)
                         || "anchored".contains(&filter)
                         || "massless".contains(&filter)
                         || "mass".contains(&filter);
 
                     if show_asm {
-                        draw_category_header(ui, "Ensamblaje", &mut self.assembly_expanded, false);
+                        draw_category_header(ui, "Assembly", &mut self.assembly_expanded, false);
                         if self.assembly_expanded {
                             if filter.is_empty() || "anchored".contains(&filter) {
                                 draw_bool_row(ui, col_name_w, "Anchored", &mut item.properties.anchored);
@@ -399,6 +349,41 @@ impl PropertiesWindowState {
                             }
                             if filter.is_empty() || "mass".contains(&filter) {
                                 draw_read_only_dimmed_row(ui, col_name_w, "AssemblyMass", &format!("{:.2}", item.properties.mass));
+                            }
+                        }
+                    }
+                }
+
+                // --- CATEGORÍA 6: TAGS & ATTRIBUTES (Al final, colapsadas por defecto) ---
+                let show_tags = filter.is_empty() || "tags".contains(&filter) || "etiquetas".contains(&filter);
+                if show_tags {
+                    let plus_clicked = draw_category_header(ui, "Tags", &mut self.tags_expanded, true);
+                    if plus_clicked {
+                        item.properties.tags.push(format!("Tag_{}", item.properties.tags.len() + 1));
+                    }
+                    if self.tags_expanded {
+                        if item.properties.tags.is_empty() {
+                            draw_empty_placeholder_row(ui, "No tags added yet");
+                        } else {
+                            for tag in &item.properties.tags {
+                                draw_read_only_dimmed_row(ui, col_name_w, "Tag", tag);
+                            }
+                        }
+                    }
+                }
+
+                let show_attr = filter.is_empty() || "attributes".contains(&filter) || "atributos".contains(&filter);
+                if show_attr {
+                    let plus_clicked = draw_category_header(ui, "Attributes", &mut self.attributes_expanded, true);
+                    if plus_clicked {
+                        item.properties.attributes.push((format!("Attr_{}", item.properties.attributes.len() + 1), "Value".into()));
+                    }
+                    if self.attributes_expanded {
+                        if item.properties.attributes.is_empty() {
+                            draw_empty_placeholder_row(ui, "No attributes added yet");
+                        } else {
+                            for (attr_name, attr_val) in &item.properties.attributes {
+                                draw_read_only_dimmed_row(ui, col_name_w, attr_name, attr_val);
                             }
                         }
                     }
@@ -533,13 +518,12 @@ fn allocate_property_row(ui: &mut egui::Ui, name_w: f32, label: &str, is_dimmed:
         row_rect.max,
     );
 
-    // Hover background
-    if row_resp.hovered() {
-        ui.painter().rect_filled(row_rect, 0.0, STUDIO_HOVER);
-    }
+    // Row background (sutil alternado / hover)
+    let bg_col = if row_resp.hovered() { Color32::from_rgb(38, 38, 42) } else { Color32::from_rgb(26, 26, 28) };
+    ui.painter().rect_filled(row_rect, 0.0, bg_col);
 
-    // Property name text (dimmed si es read-only)
-    let label_col = if is_dimmed { STUDIO_TEXT_DIMMED } else { STUDIO_TEXT };
+    // Property name text
+    let label_col = if is_dimmed { Color32::from_rgb(175, 175, 180) } else { Color32::from_rgb(215, 215, 220) };
     ui.painter().text(
         Pos2::new(name_rect.min.x + 14.0, name_rect.center().y),
         egui::Align2::LEFT_CENTER,
@@ -548,29 +532,29 @@ fn allocate_property_row(ui: &mut egui::Ui, name_w: f32, label: &str, is_dimmed:
         label_col,
     );
 
-    // Vertical line between columns
+    // Línea vertical entre columnas (rejilla Roblox Studio)
     ui.painter().line_segment(
         [Pos2::new(name_rect.max.x, row_rect.min.y), Pos2::new(name_rect.max.x, row_rect.max.y)],
-        Stroke::new(1.0, STUDIO_BORDER),
+        Stroke::new(1.0, Color32::from_rgb(38, 38, 42)),
     );
 
-    // Horizontal line beneath row
+    // Línea horizontal inferior entre filas
     ui.painter().line_segment(
         [Pos2::new(row_rect.min.x, row_rect.max.y), Pos2::new(row_rect.max.x, row_rect.max.y)],
-        Stroke::new(1.0, STUDIO_ROW_BORDER),
+        Stroke::new(1.0, Color32::from_rgb(32, 32, 35)),
     );
 
     (row_rect, name_rect, val_rect, row_resp)
 }
 
 fn draw_read_only_dimmed_row(ui: &mut egui::Ui, name_w: f32, label: &str, value: &str) {
-    let (_, _, val_rect, _) = allocate_property_row(ui, name_w, label, true);
+    let (_, _, val_rect, _) = allocate_property_row(ui, name_w, label, false);
     ui.painter().text(
         Pos2::new(val_rect.min.x + 8.0, val_rect.center().y),
         egui::Align2::LEFT_CENTER,
         value,
         FontId::proportional(11.5),
-        STUDIO_TEXT_DIMMED,
+        Color32::from_rgb(215, 215, 220),
     );
 }
 
@@ -593,14 +577,25 @@ fn draw_empty_placeholder_row(ui: &mut egui::Ui, text: &str) {
 fn draw_text_edit_row(ui: &mut egui::Ui, name_w: f32, label: &str, value: &mut String) {
     let (_, _, val_rect, _) = allocate_property_row(ui, name_w, label, false);
     let edit_rect = Rect::from_min_max(
-        Pos2::new(val_rect.min.x + 4.0, val_rect.min.y + 2.0),
+        Pos2::new(val_rect.min.x + 3.0, val_rect.min.y + 2.0),
         Pos2::new(val_rect.max.x - 4.0, val_rect.max.y - 2.0),
     );
-    let mut child = ui.child_ui(edit_rect, egui::Layout::left_to_right(egui::Align::Center), None);
+    ui.painter().rect_filled(edit_rect, Rounding::same(2.5), STUDIO_FIELD_BG);
+    ui.painter().rect_stroke(edit_rect, Rounding::same(2.5), Stroke::new(1.0, Color32::from_rgb(45, 45, 50)));
+
+    let text_inner = Rect::from_min_max(
+        Pos2::new(edit_rect.min.x + 4.0, edit_rect.min.y),
+        Pos2::new(edit_rect.max.x - 4.0, edit_rect.max.y),
+    );
+    let mut child = ui.child_ui(text_inner, egui::Layout::left_to_right(egui::Align::Center), None);
+    child.spacing_mut().item_spacing = Vec2::ZERO;
     child.add(
         egui::TextEdit::singleline(value)
+            .frame(false)
+            .margin(egui::Margin::symmetric(0.0, 1.0))
             .font(FontId::proportional(11.5))
-            .desired_width(edit_rect.width()),
+            .text_color(Color32::WHITE)
+            .desired_width(text_inner.width()),
     );
 }
 

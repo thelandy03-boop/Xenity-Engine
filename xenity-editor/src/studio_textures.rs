@@ -43,6 +43,7 @@ pub struct StudioIcons {
     pub qa_undo: TextureHandle,
     pub qa_redo: TextureHandle,
     pub icon_search: TextureHandle,
+    pub studio_logo: TextureHandle,
 
     // View Selector Cube
     pub view_front: TextureHandle,
@@ -102,6 +103,7 @@ impl StudioIcons {
             qa_undo: load_png(ctx, "rbx_qa_undo", include_bytes!("../assets/icons/qa_undo.png")),
             qa_redo: load_png(ctx, "rbx_qa_redo", include_bytes!("../assets/icons/qa_redo.png")),
             icon_search: load_png(ctx, "rbx_icon_search", include_bytes!("../assets/icons/icon_search.png")),
+            studio_logo: load_png(ctx, "rbx_studio_logo", include_bytes!("../assets/icons/roblox_studio_logo.png")),
 
             view_front: load_png(ctx, "rbx_view_front", include_bytes!("../assets/icons/view_front.png")),
             view_top: load_png(ctx, "rbx_view_top", include_bytes!("../assets/icons/view_top.png")),

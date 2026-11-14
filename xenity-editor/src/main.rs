@@ -192,7 +192,10 @@ impl eframe::App for RobloxStudioApp {
                 .max_height(600.0)
                 .frame(egui::Frame::none().fill(STUDIO_BG).inner_margin(egui::Margin::same(0.0)))
                 .show(ctx, |ui| {
-                    let cmd_result = self.output.show(ui, icons, self.show_command_bar);
+                    let (cmd_result, out_close) = self.output.show(ui, icons, self.show_command_bar);
+                    if out_close {
+                        self.show_output = false;
+                    }
                     match cmd_result {
                         CommandBarResult::SpawnPart => {
                             self.hierarchy.insert_child_into_selected_or_workspace(RobloxClass::Part, "Part".into());
@@ -216,7 +219,11 @@ impl eframe::App for RobloxStudioApp {
                 .max_width(450.0)
                 .frame(egui::Frame::none().fill(STUDIO_BG).inner_margin(egui::Margin::same(0.0)))
                 .show(ctx, |ui| {
-                    if let Some(model_name) = self.toolbox.show(ui, icons) {
+                    let (model_inserted, tb_close) = self.toolbox.show(ui, icons);
+                    if tb_close {
+                        self.show_toolbox = false;
+                    }
+                    if let Some(model_name) = model_inserted {
                         let id = self.hierarchy.insert_child_into_selected_or_workspace(RobloxClass::Model, model_name.clone());
                         self.output.add_log(LogType::Info, "Toolbox", format!("Inserted '{}' into Workspace (id: {}).", model_name, id));
                     }
@@ -297,7 +304,26 @@ impl eframe::App for RobloxStudioApp {
         }
 
         // =====================================================================
-        // 5. PANEL CENTRAL: 3D VIEWPORT DE ROBLOX STUDIO
+        // 5. BARRA DE ESTADO INFERIOR (Status Bar oficial de Roblox Studio)
+        // =====================================================================
+        egui::TopBottomPanel::bottom("studio_status_bar")
+            .exact_height(20.0)
+            .frame(egui::Frame::none().fill(STUDIO_BG).inner_margin(egui::Margin::symmetric(10.0, 2.0)))
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new("Workspace (Ready)").size(11.0).color(STUDIO_TEXT_MUTED));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.label(egui::RichText::new("60.0 FPS").size(11.0).color(Color32::from_rgb(0, 180, 80)));
+                        ui.separator();
+                        ui.label(egui::RichText::new("Snap: 1 Stud, 45°").size(11.0).color(STUDIO_TEXT_MUTED));
+                        ui.separator();
+                        ui.label(egui::RichText::new("Camera Speed: 1.0").size(11.0).color(STUDIO_TEXT_MUTED));
+                    });
+                });
+            });
+
+        // =====================================================================
+        // 6. PANEL CENTRAL: 3D VIEWPORT DE ROBLOX STUDIO
         // =====================================================================
         egui::CentralPanel::default()
             .frame(egui::Frame::none().fill(STUDIO_VIEWPORT_BG).inner_margin(egui::Margin::same(0.0)))

@@ -98,29 +98,59 @@ impl StudioOutputState {
         ui: &mut egui::Ui,
         icons: &StudioIcons,
         show_command_bar: bool,
-    ) -> CommandBarResult {
+    ) -> (CommandBarResult, bool) {
         let mut result = CommandBarResult::None;
+        let mut close_requested = false;
 
-        // 1. PESTAÑA SUPERIOR [ Output ] CON ICONO REAL
-        let tab_h = 26.0;
-        let (tab_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), tab_h), Sense::hover());
-        ui.painter().rect_filled(tab_rect, 0.0, STUDIO_BG);
+        // 1. HEADER DE PANEL DESACOPLABLE (Roblox Studio Header)
+        let header_h = 26.0;
+        let (header_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), header_h), Sense::hover());
+        ui.painter().rect_filled(header_rect, 0.0, STUDIO_BG);
 
-        let active_tab_rect = Rect::from_min_size(tab_rect.min, Vec2::new(90.0, tab_h));
-        ui.painter().rect_filled(active_tab_rect, Rounding { nw: 3.0, ne: 3.0, sw: 0.0, se: 0.0 }, STUDIO_TREE_BG);
-        ui.painter().line_segment(
-            [Pos2::new(active_tab_rect.min.x, active_tab_rect.min.y), Pos2::new(active_tab_rect.max.x, active_tab_rect.min.y)],
-            Stroke::new(2.0, STUDIO_SELECTION),
+        ui.painter().text(
+            header_rect.center(),
+            egui::Align2::CENTER_CENTER,
+            "Salida",
+            FontId::proportional(12.0),
+            Color32::from_rgb(220, 220, 225),
         );
 
-        let icon_rect = Rect::from_center_size(Pos2::new(active_tab_rect.min.x + 14.0, active_tab_rect.center().y), Vec2::new(14.0, 14.0));
-        ui.painter().image(icons.win_output.id(), icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        ui.painter().text(Pos2::new(active_tab_rect.min.x + 28.0, active_tab_rect.center().y), egui::Align2::LEFT_CENTER, "Output", FontId::proportional(11.5), Color32::WHITE);
+        // Botones derecha: ⤢ y ✕
+        let undock_center = Pos2::new(header_rect.max.x - 26.0, header_rect.center().y);
+        let undock_rect = Rect::from_center_size(undock_center, Vec2::new(16.0, 16.0));
+        let undock_resp = ui.interact(undock_rect, ui.id().with("out_undock_btn"), Sense::click());
+        if undock_resp.hovered() {
+            ui.painter().rect_filled(undock_rect, Rounding::same(2.0), STUDIO_HOVER);
+        }
+        ui.painter().text(
+            undock_center,
+            egui::Align2::CENTER_CENTER,
+            "⤢",
+            FontId::proportional(11.0),
+            if undock_resp.hovered() { Color32::WHITE } else { STUDIO_TEXT_MUTED },
+        );
+        undock_resp.on_hover_text("Desacoplar / Flotar ventana");
 
-        icons::kebab_menu(ui.painter(), Pos2::new(tab_rect.max.x - 12.0, tab_rect.center().y), STUDIO_TEXT_MUTED);
+        let close_center = Pos2::new(header_rect.max.x - 10.0, header_rect.center().y);
+        let close_rect = Rect::from_center_size(close_center, Vec2::new(16.0, 16.0));
+        let close_resp = ui.interact(close_rect, ui.id().with("out_close_btn"), Sense::click());
+        if close_resp.clicked() {
+            close_requested = true;
+        }
+        if close_resp.hovered() {
+            ui.painter().rect_filled(close_rect, Rounding::same(2.0), Color32::from_rgb(180, 40, 40));
+        }
+        ui.painter().text(
+            close_center,
+            egui::Align2::CENTER_CENTER,
+            "✕",
+            FontId::proportional(10.0),
+            if close_resp.hovered() { Color32::WHITE } else { STUDIO_TEXT_MUTED },
+        );
+        close_resp.on_hover_text("Cerrar ventana");
 
         ui.painter().line_segment(
-            [Pos2::new(tab_rect.min.x, tab_rect.max.y), Pos2::new(tab_rect.max.x, tab_rect.max.y)],
+            [Pos2::new(header_rect.min.x, header_rect.max.y), Pos2::new(header_rect.max.x, header_rect.max.y)],
             Stroke::new(1.0, STUDIO_BORDER),
         );
 
@@ -257,7 +287,7 @@ impl StudioOutputState {
             }
         }
 
-        result
+        (result, close_requested)
     }
 }
 

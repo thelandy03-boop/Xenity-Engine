@@ -240,17 +240,17 @@ impl Default for SceneHierarchyState {
     fn default() -> Self {
         Self {
             search_query: String::new(),
-            selected_id: Some(121), // StarterCharacterScripts seleccionado por defecto (como en la imagen 2)
+            selected_id: Some(100), // Player seleccionado por defecto (exactamente como en la imagen 1)
             next_id: 200,
             textures: None,
             items: vec![
-                // 1. Workspace
+                // 1. Workspace (Expandido por defecto con Camera, Terrain y Player)
                 ExplorerItem {
                     id: 10,
                     name: "Workspace".into(),
                     class: RobloxClass::Workspace,
                     is_active: true,
-                    is_expanded: false,
+                    is_expanded: true,
                     properties: InstanceProperties::default_for(&RobloxClass::Workspace, "Game"),
                     children: vec![
                         ExplorerItem {
@@ -271,14 +271,88 @@ impl Default for SceneHierarchyState {
                             properties: InstanceProperties::default_for(&RobloxClass::Terrain, "Workspace"),
                             children: vec![],
                         },
+                        // Player (Model) - Seleccionado en la imagen 1
                         ExplorerItem {
-                            id: 13,
-                            name: "Baseplate".into(),
-                            class: RobloxClass::Part,
+                            id: 100,
+                            name: "Player".into(),
+                            class: RobloxClass::Model,
                             is_active: true,
-                            is_expanded: false,
-                            properties: InstanceProperties::default_for(&RobloxClass::Part, "Workspace"),
-                            children: vec![],
+                            is_expanded: true,
+                            properties: {
+                                let mut p = InstanceProperties::default_for(&RobloxClass::Model, "Workspace");
+                                p.position = [0.00, 1.25, 0.00];
+                                p.orientation = [0.00, 0.00, 0.00];
+                                p.size = [4.00, 5.00, 4.00];
+                                p
+                            },
+                            children: vec![
+                                ExplorerItem {
+                                    id: 101,
+                                    name: "Humanoid".into(),
+                                    class: RobloxClass::Humanoid,
+                                    is_active: true,
+                                    is_expanded: false,
+                                    properties: InstanceProperties::default_for(&RobloxClass::Humanoid, "Player"),
+                                    children: vec![],
+                                },
+                                ExplorerItem {
+                                    id: 102,
+                                    name: "Weapon_Holder".into(),
+                                    class: RobloxClass::Model,
+                                    is_active: true,
+                                    is_expanded: true,
+                                    properties: InstanceProperties::default_for(&RobloxClass::Model, "Player"),
+                                    children: vec![
+                                        ExplorerItem {
+                                            id: 103,
+                                            name: "Pistol_Mesh".into(),
+                                            class: RobloxClass::MeshPart,
+                                            is_active: true,
+                                            is_expanded: false,
+                                            properties: InstanceProperties::default_for(&RobloxClass::MeshPart, "Weapon_Holder"),
+                                            children: vec![],
+                                        },
+                                    ],
+                                },
+                                ExplorerItem {
+                                    id: 104,
+                                    name: "Environment".into(),
+                                    class: RobloxClass::Model,
+                                    is_active: true,
+                                    is_expanded: true,
+                                    properties: InstanceProperties::default_for(&RobloxClass::Model, "Player"),
+                                    children: vec![
+                                        ExplorerItem {
+                                            id: 105,
+                                            name: "Ground_Plane".into(),
+                                            class: RobloxClass::MeshPart,
+                                            is_active: true,
+                                            is_expanded: false,
+                                            properties: InstanceProperties::default_for(&RobloxClass::MeshPart, "Environment"),
+                                            children: vec![],
+                                        },
+                                    ],
+                                },
+                                ExplorerItem {
+                                    id: 106,
+                                    name: "Tree_01".into(),
+                                    class: RobloxClass::Model,
+                                    is_active: true,
+                                    is_expanded: true,
+                                    properties: InstanceProperties::default_for(&RobloxClass::Model, "Player"),
+                                    children: vec![
+                                        ExplorerItem {
+                                            id: 107,
+                                            name: "Trunk".into(),
+                                            class: RobloxClass::MeshPart,
+                                            is_active: true,
+                                            is_expanded: false,
+                                            properties: InstanceProperties::default_for(&RobloxClass::MeshPart, "Tree_01"),
+                                            children: vec![],
+                                        },
+                                    ],
+                                },
+                            ],
                         },
                     ],
                 },
@@ -495,14 +569,14 @@ impl Default for SceneHierarchyState {
 }
 
 // Colores exactos de Roblox Studio Dark Theme
-pub const STUDIO_BG: Color32 = Color32::from_rgb(37, 37, 38);          // #252526
-pub const STUDIO_TREE_BG: Color32 = Color32::from_rgb(30, 30, 30);     // #1E1E1E
-pub const STUDIO_SELECTION: Color32 = Color32::from_rgb(0, 95, 184);   // #005FB8 (Azul moderno Studio)
+pub const STUDIO_BG: Color32 = Color32::from_rgb(30, 30, 32);          // #1E1E20
+pub const STUDIO_TREE_BG: Color32 = Color32::from_rgb(26, 26, 28);     // #1A1A1C
+pub const STUDIO_SELECTION: Color32 = Color32::from_rgb(0, 122, 218);   // #007ACC (Azul oficial Roblox Studio)
 pub const STUDIO_HOVER: Color32 = Color32::from_rgb(46, 46, 50);       // #2E2E32
 pub const STUDIO_BORDER: Color32 = Color32::from_rgb(45, 45, 48);      // #2D2D30
-pub const STUDIO_TEXT: Color32 = Color32::from_rgb(204, 204, 204);     // #CCCCCC
+pub const STUDIO_TEXT: Color32 = Color32::from_rgb(215, 215, 220);     // #D7D7DC
 pub const STUDIO_TEXT_MUTED: Color32 = Color32::from_rgb(130, 130, 130);
-pub const STUDIO_INPUT_BG: Color32 = Color32::from_rgb(26, 26, 26);    // #1A1A1A
+pub const STUDIO_INPUT_BG: Color32 = Color32::from_rgb(22, 22, 24);    // #161618
 
 impl SceneHierarchyState {
     pub fn find_item_mut(&mut self, target_id: usize) -> Option<&mut ExplorerItem> {
@@ -569,62 +643,64 @@ impl SceneHierarchyState {
         }
 
         // =====================================================================
-        // 1. HEADER DE PANEL DESACOPLABLE (Roblox Studio Header: Centrado + ⤢ + ✕)
+        // 1. DOCK TAB BAR OFICIAL (Explorer Tab con acento cian #00A2FF y botón ⋮)
         // =====================================================================
         let header_h = 26.0;
         let (header_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), header_h), Sense::hover());
         ui.painter().rect_filled(header_rect, 0.0, STUDIO_BG);
 
-        // Título de panel centrado
+        // Pestaña activa Explorer
+        let tab_w = 95.0;
+        let tab_rect = Rect::from_min_size(header_rect.min, Vec2::new(tab_w, header_h));
+        ui.painter().rect_filled(tab_rect, 0.0, Color32::from_rgb(40, 40, 44));
+
+        // Franja superior cian activo (Cyan Roblox Studio #00A2FF)
+        ui.painter().line_segment(
+            [tab_rect.min, Pos2::new(tab_rect.max.x, tab_rect.min.y)],
+            Stroke::new(2.0, Color32::from_rgb(0, 162, 255)),
+        );
+
+        // Borde derecho de la pestaña
+        ui.painter().line_segment(
+            [Pos2::new(tab_rect.max.x, tab_rect.min.y), tab_rect.max],
+            Stroke::new(1.0, STUDIO_BORDER),
+        );
+
+        // Ícono de la pestaña Explorer
+        let icon_center = Pos2::new(tab_rect.min.x + 13.0, tab_rect.center().y);
+        icons::tab_explorer_icon(ui.painter(), icon_center, Color32::from_rgb(215, 215, 220));
+
+        // Texto de la pestaña "Explorer"
         ui.painter().text(
-            header_rect.center(),
-            egui::Align2::CENTER_CENTER,
-            "Explorador",
+            Pos2::new(tab_rect.min.x + 25.0, tab_rect.center().y),
+            egui::Align2::LEFT_CENTER,
+            "Explorer",
             FontId::proportional(12.0),
-            Color32::from_rgb(220, 220, 225),
+            Color32::from_rgb(235, 235, 240),
         );
 
-        // Botones derecha: ⤢ (Flotar / Desacoplar) y ✕ (Cerrar)
-        let undock_center = Pos2::new(header_rect.max.x - 26.0, header_rect.center().y);
-        let undock_rect = Rect::from_center_size(undock_center, Vec2::new(16.0, 16.0));
-        let undock_resp = ui.interact(undock_rect, ui.id().with("explorer_undock_btn"), Sense::click());
-        if undock_resp.hovered() {
-            ui.painter().rect_filled(undock_rect, Rounding::same(2.0), STUDIO_HOVER);
+        // Botón derecho: ⋮ (Options / Menú de ventana)
+        let opt_center = Pos2::new(header_rect.max.x - 12.0, header_rect.center().y);
+        let opt_rect = Rect::from_center_size(opt_center, Vec2::new(18.0, 18.0));
+        let opt_resp = ui.interact(opt_rect, ui.id().with("explorer_dock_menu"), Sense::click());
+        if opt_resp.hovered() {
+            ui.painter().rect_filled(opt_rect, Rounding::same(2.0), STUDIO_HOVER);
         }
-        ui.painter().text(
-            undock_center,
-            egui::Align2::CENTER_CENTER,
-            "⤢",
-            FontId::proportional(11.0),
-            if undock_resp.hovered() { Color32::WHITE } else { STUDIO_TEXT_MUTED },
+        icons::three_dots_vertical(
+            ui.painter(),
+            opt_center,
+            if opt_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 150, 155) },
         );
-        undock_resp.on_hover_text("Desacoplar / Flotar ventana");
+        opt_resp.on_hover_text("Options");
 
-        let close_center = Pos2::new(header_rect.max.x - 10.0, header_rect.center().y);
-        let close_rect = Rect::from_center_size(close_center, Vec2::new(16.0, 16.0));
-        let close_resp = ui.interact(close_rect, ui.id().with("explorer_close_btn"), Sense::click());
-        if close_resp.clicked() {
-            close_requested = true;
-        }
-        if close_resp.hovered() {
-            ui.painter().rect_filled(close_rect, Rounding::same(2.0), Color32::from_rgb(180, 40, 40));
-        }
-        ui.painter().text(
-            close_center,
-            egui::Align2::CENTER_CENTER,
-            "✕",
-            FontId::proportional(10.0),
-            if close_resp.hovered() { Color32::WHITE } else { STUDIO_TEXT_MUTED },
-        );
-        close_resp.on_hover_text("Cerrar ventana");
-
+        // Separador inferior de cabecera
         ui.painter().line_segment(
             [Pos2::new(header_rect.min.x, header_rect.max.y), Pos2::new(header_rect.max.x, header_rect.max.y)],
             Stroke::new(1.0, STUDIO_BORDER),
         );
 
         // =====================================================================
-        // 2. SUB-BARRA DE BÚSQUEDA MODERNA (Buscar + 🕒 Historial + ⋯ Filtros)
+        // 2. SEARCH BAR: Filter Workspace (Ctrl+Shift+X)
         // =====================================================================
         let toolbar_h = 30.0;
         let (toolbar_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), toolbar_h), Sense::hover());
@@ -637,8 +713,8 @@ impl SceneHierarchyState {
             Vec2::new(toolbar_rect.width() - 12.0, search_h),
         );
 
-        ui.painter().rect_filled(search_rect, Rounding::same(3.0), STUDIO_INPUT_BG);
-        ui.painter().rect_stroke(search_rect, Rounding::same(3.0), Stroke::new(1.0, STUDIO_BORDER));
+        ui.painter().rect_filled(search_rect, Rounding::same(3.5), STUDIO_INPUT_BG);
+        ui.painter().rect_stroke(search_rect, Rounding::same(3.5), Stroke::new(1.0, STUDIO_BORDER));
 
         // Ícono de lupa alineado
         let mag_center = Pos2::new(search_rect.min.x + 13.0, search_rect.center().y);
@@ -650,44 +726,7 @@ impl SceneHierarchyState {
             Color32::from_rgb(160, 160, 160),
         );
 
-        // Botones en el extremo derecho: ⋯ (Filtros) y 🕒 (Historial)
-        let mut right_reserve = 44.0;
-        if !self.search_query.is_empty() {
-            right_reserve += 18.0;
-        }
-
-        // Historial (🕒)
-        let hist_center = Pos2::new(search_rect.max.x - 30.0, search_rect.center().y);
-        let hist_rect = Rect::from_center_size(hist_center, Vec2::new(16.0, 16.0));
-        let hist_resp = ui.interact(hist_rect, ui.id().with("search_hist_btn"), Sense::click());
-        if hist_resp.hovered() {
-            ui.painter().rect_filled(hist_rect, Rounding::same(2.0), STUDIO_HOVER);
-        }
-        ui.painter().text(
-            hist_center,
-            egui::Align2::CENTER_CENTER,
-            "🕒",
-            FontId::proportional(10.5),
-            if hist_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(160, 160, 165) },
-        );
-        hist_resp.on_hover_text("Historial de búsqueda");
-
-        // Opciones de filtro (⋯)
-        let opt_center = Pos2::new(search_rect.max.x - 12.0, search_rect.center().y);
-        let opt_rect = Rect::from_center_size(opt_center, Vec2::new(16.0, 16.0));
-        let opt_resp = ui.interact(opt_rect, ui.id().with("search_opt_btn"), Sense::click());
-        if opt_resp.hovered() {
-            ui.painter().rect_filled(opt_rect, Rounding::same(2.0), STUDIO_HOVER);
-        }
-        ui.painter().text(
-            opt_center,
-            egui::Align2::CENTER_CENTER,
-            "⋯",
-            FontId::proportional(11.0),
-            if opt_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(160, 160, 165) },
-        );
-        opt_resp.on_hover_text("Opciones de filtro");
-
+        let right_reserve = if self.search_query.is_empty() { 6.0 } else { 22.0 };
         let text_rect = Rect::from_min_max(
             Pos2::new(search_rect.min.x + 25.0, search_rect.min.y + 2.0),
             Pos2::new(search_rect.max.x - right_reserve, search_rect.max.y - 2.0),
@@ -697,7 +736,7 @@ impl SceneHierarchyState {
         edit_ui.spacing_mut().item_spacing = Vec2::ZERO;
         edit_ui.add(
             egui::TextEdit::singleline(&mut self.search_query)
-                .hint_text("Buscar")
+                .hint_text("Filter Workspace (Ctrl+Shift+X)")
                 .frame(false)
                 .margin(egui::Margin::symmetric(0.0, 1.0))
                 .font(FontId::proportional(11.5))
@@ -705,7 +744,7 @@ impl SceneHierarchyState {
         );
 
         if !self.search_query.is_empty() {
-            let clear_center = Pos2::new(search_rect.max.x - 48.0, search_rect.center().y);
+            let clear_center = Pos2::new(search_rect.max.x - 11.0, search_rect.center().y);
             let clear_rect = Rect::from_center_size(clear_center, Vec2::new(14.0, 14.0));
             let clear_resp = ui.interact(clear_rect, ui.id().with("clear_explorer_search"), Sense::click());
             let clear_col = if clear_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 150, 150) };
@@ -766,15 +805,14 @@ impl SceneHierarchyState {
 
         let (row_rect, row_resp) = ui.allocate_exact_size(Vec2::new(avail_w, row_h), Sense::click());
 
-        // Highlight moderno de selección estilo Roblox Studio con redondeo
+        // Highlight de selección oficial Roblox Studio (ancho completo, azul vibrante #007ACC)
         if is_selected {
-            let sel_rect = Rect::from_min_max(Pos2::new(row_rect.min.x + 2.0, row_rect.min.y), Pos2::new(row_rect.max.x - 2.0, row_rect.max.y));
-            ui.painter().rect_filled(sel_rect, Rounding::same(3.0), STUDIO_SELECTION);
+            ui.painter().rect_filled(row_rect, 0.0, STUDIO_SELECTION);
         } else if row_resp.hovered() {
             ui.painter().rect_filled(row_rect, 0.0, STUDIO_HOVER);
         }
 
-        let indent_x = row_rect.min.x + (depth as f32 * 14.0) + 6.0;
+        let indent_x = row_rect.min.x + (depth as f32 * 14.0) + 4.0;
 
         // Flecha Foldout ▶ / ▼
         if has_children {
@@ -784,11 +822,17 @@ impl SceneHierarchyState {
             if arrow_resp.clicked() {
                 node.is_expanded = !node.is_expanded;
             }
-            let arrow_col = if arrow_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(180, 180, 185) };
+            let arrow_col = if is_selected {
+                Color32::WHITE
+            } else if arrow_resp.hovered() {
+                Color32::WHITE
+            } else {
+                Color32::from_rgb(180, 180, 185)
+            };
             icons::foldout_arrow(ui.painter(), arrow_pos, node.is_expanded, arrow_col);
         }
 
-        // ICONOS CLÁSICOS OFICIALES (Pixel-art retro que le encanta al usuario)
+        // ICONOS CLÁSICOS OFICIALES (Pixel-art retro)
         let icon_rect = Rect::from_center_size(Pos2::new(indent_x + 18.0, row_rect.center().y), Vec2::new(16.0, 16.0));
         if let Some(texs) = textures {
             let tex = match node.class {
@@ -830,23 +874,32 @@ impl SceneHierarchyState {
             text_color,
         );
 
-        // Botón circular [+] (Insert Object) al hacer hover
+        // Botón circular [+] (Insert Object) oficial de Roblox Studio
         if row_resp.hovered() || is_selected {
             let plus_pos = Pos2::new(row_rect.max.x - 14.0, row_rect.center().y);
-            let plus_rect = Rect::from_center_size(plus_pos, Vec2::new(15.0, 15.0));
+            let plus_rect = Rect::from_center_size(plus_pos, Vec2::new(16.0, 16.0));
             let plus_resp = ui.interact(plus_rect, ui.id().with(node.id).with("plus_insert"), Sense::click());
 
-            let plus_bg = if plus_resp.hovered() {
-                Color32::from_rgb(65, 65, 75)
+            let (circle_bg, cross_col) = if is_selected {
+                if plus_resp.hovered() {
+                    (Color32::from_rgb(0, 95, 175), Color32::WHITE)
+                } else {
+                    (Color32::from_rgb(0, 105, 190), Color32::from_rgb(240, 240, 245))
+                }
             } else {
-                Color32::from_rgb(48, 48, 56)
+                if plus_resp.hovered() {
+                    (Color32::from_rgb(60, 60, 68), Color32::WHITE)
+                } else {
+                    (Color32::from_rgb(38, 38, 44), Color32::from_rgb(200, 200, 205))
+                }
             };
-            ui.painter().circle_filled(plus_pos, 7.0, plus_bg);
-            ui.painter().circle_stroke(plus_pos, 7.0, Stroke::new(1.0, Color32::from_rgb(75, 75, 85)));
 
-            let stroke = Stroke::new(1.3, if plus_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(210, 210, 210) });
-            ui.painter().line_segment([Pos2::new(plus_pos.x - 3.0, plus_pos.y), Pos2::new(plus_pos.x + 3.0, plus_pos.y)], stroke);
-            ui.painter().line_segment([Pos2::new(plus_pos.x, plus_pos.y - 3.0), Pos2::new(plus_pos.x, plus_pos.y + 3.0)], stroke);
+            ui.painter().circle_filled(plus_pos, 7.5, circle_bg);
+            ui.painter().circle_stroke(plus_pos, 7.5, Stroke::new(1.0, Color32::from_rgb(70, 70, 80)));
+
+            let stroke = Stroke::new(1.4, cross_col);
+            ui.painter().line_segment([Pos2::new(plus_pos.x - 3.2, plus_pos.y), Pos2::new(plus_pos.x + 3.2, plus_pos.y)], stroke);
+            ui.painter().line_segment([Pos2::new(plus_pos.x, plus_pos.y - 3.2), Pos2::new(plus_pos.x, plus_pos.y + 3.2)], stroke);
 
             plus_resp.on_hover_text("Insert Object");
         }

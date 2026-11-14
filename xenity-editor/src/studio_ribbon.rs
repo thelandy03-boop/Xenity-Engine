@@ -114,9 +114,10 @@ impl StudioRibbonState {
         let (title_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), title_bar_h), Sense::hover());
         ui.painter().rect_filled(title_rect, 0.0, STUDIO_TOP_BG);
 
-        // Logo Roblox Studio (Cuadrado rotado con agujero)
+        // Logo Oficial Roblox Studio (Extraído de QtResources)
         let logo_center = Pos2::new(title_rect.min.x + 16.0, title_rect.center().y);
-        draw_roblox_studio_logo(ui.painter(), logo_center, 14.0);
+        let logo_rect = Rect::from_center_size(logo_center, Vec2::new(18.0, 18.0));
+        ui.painter().image(icons.studio_logo.id(), logo_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
 
         // Quick Access Icons: Save, Undo, Redo (PNGs REALES)
         let mut qa_x = title_rect.min.x + 36.0;
