@@ -35,6 +35,8 @@ pub struct StudioRibbonState {
     pub current_tool: StudioTool,
     pub part_dropdown_open: bool,
     pub play_dropdown_open: bool,
+    pub probar_dropdown_open: bool,
+    pub probar_mode: usize,
 
     // Snapping & Physical Settings
     pub move_snap_enabled: bool,
@@ -56,6 +58,8 @@ impl Default for StudioRibbonState {
             current_tool: StudioTool::Select,
             part_dropdown_open: false,
             play_dropdown_open: false,
+            probar_dropdown_open: false,
+            probar_mode: 0,
 
             move_snap_enabled: true,
             move_snap_studs: 21.0,
@@ -203,8 +207,19 @@ impl StudioRibbonState {
         let probar_w = 64.0;
         let probar_rect = Rect::from_center_size(Pos2::new(cur_x + probar_w * 0.5, bar_center_y), Vec2::new(probar_w, 22.0));
         let probar_resp = ui.interact(probar_rect, ui.id().with("btn_probar_dropdown"), Sense::click());
-        let probar_bg = if probar_resp.hovered() { Color32::from_rgb(48, 50, 56) } else { Color32::from_rgb(34, 35, 40) };
-        ui.painter().rect(probar_rect, Rounding::same(4.0), probar_bg, Stroke::new(1.0, Color32::from_rgb(52, 54, 60)));
+        let probar_bg = if self.probar_dropdown_open {
+            Color32::from_rgb(34, 35, 40)
+        } else if probar_resp.hovered() {
+            Color32::from_rgb(48, 50, 56)
+        } else {
+            Color32::from_rgb(34, 35, 40)
+        };
+        let probar_stroke = if self.probar_dropdown_open {
+            Stroke::new(1.5, Color32::from_rgb(0, 136, 255))
+        } else {
+            Stroke::new(1.0, Color32::from_rgb(52, 54, 60))
+        };
+        ui.painter().rect(probar_rect, Rounding::same(4.0), probar_bg, probar_stroke);
         ui.painter().text(
             Pos2::new(probar_rect.min.x + 8.0, bar_center_y),
             egui::Align2::LEFT_CENTER,
@@ -213,14 +228,77 @@ impl StudioRibbonState {
             Color32::from_rgb(220, 220, 225),
         );
         let p_arrow_x = probar_rect.max.x - 10.0;
-        let p1 = Pos2::new(p_arrow_x - 2.5, bar_center_y - 1.5);
-        let p2 = Pos2::new(p_arrow_x + 2.5, bar_center_y - 1.5);
-        let p3 = Pos2::new(p_arrow_x, bar_center_y + 2.0);
-        ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], Color32::from_rgb(180, 180, 185), Stroke::NONE));
-        if probar_resp.clicked() {
-            if !is_playing { action = RibbonAction::PlaySimulation; }
+        if self.probar_dropdown_open {
+            // Flecha ▴ hacia arriba
+            let p1 = Pos2::new(p_arrow_x - 2.5, bar_center_y + 1.5);
+            let p2 = Pos2::new(p_arrow_x + 2.5, bar_center_y + 1.5);
+            let p3 = Pos2::new(p_arrow_x, bar_center_y - 2.0);
+            ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], Color32::WHITE, Stroke::NONE));
+        } else {
+            // Flecha ▾ hacia abajo
+            let p1 = Pos2::new(p_arrow_x - 2.5, bar_center_y - 1.5);
+            let p2 = Pos2::new(p_arrow_x + 2.5, bar_center_y - 1.5);
+            let p3 = Pos2::new(p_arrow_x, bar_center_y + 2.0);
+            ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], Color32::from_rgb(180, 180, 185), Stroke::NONE));
         }
-        probar_resp.on_hover_text("Opciones de simulación");
+        if probar_resp.clicked() {
+            self.probar_dropdown_open = !self.probar_dropdown_open;
+        }
+        probar_resp.on_hover_text("Opciones de prueba y simulación");
+
+        // Menú Desplegable Oficial de "Probar" (Imagen 1 de referencia)
+        if self.probar_dropdown_open {
+            let menu_pos = Pos2::new(probar_rect.min.x, probar_rect.max.y + 3.0);
+            let menu_w = 145.0;
+            let menu_items = [
+                (0, "Probar"),
+                (1, "Probar aquí"),
+                (2, "Ejecutar"),
+                (3, "Prueba en equipo"),
+                (4, "Servidor y clientes"),
+            ];
+            let item_h = 24.0;
+            let menu_h = (menu_items.len() as f32) * item_h + 8.0;
+
+            egui::Area::new(ui.id().with("area_probar_menu"))
+                .fixed_pos(menu_pos)
+                .order(egui::Order::Foreground)
+                .show(ui.ctx(), |ui| {
+                    let (popup_rect, _) = ui.allocate_exact_size(Vec2::new(menu_w, menu_h), Sense::hover());
+                    ui.painter().rect_filled(popup_rect, Rounding::same(4.0), Color32::from_rgb(26, 27, 32));
+                    ui.painter().rect_stroke(popup_rect, Rounding::same(4.0), Stroke::new(1.0, Color32::from_rgb(48, 50, 58)));
+
+                    let mut item_y = popup_rect.min.y + 4.0;
+                    for (idx, text) in menu_items {
+                        let it_rect = Rect::from_min_size(Pos2::new(popup_rect.min.x + 4.0, item_y), Vec2::new(menu_w - 8.0, item_h));
+                        let it_resp = ui.interact(it_rect, ui.id().with(("probar_item", idx)), Sense::click());
+                        let is_sel = self.probar_mode == idx;
+
+                        if it_resp.hovered() || is_sel {
+                            ui.painter().rect_filled(it_rect, Rounding::same(3.0), Color32::from_rgb(46, 48, 55));
+                        }
+
+                        let text_color = if it_resp.hovered() || is_sel { Color32::WHITE } else { Color32::from_rgb(215, 218, 225) };
+                        ui.painter().text(
+                            Pos2::new(it_rect.min.x + 8.0, it_rect.center().y),
+                            egui::Align2::LEFT_CENTER,
+                            text,
+                            FontId::proportional(11.5),
+                            text_color,
+                        );
+
+                        if it_resp.clicked() {
+                            self.probar_mode = idx;
+                            self.probar_dropdown_open = false;
+                            if idx == 0 || idx == 1 || idx == 2 {
+                                action = RibbonAction::PlaySimulation;
+                            }
+                        }
+
+                        item_y += item_h;
+                    }
+                });
+        }
         cur_x += probar_w + 10.0;
 
         // Botón Play ▶ (Azul)
@@ -869,12 +947,15 @@ fn draw_snap_row(
         };
         ui.painter().rect(cb_rect, Rounding::same(2.0), cb_bg, cb_stroke);
         if *enabled {
-            ui.painter().text(
-                cb_rect.center(),
-                egui::Align2::CENTER_CENTER,
-                "✓",
-                FontId::proportional(10.0),
-                Color32::from_rgb(220, 220, 225),
+            let c = cb_rect.center();
+            let col = Color32::from_rgb(220, 220, 225);
+            ui.painter().line_segment(
+                [Pos2::new(c.x - 3.5, c.y + 0.2), Pos2::new(c.x - 1.0, c.y + 2.8)],
+                Stroke::new(1.6, col),
+            );
+            ui.painter().line_segment(
+                [Pos2::new(c.x - 1.0, c.y + 2.8), Pos2::new(c.x + 3.8, c.y - 2.8)],
+                Stroke::new(1.6, col),
             );
         }
 
@@ -933,8 +1014,19 @@ fn draw_snap_row(
             }
         }
 
-        ui.painter().text(up_rect.center(), egui::Align2::CENTER_CENTER, "▴", FontId::proportional(7.0), Color32::from_rgb(160, 160, 165));
-        ui.painter().text(down_rect.center(), egui::Align2::CENTER_CENTER, "▾", FontId::proportional(7.0), Color32::from_rgb(160, 160, 165));
+        let up_c = up_rect.center();
+        let up_col = if up_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(170, 172, 178) };
+        let p1 = Pos2::new(up_c.x, up_c.y - 2.2);
+        let p2 = Pos2::new(up_c.x - 2.8, up_c.y + 1.2);
+        let p3 = Pos2::new(up_c.x + 2.8, up_c.y + 1.2);
+        ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], up_col, Stroke::NONE));
+
+        let down_c = down_rect.center();
+        let down_col = if down_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(170, 172, 178) };
+        let d1 = Pos2::new(down_c.x - 2.8, down_c.y - 1.2);
+        let d2 = Pos2::new(down_c.x + 2.8, down_c.y - 1.2);
+        let d3 = Pos2::new(down_c.x, down_c.y + 2.2);
+        ui.painter().add(egui::Shape::convex_polygon(vec![d1, d2, d3], down_col, Stroke::NONE));
     });
 }
 
