@@ -572,3 +572,35 @@ pub fn three_dots_vertical(painter: &Painter, center: Pos2, color: Color32) {
     painter.circle_filled(center, r, color);
     painter.circle_filled(Pos2::new(center.x, center.y + 4.0), r, color);
 }
+
+/// Ícono de escoba para limpiar salida (Clear output)
+pub fn broom_icon(painter: &Painter, center: Pos2, color: Color32) {
+    let p_top = Pos2::new(center.x + 4.0, center.y - 5.0);
+    let p_mid = Pos2::new(center.x - 0.5, center.y + 0.5);
+    painter.line_segment([p_top, p_mid], Stroke::new(1.5, color));
+
+    let b1 = Pos2::new(center.x - 4.5, center.y + 1.5);
+    let b2 = Pos2::new(center.x - 2.0, center.y + 5.0);
+    let b3 = Pos2::new(center.x + 2.5, center.y + 2.5);
+    painter.add(egui::Shape::convex_polygon(vec![p_mid, b1, b2, b3], color, Stroke::NONE));
+}
+
+/// Ícono de marcador (Bookmark ribbon)
+pub fn bookmark_icon(painter: &Painter, center: Pos2, color: Color32) {
+    let w = 4.0;
+    let h = 5.5;
+    let top_left = Pos2::new(center.x - w, center.y - h);
+    let top_right = Pos2::new(center.x + w, center.y - h);
+    let bot_right = Pos2::new(center.x + w, center.y + h);
+    let notch = Pos2::new(center.x, center.y + h - 2.5);
+    let bot_left = Pos2::new(center.x - w, center.y + h);
+    painter.add(egui::Shape::convex_polygon(vec![top_left, top_right, bot_right, notch, bot_left], color, Stroke::NONE));
+}
+
+/// Ícono de reloj de historial (History clock)
+pub fn clock_icon(painter: &Painter, center: Pos2, color: Color32) {
+    let r = 5.5;
+    painter.circle_stroke(center, r, Stroke::new(1.2, color));
+    painter.line_segment([center, Pos2::new(center.x, center.y - 3.0)], Stroke::new(1.2, color));
+    painter.line_segment([center, Pos2::new(center.x + 2.5, center.y)], Stroke::new(1.2, color));
+}
