@@ -188,14 +188,16 @@ impl StudioOutputState {
         if opt_resp.hovered() {
             right_ui.painter().rect_filled(opt_rect, Rounding::same(2.0), STUDIO_HOVER);
         }
-        icons::three_dots_vertical(
-            right_ui.painter(),
-            opt_rect.center(),
-            if opt_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(160, 160, 165) },
+        let opt_icon_rect = Rect::from_center_size(opt_rect.center(), Vec2::new(14.0, 14.0));
+        right_ui.painter().image(
+            icons.out_more.id(),
+            opt_icon_rect,
+            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+            if opt_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(175, 175, 180) },
         );
         opt_resp.on_hover_text("Opciones de salida");
 
-        // Botón Broom 🧹 (Limpiar)
+        // Botón Limpiar Consola (Ícono real oficial DeleteButton.png de Roblox Studio)
         let (broom_rect, broom_resp) = right_ui.allocate_exact_size(Vec2::new(20.0, 20.0), Sense::click());
         if broom_resp.clicked() {
             self.logs.clear();
@@ -204,9 +206,11 @@ impl StudioOutputState {
         if broom_resp.hovered() {
             right_ui.painter().rect_filled(broom_rect, Rounding::same(2.0), STUDIO_HOVER);
         }
-        icons::broom_icon(
-            right_ui.painter(),
-            broom_rect.center(),
+        let clear_icon_rect = Rect::from_center_size(broom_rect.center(), Vec2::new(14.0, 14.0));
+        right_ui.painter().image(
+            icons.out_clear.id(),
+            clear_icon_rect,
+            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
             if broom_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(175, 175, 180) },
         );
         broom_resp.on_hover_text("Limpiar salida");

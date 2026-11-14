@@ -189,7 +189,7 @@ impl PropertiesWindowState {
         };
 
         let filter = self.search_query.to_lowercase();
-        let col_name_w = (ui.available_width() * 0.44).clamp(110.0, 180.0);
+        let col_name_w = (ui.available_width() * 0.42).clamp(110.0, 500.0);
 
         egui::ScrollArea::vertical()
             .id_salt("roblox_properties_scroll")

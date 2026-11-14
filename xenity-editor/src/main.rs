@@ -237,19 +237,19 @@ impl eframe::App for RobloxStudioApp {
             egui::SidePanel::right("studio_right_dock")
                 .resizable(true)
                 .default_width(330.0)
-                .min_width(240.0)
-                .max_width(650.0)
+                .min_width(200.0)
+                .max_width(900.0)
                 .frame(egui::Frame::none().fill(STUDIO_BG).inner_margin(egui::Margin::same(0.0)))
                 .show(ctx, |ui| {
                     let full_rect = ui.available_rect_before_wrap();
                     let total_h = full_rect.height();
 
                     if self.show_explorer && self.show_properties {
-                        // Ambas ventanas visibles: divididas por splitter interactivo
-                        let split_h = (total_h * self.right_split_ratio).clamp(80.0, (total_h - 80.0).max(80.0));
+                        // Ambas ventanas visibles: divididas por splitter interactivo que adapta ambas ventanas
+                        let split_h = (total_h * self.right_split_ratio).clamp(50.0, (total_h - 50.0).max(50.0));
                         let split_y = full_rect.min.y + split_h;
 
-                        // Explorer (Mitad Superior)
+                        // Explorer (Mitad Superior - se adapta al tamaño)
                         let explorer_rect = Rect::from_min_max(full_rect.min, Pos2::new(full_rect.max.x, split_y - 2.0));
                         let mut explorer_ui = ui.child_ui(explorer_rect, egui::Layout::top_down(egui::Align::Min), None);
                         let (clicked_name, exp_close) = self.hierarchy.show(&mut explorer_ui, icons);
@@ -260,22 +260,30 @@ impl eframe::App for RobloxStudioApp {
                             self.show_explorer = false;
                         }
 
-                        // Splitter Barra Horizontal
-                        let splitter_rect = Rect::from_min_max(Pos2::new(full_rect.min.x, split_y - 2.0), Pos2::new(full_rect.max.x, split_y + 2.0));
-                        let splitter_resp = ui.interact(splitter_rect, ui.id().with("dock_splitter"), Sense::click_and_drag());
+                        // Splitter Barra Horizontal (zona de agarre amplia y responsiva)
+                        let grab_h = 10.0;
+                        let grab_rect = Rect::from_center_size(
+                            Pos2::new(full_rect.center().x, split_y),
+                            Vec2::new(full_rect.width(), grab_h),
+                        );
+                        let splitter_resp = ui.interact(grab_rect, ui.id().with("dock_splitter"), Sense::click_and_drag());
                         if splitter_resp.hovered() || splitter_resp.dragged() {
                             ui.ctx().set_cursor_icon(CursorIcon::ResizeVertical);
                         }
-                        let splitter_color = if splitter_resp.dragged() || splitter_resp.hovered() { STUDIO_SELECTION } else { STUDIO_BORDER };
-                        ui.painter().rect_filled(splitter_rect, 0.0, splitter_color);
+                        let splitter_color = if splitter_resp.dragged() || splitter_resp.hovered() { Color32::from_rgb(0, 162, 255) } else { STUDIO_BORDER };
+                        ui.painter().rect_filled(
+                            Rect::from_center_size(Pos2::new(full_rect.center().x, split_y), Vec2::new(full_rect.width(), 3.0)),
+                            0.0,
+                            splitter_color,
+                        );
 
                         if splitter_resp.dragged() {
                             let delta_y = splitter_resp.drag_delta().y;
                             let new_h = split_h + delta_y;
-                            self.right_split_ratio = (new_h / total_h).clamp(0.15, 0.85);
+                            self.right_split_ratio = (new_h / total_h).clamp(0.06, 0.94);
                         }
 
-                        // Properties (Mitad Inferior)
+                        // Properties (Mitad Inferior - al agrandar, el explorador se adapta suavemente)
                         let properties_rect = Rect::from_min_max(Pos2::new(full_rect.min.x, split_y + 2.0), full_rect.max);
                         let mut prop_ui = ui.child_ui(properties_rect, egui::Layout::top_down(egui::Align::Min), None);
                         let selected_item = self.hierarchy.get_selected_item_mut();
@@ -304,26 +312,7 @@ impl eframe::App for RobloxStudioApp {
         }
 
         // =====================================================================
-        // 5. BARRA DE ESTADO INFERIOR (Status Bar oficial de Roblox Studio)
-        // =====================================================================
-        egui::TopBottomPanel::bottom("studio_status_bar")
-            .exact_height(20.0)
-            .frame(egui::Frame::none().fill(STUDIO_BG).inner_margin(egui::Margin::symmetric(10.0, 2.0)))
-            .show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("Workspace (Ready)").size(11.0).color(STUDIO_TEXT_MUTED));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(egui::RichText::new("60.0 FPS").size(11.0).color(Color32::from_rgb(0, 180, 80)));
-                        ui.separator();
-                        ui.label(egui::RichText::new("Snap: 1 Stud, 45°").size(11.0).color(STUDIO_TEXT_MUTED));
-                        ui.separator();
-                        ui.label(egui::RichText::new("Camera Speed: 1.0").size(11.0).color(STUDIO_TEXT_MUTED));
-                    });
-                });
-            });
-
-        // =====================================================================
-        // 6. PANEL CENTRAL: 3D VIEWPORT DE ROBLOX STUDIO
+        // 5. PANEL CENTRAL: 3D VIEWPORT DE ROBLOX STUDIO
         // =====================================================================
         egui::CentralPanel::default()
             .frame(egui::Frame::none().fill(STUDIO_VIEWPORT_BG).inner_margin(egui::Margin::same(0.0)))
