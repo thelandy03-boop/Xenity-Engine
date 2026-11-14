@@ -373,19 +373,7 @@ impl StudioRibbonState {
         );
         dev_resp.on_hover_text("Emulación de dispositivo");
 
-        // --- PESTAÑAS MODERNAS TIPO PÍLDORA (ESPACIADO EXACTO SEGÚN IMAGEN 2) ---
-        let mut tab_x = (tabs_rect.min.x + 360.0).max(cur_x + 40.0);
-
-        // 1. Pestaña activa: Inicio (Píldora destacada)
-        let inicio_font = FontId::proportional(11.5);
-        let inicio_rect = Rect::from_center_size(Pos2::new(tab_x + 24.0, bar_center_y), Vec2::new(48.0, 24.0));
-        let inicio_resp = ui.interact(inicio_rect, ui.id().with("mod_tab_inicio"), Sense::click());
-        ui.painter().rect_filled(inicio_rect, Rounding::same(4.0), Color32::from_rgb(52, 54, 60));
-        ui.painter().text(inicio_rect.center(), egui::Align2::CENTER_CENTER, "Inicio", inicio_font, Color32::WHITE);
-        if inicio_resp.clicked() { self.current_tab = RibbonTab::Home; }
-        tab_x += 48.0 + 20.0;
-
-        // 2. Pestañas inactivas con espaciado amplio y elegante
+        // --- PESTAÑAS MODERNAS TIPO PÍLDORA (PERFECTAMENTE CENTRADAS EN LA VENTANA) ---
         let other_tabs = [
             ("Avatar", RibbonTab::Avatar),
             ("UI", RibbonTab::View),
@@ -395,29 +383,54 @@ impl StudioRibbonState {
             ("Sin título", RibbonTab::Home),
         ];
 
+        let inicio_w = 48.0;
+        let tab_gap = 20.0;
+        let font_id = FontId::proportional(12.0);
+
+        // Cálculo exacto del ancho total del bloque de pestañas
+        let mut total_tabs_w = inicio_w + tab_gap;
+        for (label, _) in &other_tabs {
+            let galley = ui.painter().layout_no_wrap(label.to_string(), font_id.clone(), Color32::WHITE);
+            total_tabs_w += galley.size().x + tab_gap;
+        }
+        total_tabs_w += 18.0; // Ancho del botón '+'
+
+        // Centrado dinámico respecto al ancho total de la barra
+        let center_x = tabs_rect.center().x;
+        let mut tab_x = (center_x - total_tabs_w * 0.5).max(cur_x + 20.0);
+
+        // 1. Pestaña activa: Inicio (Píldora destacada oficial)
+        let inicio_font = FontId::proportional(11.5);
+        let inicio_rect = Rect::from_center_size(Pos2::new(tab_x + inicio_w * 0.5, bar_center_y), Vec2::new(inicio_w, 24.0));
+        let inicio_resp = ui.interact(inicio_rect, ui.id().with("mod_tab_inicio"), Sense::click());
+        ui.painter().rect_filled(inicio_rect, Rounding::same(4.0), Color32::from_rgb(52, 54, 60));
+        ui.painter().text(inicio_rect.center(), egui::Align2::CENTER_CENTER, "Inicio", inicio_font, Color32::WHITE);
+        if inicio_resp.clicked() { self.current_tab = RibbonTab::Home; }
+        tab_x += inicio_w + tab_gap;
+
+        // 2. Pestañas inactivas centradas
         for (label, tab) in other_tabs {
-            let font_id = FontId::proportional(12.0);
             let galley = ui.painter().layout_no_wrap(label.to_string(), font_id.clone(), Color32::WHITE);
             let text_w = galley.size().x;
 
-            let rect = Rect::from_center_size(Pos2::new(tab_x + text_w * 0.5, bar_center_y), Vec2::new(text_w + 8.0, 22.0));
+            let rect = Rect::from_center_size(Pos2::new(tab_x + text_w * 0.5, bar_center_y), Vec2::new(text_w + 6.0, 22.0));
             let resp = ui.interact(rect, ui.id().with(("mod_tab", label)), Sense::click());
 
             if resp.hovered() {
                 ui.painter().rect_filled(rect, Rounding::same(4.0), Color32::from_rgba_unmultiplied(255, 255, 255, 12));
             }
             let col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 153, 162) };
-            ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, font_id, col);
+            ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, font_id.clone(), col);
 
             if resp.clicked() {
                 self.current_tab = tab;
             }
 
-            tab_x += text_w + 22.0;
+            tab_x += text_w + tab_gap;
         }
 
         // Botón '+' para nueva pestaña
-        let add_tab_rect = Rect::from_center_size(Pos2::new(tab_x + 6.0, bar_center_y), Vec2::new(18.0, 20.0));
+        let add_tab_rect = Rect::from_center_size(Pos2::new(tab_x + 8.0, bar_center_y), Vec2::new(18.0, 20.0));
         let add_tab_resp = ui.interact(add_tab_rect, ui.id().with("add_tab_btn"), Sense::click());
         if add_tab_resp.hovered() {
             ui.painter().rect_filled(add_tab_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
@@ -430,6 +443,44 @@ impl StudioRibbonState {
             if add_tab_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 153, 162) },
         );
         add_tab_resp.on_hover_text("Nueva pestaña");
+
+        // --- LADO DERECHO OFICIAL ROBLOX STUDIO: Acciones rápidas (Avatar, Colaborar, Notificaciones, etc.) ---
+        let mut r_x = tabs_rect.max.x - 18.0;
+
+        // Avatar de usuario circular
+        let user_av_center = Pos2::new(r_x, bar_center_y);
+        ui.painter().circle_filled(user_av_center, 10.0, Color32::from_rgb(45, 95, 170));
+        ui.painter().circle_stroke(user_av_center, 10.0, Stroke::new(1.2, Color32::from_rgb(70, 130, 210)));
+        ui.painter().text(user_av_center, egui::Align2::CENTER_CENTER, "👤", FontId::proportional(10.0), Color32::WHITE);
+        r_x -= 24.0;
+
+        // Campana / Notificaciones 🔔
+        let bell_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(18.0, 18.0));
+        let bell_resp = ui.interact(bell_rect, ui.id().with("top_bell"), Sense::click());
+        if bell_resp.hovered() { ui.painter().rect_filled(bell_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18)); }
+        ui.painter().text(bell_rect.center(), egui::Align2::CENTER_CENTER, "🔔", FontId::proportional(11.0), Color32::from_rgb(160, 163, 172));
+        r_x -= 24.0;
+
+        // Nube / Guardar ☁
+        let cloud_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(18.0, 18.0));
+        let cloud_resp = ui.interact(cloud_rect, ui.id().with("top_cloud"), Sense::click());
+        if cloud_resp.hovered() { ui.painter().rect_filled(cloud_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18)); }
+        ui.painter().text(cloud_rect.center(), egui::Align2::CENTER_CENTER, "☁", FontId::proportional(12.0), Color32::from_rgb(160, 163, 172));
+        if cloud_resp.clicked() { action = RibbonAction::SavePlace; }
+        r_x -= 24.0;
+
+        // Compartir 🔗 / Colaborar
+        let share_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(18.0, 18.0));
+        let share_resp = ui.interact(share_rect, ui.id().with("top_share"), Sense::click());
+        if share_resp.hovered() { ui.painter().rect_filled(share_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18)); }
+        ui.painter().text(share_rect.center(), egui::Align2::CENTER_CENTER, "🔗", FontId::proportional(11.0), Color32::from_rgb(160, 163, 172));
+        r_x -= 24.0;
+
+        // Chat 💬
+        let chat_rect = Rect::from_center_size(Pos2::new(r_x, bar_center_y), Vec2::new(18.0, 18.0));
+        let chat_resp = ui.interact(chat_rect, ui.id().with("top_chat"), Sense::click());
+        if chat_resp.hovered() { ui.painter().rect_filled(chat_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18)); }
+        ui.painter().text(chat_rect.center(), egui::Align2::CENTER_CENTER, "💬", FontId::proportional(11.0), Color32::from_rgb(160, 163, 172));
 
         ui.painter().line_segment(
             [Pos2::new(tabs_rect.min.x, tabs_rect.max.y), Pos2::new(tabs_rect.max.x, tabs_rect.max.y)],
@@ -586,13 +637,13 @@ impl StudioRibbonState {
         draw_modern_divider(ui);
 
         // 5. Ventanas y Paneles (Explorador, Propiedades, Caja de..., Recursos)
-        if draw_modern_ribbon_button(ui, "Explorador", explorer_visible, &icons.rib_explorer, false) {
+        if draw_modern_ribbon_button(ui, "Explorador", false, &icons.rib_explorer, false) {
             *action = RibbonAction::ToggleExplorer;
         }
-        if draw_modern_ribbon_button(ui, "Propiedades", properties_visible, &icons.rib_properties, false) {
+        if draw_modern_ribbon_button(ui, "Propiedades", false, &icons.rib_properties, false) {
             *action = RibbonAction::ToggleProperties;
         }
-        if draw_modern_ribbon_button(ui, "Caja de...", toolbox_visible, &icons.rib_toolbox, false) {
+        if draw_modern_ribbon_button(ui, "Caja de...", false, &icons.rib_toolbox, false) {
             *action = RibbonAction::ToggleToolbox;
         }
         if draw_modern_ribbon_button(ui, "Recursos", false, &icons.rib_assetmgr, false) {
@@ -885,13 +936,13 @@ fn draw_modern_ribbon_button(
 
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(btn_w, btn_h), Sense::click());
 
-    // Background & Border
+    // Background & Border idéntico a Roblox Studio oficial
     if is_active {
-        ui.painter().rect_filled(rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(0, 162, 255, 35));
-        ui.painter().rect_stroke(rect, Rounding::same(3.0), Stroke::new(1.0, Color32::from_rgb(0, 162, 255)));
+        ui.painter().rect_filled(rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 12));
+        ui.painter().rect_stroke(rect, Rounding::same(3.0), Stroke::new(1.0, Color32::from_rgb(65, 68, 76)));
     } else if resp.hovered() {
-        ui.painter().rect_filled(rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 20));
-        ui.painter().rect_stroke(rect, Rounding::same(3.0), Stroke::new(1.0, Color32::from_rgba_unmultiplied(255, 255, 255, 35)));
+        ui.painter().rect_filled(rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
+        ui.painter().rect_stroke(rect, Rounding::same(3.0), Stroke::new(1.0, Color32::from_rgba_unmultiplied(255, 255, 255, 25)));
     }
 
     let icon_size = Vec2::new(24.0, 24.0);
