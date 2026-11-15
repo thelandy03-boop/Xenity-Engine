@@ -156,7 +156,7 @@ impl StudioRibbonState {
             let is_open = self.active_top_menu == Some(idx);
 
             let bg = if is_open {
-                Color32::from_rgb(34, 37, 44)
+                Color32::from_rgb(36, 36, 40)
             } else if item_resp.hovered() {
                 Color32::from_rgba_unmultiplied(255, 255, 255, 14)
             } else {
@@ -164,7 +164,7 @@ impl StudioRibbonState {
             };
 
             let stroke = if is_open {
-                Stroke::new(1.0, Color32::from_rgb(48, 52, 63))
+                Stroke::new(1.0, Color32::from_rgb(46, 46, 52))
             } else {
                 Stroke::NONE
             };
@@ -210,8 +210,8 @@ impl StudioRibbonState {
                     let mut close_menu = false;
 
                     let frame_res = egui::Frame::popup(ui.style())
-                        .fill(Color32::from_rgb(34, 37, 44))
-                        .stroke(Stroke::new(1.0, Color32::from_rgb(48, 52, 63)))
+                        .fill(Color32::from_rgb(22, 22, 25))
+                        .stroke(Stroke::new(1.0, Color32::from_rgb(46, 46, 52)))
                         .rounding(Rounding::same(2.0))
                         .inner_margin(egui::Margin::symmetric(2.0, 3.0))
                         .show(ui, |ui| {
@@ -1638,7 +1638,7 @@ fn draw_menu_sep(ui: &mut egui::Ui) {
     let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0), Sense::hover());
     ui.painter().line_segment(
         [Pos2::new(rect.min.x, rect.center().y), Pos2::new(rect.max.x, rect.center().y)],
-        Stroke::new(1.0, Color32::from_rgb(46, 50, 60)),
+        Stroke::new(1.0, Color32::from_rgb(44, 46, 54)),
     );
     ui.add_space(2.0);
 }
@@ -1649,23 +1649,23 @@ fn draw_menu_entry_ext(ui: &mut egui::Ui, text: &str, shortcut: &str, disabled: 
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), h), Sense::click());
 
     if !disabled && resp.hovered() {
-        ui.painter().rect_filled(rect, Rounding::same(2.0), Color32::from_rgb(48, 53, 64));
+        ui.painter().rect_filled(rect, Rounding::same(2.0), Color32::from_rgb(38, 40, 48));
     }
 
     let text_col = if disabled {
-        Color32::from_rgb(95, 100, 112)
+        Color32::from_rgb(105, 108, 120)
     } else if resp.hovered() {
         Color32::WHITE
     } else {
-        Color32::from_rgb(222, 226, 234)
+        Color32::from_rgb(220, 222, 230)
     };
 
     let shortcut_col = if disabled {
-        Color32::from_rgb(80, 84, 96)
+        Color32::from_rgb(85, 88, 100)
     } else if resp.hovered() {
-        Color32::from_rgb(215, 220, 230)
+        Color32::from_rgb(180, 185, 195)
     } else {
-        Color32::from_rgb(180, 185, 198)
+        Color32::from_rgb(135, 138, 150)
     };
 
     ui.painter().text(
