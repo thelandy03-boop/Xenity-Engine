@@ -227,15 +227,26 @@ impl BuildExportState {
 
         let mut action = BuildDialogAction::None;
 
-        // Modal overlay
+        // Modal overlay: se dibuja en Order::Middle (afecta exclusivamente al fondo de la pantalla)
         let screen_rect = ctx.screen_rect();
-        let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Middle, egui::Id::new("build_modal_backdrop")));
-        painter.rect_filled(screen_rect, 0.0, Color32::from_rgba_unmultiplied(0, 0, 0, 140));
+        let mut clicked_backdrop = false;
+
+        egui::Area::new(egui::Id::new("build_modal_backdrop_area"))
+            .order(egui::Order::Middle)
+            .fixed_pos(screen_rect.min)
+            .show(ctx, |ui| {
+                let (rect, resp) = ui.allocate_exact_size(screen_rect.size(), Sense::click());
+                ui.painter().rect_filled(rect, 0.0, Color32::from_rgba_unmultiplied(0, 0, 0, 140));
+                if resp.clicked() {
+                    clicked_backdrop = true;
+                }
+            });
 
         let mut is_still_open = true;
 
-        // Ventana con estilo Unity exacto
+        // Ventana en primer plano (Order::Foreground): queda por encima del overlay oscuro, 100% nítida y brillante
         egui::Window::new("BuildSettingsWindow")
+            .order(egui::Order::Foreground)
             .title_bar(false)
             .collapsible(false)
             .resizable(false)
@@ -243,8 +254,8 @@ impl BuildExportState {
             .fixed_size([690.0, 620.0])
             .frame(
                 egui::Frame::window(&ctx.style())
-                    .fill(Color32::from_rgb(34, 34, 38))
-                    .stroke(Stroke::new(1.0, Color32::from_rgb(52, 54, 62)))
+                    .fill(Color32::from_rgb(40, 40, 45))
+                    .stroke(Stroke::new(1.0, Color32::from_rgb(64, 66, 75)))
                     .rounding(Rounding::same(4.0))
                     .inner_margin(egui::Margin::symmetric(14.0, 10.0)),
             )
@@ -258,14 +269,14 @@ impl BuildExportState {
                     ui.painter().rect_filled(
                         tab_rect,
                         Rounding { nw: 3.0, ne: 3.0, sw: 0.0, se: 0.0 },
-                        Color32::from_rgb(46, 47, 52),
+                        Color32::from_rgb(52, 54, 62),
                     );
                     ui.painter().text(
                         tab_rect.center(),
                         egui::Align2::CENTER_CENTER,
                         "Build Settings",
                         FontId::proportional(11.5),
-                        Color32::from_rgb(230, 230, 230),
+                        Color32::WHITE,
                     );
 
                     // Botones de la esquina superior derecha (⋮ y ✕)
@@ -695,7 +706,7 @@ impl BuildExportState {
                 );
             });
 
-        if !is_still_open || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+        if !is_still_open || clicked_backdrop || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.is_open = false;
         }
 
