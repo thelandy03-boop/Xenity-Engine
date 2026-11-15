@@ -127,53 +127,11 @@ impl StudioRibbonState {
         let mut action = RibbonAction::None;
 
         // =====================================================================
-        // 1. BARRA SUPERIOR DE TÍTULO Y QUICK ACCESS (Acceso Rápido)
+        // 1. BARRA SUPERIOR DE TÍTULO
         // =====================================================================
         let title_bar_h = 30.0;
         let (title_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), title_bar_h), Sense::hover());
         ui.painter().rect_filled(title_rect, 0.0, STUDIO_TOP_BG);
-
-        // Logo Oficial Roblox Studio (Extraído de QtResources)
-        let logo_center = Pos2::new(title_rect.min.x + 16.0, title_rect.center().y);
-        let logo_rect = Rect::from_center_size(logo_center, Vec2::new(18.0, 18.0));
-        ui.painter().image(icons.studio_logo.id(), logo_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-
-        // Quick Access Icons: Save, Undo, Redo (PNGs REALES)
-        let mut qa_x = title_rect.min.x + 36.0;
-
-        // Save
-        let save_rect = Rect::from_center_size(Pos2::new(qa_x, title_rect.center().y), Vec2::new(20.0, 20.0));
-        let save_resp = ui.interact(save_rect, ui.id().with("qa_save"), Sense::click());
-        if save_resp.hovered() {
-            ui.painter().rect_filled(save_rect, Rounding::same(2.0), STUDIO_BTN_HOVER);
-        }
-        ui.painter().text(save_rect.center(), egui::Align2::CENTER_CENTER, "💾", FontId::proportional(11.0), Color32::from_rgb(210, 210, 210));
-        if save_resp.clicked() { action = RibbonAction::SavePlace; }
-        save_resp.on_hover_text("Save to Roblox (Ctrl+S)");
-        qa_x += 24.0;
-
-        // Undo (PNG REAL DE STUDIO)
-        let undo_rect = Rect::from_center_size(Pos2::new(qa_x, title_rect.center().y), Vec2::new(20.0, 20.0));
-        let undo_resp = ui.interact(undo_rect, ui.id().with("qa_undo"), Sense::click());
-        if undo_resp.hovered() {
-            ui.painter().rect_filled(undo_rect, Rounding::same(2.0), STUDIO_BTN_HOVER);
-        }
-        let undo_img_rect = Rect::from_center_size(undo_rect.center(), Vec2::new(16.0, 16.0));
-        ui.painter().image(icons.qa_undo.id(), undo_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        if undo_resp.clicked() { action = RibbonAction::Undo; }
-        undo_resp.on_hover_text("Undo (Ctrl+Z)");
-        qa_x += 24.0;
-
-        // Redo (PNG REAL DE STUDIO)
-        let redo_rect = Rect::from_center_size(Pos2::new(qa_x, title_rect.center().y), Vec2::new(20.0, 20.0));
-        let redo_resp = ui.interact(redo_rect, ui.id().with("qa_redo"), Sense::click());
-        if redo_resp.hovered() {
-            ui.painter().rect_filled(redo_rect, Rounding::same(2.0), STUDIO_BTN_HOVER);
-        }
-        let redo_img_rect = Rect::from_center_size(redo_rect.center(), Vec2::new(16.0, 16.0));
-        ui.painter().image(icons.qa_redo.id(), redo_img_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        if redo_resp.clicked() { action = RibbonAction::Redo; }
-        redo_resp.on_hover_text("Redo (Ctrl+Y)");
 
         // Título de la experiencia centrado
         ui.painter().text(
