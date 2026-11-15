@@ -196,9 +196,23 @@ int XenityFFI::Init(int width, int height)
 		if (go)
 		{
 			if (go->GetName() == "Sun")
+			{
 				hasSun = true;
+				auto light = go->GetComponent<Light>();
+				if (light)
+				{
+					light->SetupDirectionalLight(Color::CreateFromRGBAFloat(1.0f, 0.98f, 0.95f, 1.0f), 0.65f);
+				}
+			}
 			if (go->GetName() == "Ambient")
+			{
 				hasAmbient = true;
+				auto light = go->GetComponent<Light>();
+				if (light)
+				{
+					light->SetupAmbientLight(Color::CreateFromRGBAFloat(0.65f, 0.70f, 0.78f, 1.0f), 0.50f);
+				}
+			}
 			if (go->GetName() == "Baseplate")
 			{
 				hasBaseplate = true;
@@ -229,7 +243,7 @@ int XenityFFI::Init(int width, int height)
 	{
 		auto sunGO = CreateGameObject("Sun");
 		auto sunLight = sunGO->AddComponent<Light>();
-		sunLight->SetupDirectionalLight(Color::CreateFromRGBAFloat(1.0f, 0.98f, 0.95f, 1.0f), 0.95f);
+		sunLight->SetupDirectionalLight(Color::CreateFromRGBAFloat(1.0f, 0.98f, 0.95f, 1.0f), 0.65f);
 		sunGO->GetTransform()->SetEulerAngles(Vector3(50.0f, -30.0f, 0.0f));
 	}
 
@@ -237,7 +251,7 @@ int XenityFFI::Init(int width, int height)
 	{
 		auto ambGO = CreateGameObject("Ambient");
 		auto ambLight = ambGO->AddComponent<Light>();
-		ambLight->SetupAmbientLight(Color::CreateFromRGBAFloat(0.70f, 0.75f, 0.82f, 1.0f), 0.85f);
+		ambLight->SetupAmbientLight(Color::CreateFromRGBAFloat(0.65f, 0.70f, 0.78f, 1.0f), 0.50f);
 	}
 
 	if (!hasBaseplate)
