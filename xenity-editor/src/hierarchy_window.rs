@@ -302,6 +302,7 @@ pub struct SceneHierarchyState {
     pub next_id: usize,
     pub textures: Option<RobloxIconTextures>,
     pub context_menu: Option<ExplorerContextMenu>,
+    pub xenity_mappings: std::collections::HashMap<usize, i32>,
 }
 
 impl Default for SceneHierarchyState {
@@ -312,6 +313,7 @@ impl Default for SceneHierarchyState {
             next_id: 200,
             textures: None,
             context_menu: None,
+            xenity_mappings: std::collections::HashMap::new(),
             items: vec![
                 // 1. Workspace (Expandido por defecto con Camera, Terrain y Player)
                 ExplorerItem {
@@ -700,6 +702,83 @@ impl SceneHierarchyState {
         }
         self.selected_id = Some(id);
         id
+    }
+
+    pub fn get_xenity_index_for_id(&self, id: usize) -> Option<i32> {
+        self.xenity_mappings.get(&id).copied()
+    }
+
+    pub fn get_id_for_xenity_index(&self, x_idx: i32) -> Option<usize> {
+        self.xenity_mappings.iter().find_map(|(&k, &v)| if v == x_idx { Some(k) } else { None })
+    }
+
+    pub fn sync_from_engine(&mut self, engine: &mut crate::xenity_ffi::XenityEngine) {
+        let count = engine.get_gameobject_count();
+        if count <= 0 {
+            return;
+        }
+
+        let ws_pos = self.items.iter().position(|it| it.class == RobloxClass::Workspace);
+        let ws_idx = match ws_pos {
+            Some(i) => i,
+            None => return,
+        };
+
+        for i in 0..count {
+            if let Some(info) = engine.get_gameobject_info(i) {
+                let name = info.name_as_str();
+                if name.is_empty() || name == "EditorCamera" {
+                    continue;
+                }
+
+                let color = Color32::from_rgb(
+                    (info.color[0] * 255.0).clamp(0.0, 255.0) as u8,
+                    (info.color[1] * 255.0).clamp(0.0, 255.0) as u8,
+                    (info.color[2] * 255.0).clamp(0.0, 255.0) as u8,
+                );
+
+                // Check if existing item in Workspace has this name
+                let found = self.items[ws_idx]
+                    .children
+                    .iter_mut()
+                    .find(|c| c.name == name);
+
+                if let Some(item) = found {
+                    item.properties.position = info.pos;
+                    item.properties.orientation = info.rot;
+                    item.properties.size = info.scale;
+                    item.properties.color = color;
+                    self.xenity_mappings.insert(item.id, i);
+                } else {
+                    let roblox_class = if info.has_light != 0 {
+                        RobloxClass::Light
+                    } else if name == "Camera" {
+                        RobloxClass::Camera
+                    } else {
+                        RobloxClass::Part
+                    };
+
+                    let new_id = self.next_id;
+                    self.next_id += 1;
+                    let mut props = InstanceProperties::default_for(&roblox_class, "Workspace");
+                    props.position = info.pos;
+                    props.orientation = info.rot;
+                    props.size = info.scale;
+                    props.color = color;
+
+                    self.items[ws_idx].children.push(ExplorerItem {
+                        id: new_id,
+                        name: name.to_string(),
+                        class: roblox_class,
+                        is_active: info.is_active != 0,
+                        is_expanded: false,
+                        properties: props,
+                        children: vec![],
+                    });
+                    self.xenity_mappings.insert(new_id, i);
+                }
+            }
+        }
     }
 
     pub fn show(&mut self, ui: &mut egui::Ui, icons: &StudioIcons) -> (Option<String>, bool) {

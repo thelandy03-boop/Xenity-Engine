@@ -25,6 +25,7 @@ class Camera;
 
 class Material : public FileReference
 {
+	friend class XenityFFI;
 public:
 	Material();
 	~Material();

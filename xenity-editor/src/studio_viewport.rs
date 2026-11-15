@@ -38,8 +38,9 @@ impl StudioViewportState {
         is_playing: bool,
         show_grid: bool,
         show_view_selector: bool,
+        current_tool: crate::studio_ribbon::StudioTool,
         engine: &mut Option<XenityEngine>,
-    ) {
+    ) -> Option<i32> {
         // 1. PESTAÑA SUPERIOR DE DOCUMENTO VIEWPORT [ Experiencia sin título ✕ ]
         let doc_bar_h = 28.0;
         let (doc_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), doc_bar_h), Sense::hover());
@@ -92,6 +93,7 @@ impl StudioViewportState {
         let vp_h = (vp_rect.height().round() as u32).max(64);
 
         self.engine_rendered = false;
+        let mut picked_object_index = None;
 
         // Renderizado con el motor C++ Xenity
         if let Some(eng) = engine {
@@ -101,7 +103,39 @@ impl StudioViewportState {
                 eng.resize(vp_w, vp_h);
             }
 
-            // Controles de cámara de Studio
+            // Actualizar modo de herramienta en el motor C++
+            let tool_mode = match current_tool {
+                crate::studio_ribbon::StudioTool::Select => 0,
+                crate::studio_ribbon::StudioTool::Move => 1,
+                crate::studio_ribbon::StudioTool::Rotate => 2,
+                crate::studio_ribbon::StudioTool::Scale => 3,
+                crate::studio_ribbon::StudioTool::Transform => 1,
+            };
+            eng.set_tool_mode(tool_mode);
+
+            // Clic izquierdo en el Viewport 3D: Raycast & Selección de pieza
+            if vp_resp.clicked_by(egui::PointerButton::Primary) && !ui.input(|i| i.modifiers.alt) {
+                if let Some(pos) = ui.ctx().pointer_latest_pos() {
+                    if vp_rect.contains(pos) {
+                        let norm_x = (pos.x - vp_rect.min.x) / vp_rect.width();
+                        let norm_y = (pos.y - vp_rect.min.y) / vp_rect.height();
+                        let hit = eng.pick_gameobject(norm_x, norm_y);
+                        if hit >= 0 {
+                            picked_object_index = Some(hit);
+                        }
+                    }
+                }
+            }
+
+            // Arrastre con clic izquierdo: Transformar el objeto seleccionado mediante el Gizmo 3D
+            if vp_resp.dragged_by(egui::PointerButton::Primary) && !ui.input(|i| i.modifiers.alt) {
+                let delta = vp_resp.drag_delta();
+                if tool_mode != 0 && (delta.x != 0.0 || delta.y != 0.0) {
+                    eng.transform_selected(delta.x, delta.y, tool_mode, 0);
+                }
+            }
+
+            // Controles de cámara de Studio: Arrastre con clic derecho o Alt + Clic izquierdo
             if vp_resp.dragged_by(egui::PointerButton::Secondary) || (vp_resp.dragged_by(egui::PointerButton::Primary) && ui.input(|i| i.modifiers.alt)) {
                 let delta = vp_resp.drag_delta();
                 eng.camera_orbit(delta.x * 0.35, delta.y * 0.35, 0.0, 0.0, 0.0);
@@ -204,6 +238,8 @@ impl StudioViewportState {
             FontId::proportional(11.5),
             if is_playing { Color32::from_rgb(255, 120, 120) } else { Color32::from_rgb(180, 225, 255) },
         );
+
+        picked_object_index
     }
 }
 

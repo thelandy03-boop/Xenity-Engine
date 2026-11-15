@@ -100,6 +100,11 @@ impl eframe::App for RobloxStudioApp {
         }
         let icons = self.icons.as_ref().unwrap();
 
+        // 0. Sincronizar jerarquía de GameObjects reales desde el motor C++ Xenity
+        if let Some(ref mut eng) = self.engine {
+            self.hierarchy.sync_from_engine(eng);
+        }
+
         // =====================================================================
         // 1. RIBBON BAR SUPERIOR COMPLETO DE ROBLOX STUDIO
         // =====================================================================
@@ -361,15 +366,45 @@ impl eframe::App for RobloxStudioApp {
         egui::CentralPanel::default()
             .frame(egui::Frame::none().fill(STUDIO_VIEWPORT_BG).inner_margin(egui::Margin::same(0.0)))
             .show(ctx, |ui| {
-                self.viewport.show(
+                let hit_opt = self.viewport.show(
                     ui,
                     icons,
                     self.is_playing,
                     self.show_grid,
                     self.show_view_selector,
+                    self.ribbon.current_tool,
                     &mut self.engine,
                 );
+                if let Some(hit_idx) = hit_opt {
+                    if let Some(id) = self.hierarchy.get_id_for_xenity_index(hit_idx) {
+                        self.hierarchy.selected_id = Some(id);
+                    }
+                }
             });
+
+        // Sincronizar selección y propiedades con el motor C++
+        if let Some(ref mut eng) = self.engine {
+            if let Some(sel_id) = self.hierarchy.selected_id {
+                if let Some(x_idx) = self.hierarchy.get_xenity_index_for_id(sel_id) {
+                    eng.select_gameobject(x_idx);
+
+                    if let Some(item) = self.hierarchy.find_item_mut(sel_id) {
+                        eng.set_gameobject_transform(
+                            x_idx,
+                            item.properties.position,
+                            item.properties.orientation,
+                            item.properties.size,
+                        );
+                        let c = item.properties.color;
+                        eng.set_gameobject_color(
+                            x_idx,
+                            [c.r() as f32 / 255.0, c.g() as f32 / 255.0, c.b() as f32 / 255.0, c.a() as f32 / 255.0],
+                        );
+                        eng.set_gameobject_name(x_idx, &item.name);
+                    }
+                }
+            }
+        }
 
         // Solicitar refresco continuo si la simulación está activa o el motor está inicializado
         if self.is_playing || self.engine.as_ref().map(|e| e.is_initialized).unwrap_or(false) {

@@ -19,24 +19,60 @@
 #include <engine/ui/window.h>
 #include <engine/graphics/graphics.h>
 #include <engine/graphics/camera.h>
+#include <engine/graphics/material.h>
+#include <engine/graphics/3d_graphics/mesh_renderer.h>
+#include <engine/graphics/3d_graphics/mesh_data.h>
 #include <engine/game_elements/gameobject.h>
 #include <engine/game_elements/transform.h>
 #include <engine/time/time.h>
 #include <engine/inputs/input_system.h>
 #include <engine/physics/physics_manager.h>
+#include <engine/physics/box_collider.h>
+#include <engine/physics/sphere_collider.h>
 #include <engine/game_elements/gameplay_manager.h>
 #include <engine/asset_management/project_manager.h>
+#include <engine/asset_management/asset_manager.h>
 #include <engine/scene_management/scene_manager.h>
 #include <engine/tools/shape_spawner.h>
 #include <engine/lighting/lighting.h>
+#include <engine/tools/gameplay_utility.h>
 
 #include <editor/editor.h>
 #include <editor/ui/menus/basic/scene_menu.h>
+#include <editor/tool_mode.h>
 
 std::shared_ptr<Camera> XenityFFI::s_camera = nullptr;
 int XenityFFI::s_width = 1280;
 int XenityFFI::s_height = 720;
 bool XenityFFI::s_initialized = false;
+int XenityFFI::s_currentToolMode = 1; // 1 = ToolMode::Tool_Move
+
+static bool GetAABBDistance(const Vector3& corner1, const Vector3& corner2, const Vector3& dirfrac, const Vector3& startPosition, float* t)
+{
+	float t1 = (corner1.x - startPosition.x) * dirfrac.x;
+	float t2 = (corner2.x - startPosition.x) * dirfrac.x;
+	float t3 = (corner1.y - startPosition.y) * dirfrac.y;
+	float t4 = (corner2.y - startPosition.y) * dirfrac.y;
+	float t5 = (corner1.z - startPosition.z) * dirfrac.z;
+	float t6 = (corner2.z - startPosition.z) * dirfrac.z;
+
+	float tmin = std::max(std::max(std::min(t1, t2), std::min(t3, t4)), std::min(t5, t6));
+	float tmax = std::min(std::min(std::max(t1, t2), std::max(t3, t4)), std::max(t5, t6));
+
+	if (tmax < 0.0f || tmin > tmax)
+	{
+		return false;
+	}
+	else
+	{
+		if (*t > tmin)
+		{
+			*t = tmin;
+			return true;
+		}
+	}
+	return false;
+}
 
 int XenityFFI::Init(int width, int height)
 {
@@ -79,6 +115,7 @@ int XenityFFI::Init(int width, int height)
 	if (sceneMenu && !sceneMenu->weakCamera.expired())
 	{
 		s_camera = sceneMenu->weakCamera.lock();
+		sceneMenu->toolMode = ToolMode::Tool_Move;
 	}
 
 	if (!s_camera)
@@ -93,8 +130,8 @@ int XenityFFI::Init(int width, int height)
 
 	if (s_camera)
 	{
-		s_camera->GetTransform()->SetPosition(Vector3(0.0f, 6.0f, -14.0f));
-		s_camera->GetTransform()->SetEulerAngles(Vector3(20.0f, 0.0f, 0.0f));
+		s_camera->GetTransform()->SetPosition(Vector3(0.0f, 8.0f, -16.0f));
+		s_camera->GetTransform()->SetEulerAngles(Vector3(22.0f, 0.0f, 0.0f));
 		s_camera->ChangeFrameBufferSize(Vector2Int(s_width, s_height));
 	}
 
@@ -118,7 +155,7 @@ int XenityFFI::Init(int width, int height)
 	{
 		auto sunGO = CreateGameObject("Sun");
 		auto sunLight = sunGO->AddComponent<Light>();
-		sunLight->SetupDirectionalLight(Color::CreateFromRGBAFloat(1.0f, 0.98f, 0.92f, 1.0f), 0.8f);
+		sunLight->SetupDirectionalLight(Color::CreateFromRGBAFloat(1.0f, 0.98f, 0.92f, 1.0f), 0.85f);
 		sunGO->GetTransform()->SetEulerAngles(Vector3(45.0f, -35.0f, 0.0f));
 	}
 
@@ -259,9 +296,10 @@ void XenityFFI::SpawnPrimitive(int primitive_type)
 	{
 		Vector3 camPos = s_camera->GetTransform()->GetPosition();
 		Vector3 camFwd = -s_camera->GetTransform()->GetForward();
-		Vector3 spawnPos = camPos + camFwd * 5.0f;
+		Vector3 spawnPos = camPos + camFwd * 6.0f;
 		if (spawnPos.y < 0.5f) spawnPos.y = 0.5f;
 		spawned->GetTransform()->SetPosition(spawnPos);
+		Editor::SetSelectedGameObject(spawned);
 	}
 }
 
@@ -286,6 +324,318 @@ void XenityFFI::Shutdown()
 	s_camera.reset();
 	Engine::Stop();
 	s_initialized = false;
+}
+
+// -------------------------------------------------------------
+// Gizmos & Selection Implementation
+// -------------------------------------------------------------
+
+void XenityFFI::SetToolMode(int mode)
+{
+	s_currentToolMode = mode;
+	auto sceneMenu = Editor::GetMenu<SceneMenu>();
+	if (sceneMenu)
+	{
+		// mode: 0: Tool_MoveCamera (Select), 1: Tool_Move, 2: Tool_Rotate, 3: Tool_Scale
+		sceneMenu->toolMode = static_cast<ToolMode>(mode);
+	}
+}
+
+void XenityFFI::SelectGameObject(int index)
+{
+	if (index >= 0 && index < GameplayManager::gameObjectCount)
+	{
+		auto go = GameplayManager::GetGameObjects()[index];
+		Editor::SetSelectedGameObject(go);
+	}
+	else
+	{
+		Editor::SetSelectedGameObject(nullptr);
+	}
+}
+
+int XenityFFI::GetSelectedGameObject()
+{
+	if (!Editor::GetSelectedGameObjects().empty())
+	{
+		auto selected = Editor::GetSelectedGameObjects()[0].lock();
+		if (selected)
+		{
+			const int count = GameplayManager::gameObjectCount;
+			for (int i = 0; i < count; i++)
+			{
+				if (GameplayManager::GetGameObjects()[i] == selected)
+					return i;
+			}
+		}
+	}
+	return -1;
+}
+
+int XenityFFI::PickGameObject(float norm_x, float norm_y)
+{
+	if (!s_camera || norm_x < 0.0f || norm_y < 0.0f || norm_x > 1.0f || norm_y > 1.0f)
+	{
+		Editor::SetSelectedGameObject(nullptr);
+		return -1;
+	}
+
+	InputSystem::mousePosition = Vector2(norm_x * s_camera->GetWidth(), norm_y * s_camera->GetHeight());
+	const Vector3 dir = s_camera->GetMouseRay();
+	if (dir.x == 0.0f && dir.y == 0.0f && dir.z == 0.0f)
+	{
+		return -1;
+	}
+
+	Vector3 dirfrac;
+	dirfrac.x = 1.0f / (dir.x != 0.0f ? dir.x : 0.00001f);
+	dirfrac.y = 1.0f / (dir.y != 0.0f ? dir.y : 0.00001f);
+	dirfrac.z = 1.0f / (dir.z != 0.0f ? dir.z : 0.00001f);
+
+	const Vector3 camPos = s_camera->GetTransform()->GetPosition();
+	float minDis = 999999.0f;
+	int hitIndex = -1;
+	std::shared_ptr<GameObject> hitGo = nullptr;
+
+	const int count = GameplayManager::gameObjectCount;
+	for (int i = 0; i < count; i++)
+	{
+		auto go = GameplayManager::GetGameObjects()[i];
+		if (!go || !go->IsActive() || go->GetName() == "EditorCamera" || go->GetName() == "Camera")
+			continue;
+
+		Vector3 transformedMin;
+		Vector3 transformedMax;
+		auto meshRenderer = go->GetComponent<MeshRenderer>();
+		if (meshRenderer && meshRenderer->GetMeshData() && meshRenderer->IsEnabled())
+		{
+			const Vector3& minB = meshRenderer->GetMeshData()->GetMinBoundingBox();
+			const Vector3& maxB = meshRenderer->GetMeshData()->GetMaxBoundingBox();
+			glm::mat4 mat = go->GetTransform()->GetTransformationMatrix();
+			transformedMin = Vector3(mat * glm::vec4(minB.x, minB.y, minB.z, 1.0f));
+			transformedMax = Vector3(mat * glm::vec4(maxB.x, maxB.y, maxB.z, 1.0f));
+			transformedMin.x = -transformedMin.x;
+			transformedMax.x = -transformedMax.x;
+		}
+		else
+		{
+			Vector3 p = go->GetTransform()->GetPosition();
+			Vector3 s = go->GetTransform()->GetLocalScale() * 0.5f;
+			if (s.x < 0.5f) s = Vector3(0.5f);
+			transformedMin = p - s;
+			transformedMax = p + s;
+		}
+
+		float dis = 999999.0f;
+		if (GetAABBDistance(transformedMin, transformedMax, dirfrac, camPos, &dis))
+		{
+			if (dis > 0.0f && dis < minDis)
+			{
+				minDis = dis;
+				hitIndex = i;
+				hitGo = go;
+			}
+		}
+	}
+
+	if (hitGo)
+	{
+		Editor::SetSelectedGameObject(hitGo);
+	}
+	return hitIndex;
+}
+
+void XenityFFI::TransformSelected(float delta_x, float delta_y, int tool_mode, int axis)
+{
+	if (Editor::GetSelectedGameObjects().empty() || !s_camera)
+		return;
+
+	auto go = Editor::GetSelectedGameObjects()[0].lock();
+	if (!go)
+		return;
+
+	auto trans = go->GetTransform();
+	if (!trans)
+		return;
+
+	if (tool_mode == 1) // Tool_Move
+	{
+		Vector3 camRight = -s_camera->GetTransform()->GetLeft();
+		Vector3 camUp = s_camera->GetTransform()->GetUp();
+		float camDist = Vector3::Distance(trans->GetPosition(), s_camera->GetTransform()->GetPosition());
+		float factor = std::max(0.001f, camDist * 0.0018f);
+
+		Vector3 move(0.0f);
+		if (axis == 1) // X axis
+			move = Vector3(1.0f, 0.0f, 0.0f) * (delta_x * factor);
+		else if (axis == 2) // Y axis
+			move = Vector3(0.0f, 1.0f, 0.0f) * (-delta_y * factor);
+		else if (axis == 3) // Z axis
+			move = Vector3(0.0f, 0.0f, 1.0f) * (delta_x * factor);
+		else // View aligned
+			move = (camRight * delta_x - camUp * delta_y) * factor;
+
+		trans->SetPosition(trans->GetPosition() + move);
+	}
+	else if (tool_mode == 2) // Tool_Rotate
+	{
+		Vector3 rot = trans->GetEulerAngles();
+		if (axis == 1)
+			rot.x += delta_y * 0.5f;
+		else if (axis == 2)
+			rot.y += delta_x * 0.5f;
+		else if (axis == 3)
+			rot.z += delta_x * 0.5f;
+		else
+		{
+			rot.y += delta_x * 0.5f;
+			rot.x += delta_y * 0.5f;
+		}
+		trans->SetEulerAngles(rot);
+	}
+	else if (tool_mode == 3) // Tool_Scale
+	{
+		Vector3 scale = trans->GetLocalScale();
+		float factor = (delta_x - delta_y) * 0.015f;
+		if (axis == 1)
+			scale.x = std::max(0.05f, scale.x + delta_x * 0.02f);
+		else if (axis == 2)
+			scale.y = std::max(0.05f, scale.y - delta_y * 0.02f);
+		else if (axis == 3)
+			scale.z = std::max(0.05f, scale.z + delta_x * 0.02f);
+		else
+		{
+			scale.x = std::max(0.05f, scale.x + factor);
+			scale.y = std::max(0.05f, scale.y + factor);
+			scale.z = std::max(0.05f, scale.z + factor);
+		}
+		trans->SetLocalScale(scale);
+	}
+}
+
+// -------------------------------------------------------------
+// Hierarchy & Properties Sync Implementation
+// -------------------------------------------------------------
+
+int XenityFFI::GetGameObjectInfo(int index, XenityGameObjectInfo* out_info)
+{
+	if (index < 0 || index >= GameplayManager::gameObjectCount || !out_info)
+		return 0;
+
+	auto go = GameplayManager::GetGameObjects()[index];
+	if (!go)
+		return 0;
+
+	out_info->index = index;
+	std::string name = go->GetName();
+	strncpy(out_info->name, name.c_str(), sizeof(out_info->name) - 1);
+	out_info->name[sizeof(out_info->name) - 1] = '\0';
+
+	Vector3 pos = go->GetTransform()->GetPosition();
+	Vector3 rot = go->GetTransform()->GetEulerAngles();
+	Vector3 scale = go->GetTransform()->GetLocalScale();
+
+	out_info->pos[0] = pos.x;
+	out_info->pos[1] = pos.y;
+	out_info->pos[2] = pos.z;
+
+	out_info->rot[0] = rot.x;
+	out_info->rot[1] = rot.y;
+	out_info->rot[2] = rot.z;
+
+	out_info->scale[0] = scale.x;
+	out_info->scale[1] = scale.y;
+	out_info->scale[2] = scale.z;
+
+	out_info->has_mesh = go->GetComponent<MeshRenderer>() ? 1 : 0;
+	out_info->has_collider = (go->GetComponent<BoxCollider>() || go->GetComponent<SphereCollider>()) ? 1 : 0;
+	out_info->has_light = go->GetComponent<Light>() ? 1 : 0;
+	out_info->is_active = go->IsActive() ? 1 : 0;
+
+	out_info->color[0] = 0.64f;
+	out_info->color[1] = 0.63f;
+	out_info->color[2] = 0.65f;
+	out_info->color[3] = 1.0f;
+
+	if (auto mr = go->GetComponent<MeshRenderer>())
+	{
+		if (auto mat = mr->GetMaterial(0))
+		{
+			const RGBA& c = mat->GetColor().GetRGBA();
+			out_info->color[0] = c.r;
+			out_info->color[1] = c.g;
+			out_info->color[2] = c.b;
+			out_info->color[3] = c.a;
+		}
+	}
+	return 1;
+}
+
+void XenityFFI::SetGameObjectTransform(int index, float px, float py, float pz, float rx, float ry, float rz, float sx, float sy, float sz)
+{
+	if (index >= 0 && index < GameplayManager::gameObjectCount)
+	{
+		auto go = GameplayManager::GetGameObjects()[index];
+		if (go)
+		{
+			go->GetTransform()->SetPosition(Vector3(px, py, pz));
+			go->GetTransform()->SetEulerAngles(Vector3(rx, ry, rz));
+			go->GetTransform()->SetLocalScale(Vector3(sx, sy, sz));
+		}
+	}
+}
+
+void XenityFFI::SetGameObjectColor(int index, float r, float g, float b, float a)
+{
+	if (index >= 0 && index < GameplayManager::gameObjectCount)
+	{
+		auto go = GameplayManager::GetGameObjects()[index];
+		if (go)
+		{
+			if (auto mr = go->GetComponent<MeshRenderer>())
+			{
+				auto mat = mr->GetMaterial(0);
+				if (!mat || mat == AssetManager::standardMaterial)
+				{
+					auto newMat = Material::MakeMaterial();
+					if (AssetManager::standardMaterial)
+					{
+						newMat->m_shader = AssetManager::standardMaterial->m_shader;
+					}
+					newMat->SetColor(Color::CreateFromRGBAFloat(r, g, b, a));
+					mr->SetMaterial(newMat, 0);
+				}
+				else
+				{
+					mat->SetColor(Color::CreateFromRGBAFloat(r, g, b, a));
+				}
+			}
+		}
+	}
+}
+
+void XenityFFI::SetGameObjectName(int index, const char* name)
+{
+	if (index >= 0 && index < GameplayManager::gameObjectCount && name)
+	{
+		auto go = GameplayManager::GetGameObjects()[index];
+		if (go)
+		{
+			go->SetName(name);
+		}
+	}
+}
+
+void XenityFFI::DeleteGameObject(int index)
+{
+	if (index >= 0 && index < GameplayManager::gameObjectCount)
+	{
+		auto go = GameplayManager::GetGameObjects()[index];
+		if (go && go->GetName() != "Baseplate" && go->GetName() != "Camera")
+		{
+			Destroy(go);
+		}
+	}
 }
 
 extern "C" {
@@ -333,6 +683,56 @@ XENITY_API int xenity_get_gameobject_count()
 XENITY_API void xenity_shutdown()
 {
 	XenityFFI::Shutdown();
+}
+
+XENITY_API void xenity_set_tool_mode(int mode)
+{
+	XenityFFI::SetToolMode(mode);
+}
+
+XENITY_API void xenity_select_gameobject(int index)
+{
+	XenityFFI::SelectGameObject(index);
+}
+
+XENITY_API int xenity_get_selected_gameobject()
+{
+	return XenityFFI::GetSelectedGameObject();
+}
+
+XENITY_API int xenity_pick_gameobject(float norm_x, float norm_y)
+{
+	return XenityFFI::PickGameObject(norm_x, norm_y);
+}
+
+XENITY_API void xenity_transform_selected(float delta_x, float delta_y, int tool_mode, int axis)
+{
+	XenityFFI::TransformSelected(delta_x, delta_y, tool_mode, axis);
+}
+
+XENITY_API int xenity_get_gameobject_info(int index, XenityGameObjectInfo* out_info)
+{
+	return XenityFFI::GetGameObjectInfo(index, out_info);
+}
+
+XENITY_API void xenity_set_gameobject_transform(int index, float px, float py, float pz, float rx, float ry, float rz, float sx, float sy, float sz)
+{
+	XenityFFI::SetGameObjectTransform(index, px, py, pz, rx, ry, rz, sx, sy, sz);
+}
+
+XENITY_API void xenity_set_gameobject_color(int index, float r, float g, float b, float a)
+{
+	XenityFFI::SetGameObjectColor(index, r, g, b, a);
+}
+
+XENITY_API void xenity_set_gameobject_name(int index, const char* name)
+{
+	XenityFFI::SetGameObjectName(index, name);
+}
+
+XENITY_API void xenity_delete_gameobject(int index)
+{
+	XenityFFI::DeleteGameObject(index);
 }
 
 }
