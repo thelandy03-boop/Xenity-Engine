@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 //
 // Build Settings Dialog for Roblox Studio / Xenity Engine
-// Recreates the authentic Unity-style Build Settings layout:
-// - "Scenes In Build" list with "Add Open Scenes" button
-// - Two-column platform selection with blue highlight and target settings
-// - Asset Import Overrides, Switch Platform, Build, and Build And Run buttons
+// Integrates the 2-column + Scenes in Build architecture of Unity
+// styled seamlessly with Roblox Studio's authentic dark UI theme (#252526 / #1E1E1E / #007ACC).
 
 use eframe::egui::{self, Color32, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
+use crate::studio_style::*;
 use crate::xenity_ffi::XenityEngine;
 use std::path::{Path, PathBuf};
 use std::fs;
@@ -24,12 +23,12 @@ pub enum ExportPlatform {
 impl ExportPlatform {
     pub fn name(&self) -> &'static str {
         match self {
-            ExportPlatform::Windows => "Windows, Mac, Linux",
+            ExportPlatform::Windows => "Windows Standalone (PC)",
             ExportPlatform::PlayStation3 => "PlayStation 3 (PS3)",
             ExportPlatform::PSP => "PlayStation Portable (PSP)",
             ExportPlatform::PSVita => "PlayStation Vita",
-            ExportPlatform::DedicatedServer => "Dedicated Server",
-            ExportPlatform::Android => "Android",
+            ExportPlatform::DedicatedServer => "Servidor Dedicado",
+            ExportPlatform::Android => "Android Mobile",
         }
     }
 
@@ -52,6 +51,17 @@ impl ExportPlatform {
             ExportPlatform::PSVita => "VITA",
             ExportPlatform::DedicatedServer => "SRV",
             ExportPlatform::Android => "APK",
+        }
+    }
+
+    pub fn hardware_desc(&self) -> &'static str {
+        match self {
+            ExportPlatform::Windows => "x86_64 | OpenGL 3.3 Core Renderer (Sin límite estricto de consola)",
+            ExportPlatform::PlayStation3 => "Cell Broadband Engine @ 3.2GHz | RSX Reality Synthesizer (256MB XDR + 256MB VRAM)",
+            ExportPlatform::PSP => "MIPS R4000 @ 333MHz | Graphics Core GU (32MB / 64MB RAM)",
+            ExportPlatform::PSVita => "Quad-core ARM Cortex-A9 | SGX543MP4+ (512MB RAM + 128MB VRAM)",
+            ExportPlatform::DedicatedServer => "Modo consola sin renderizado gráfico (Headless Server)",
+            ExportPlatform::Android => "GLES 3.0 / Vulkan | Arquitecturas ARM64",
         }
     }
 
@@ -92,7 +102,7 @@ impl ExportPlatform {
         match self {
             ExportPlatform::Windows => &["Windows (64-bit)", "Windows (32-bit)", "Universal Windows Platform"],
             ExportPlatform::PlayStation3 => &["PS3_GAME Folder (RPCS3 / HEN)", "PKG Package (Installable)", "ISO Disc Image"],
-            ExportPlatform::PSP => &["EBOOT.PBP (PPSSPP & Hardware)", "ISO Disc Image"],
+            ExportPlatform::PSP => &["EBOOT.PBP (PPSSPP & Consola Real)", "ISO Disc Image"],
             ExportPlatform::PSVita => &["VPK Package (Vita3K / HENkaku)", "Folder App (ux0:app)"],
             ExportPlatform::DedicatedServer => &["Linux Headless", "Windows Server (x64)"],
             ExportPlatform::Android => &["APK Package", "AAB (Google Play)"],
@@ -157,8 +167,8 @@ impl Default for BuildExportState {
     fn default() -> Self {
         Self {
             is_open: false,
-            selected_platform: ExportPlatform::Windows,
-            active_build_platform: ExportPlatform::Windows,
+            selected_platform: ExportPlatform::PlayStation3,
+            active_build_platform: ExportPlatform::PlayStation3,
 
             scenes: vec![
                 (true, "Scenes/MainScene.xencene".to_string()),
@@ -168,9 +178,9 @@ impl Default for BuildExportState {
             target_format_idx: 0,
             arch_idx: 0,
             game_title: "My Roblox Place".to_string(),
-            title_id: "XENITY_GAME".to_string(),
+            title_id: "NPEB00123".to_string(),
             version: "1.00".to_string(),
-            export_path: "build/windows".to_string(),
+            export_path: "build/ps3".to_string(),
 
             copy_pdb: false,
             create_vs_solution: false,
@@ -227,7 +237,7 @@ impl BuildExportState {
 
         let mut action = BuildDialogAction::None;
 
-        // Modal overlay: se dibuja en Order::Middle (afecta exclusivamente al fondo de la pantalla)
+        // Modal overlay: orden Middle (oscurece sutilmente el fondo para dar foco al modal)
         let screen_rect = ctx.screen_rect();
         let mut clicked_backdrop = false;
 
@@ -236,7 +246,7 @@ impl BuildExportState {
             .fixed_pos(screen_rect.min)
             .show(ctx, |ui| {
                 let (rect, resp) = ui.allocate_exact_size(screen_rect.size(), Sense::click());
-                ui.painter().rect_filled(rect, 0.0, Color32::from_rgba_unmultiplied(0, 0, 0, 140));
+                ui.painter().rect_filled(rect, 0.0, Color32::from_rgba_unmultiplied(0, 0, 0, 110));
                 if resp.clicked() {
                     clicked_backdrop = true;
                 }
@@ -244,77 +254,95 @@ impl BuildExportState {
 
         let mut is_still_open = true;
 
-        // Ventana en primer plano (Order::Foreground): queda por encima del overlay oscuro, 100% nítida y brillante
-        egui::Window::new("BuildSettingsWindow")
+        // =====================================================================
+        // VENTANA MODAL ESTILO OFICIAL ROBLOX STUDIO (Order::Foreground)
+        // =====================================================================
+        egui::Window::new("BuildSettingsModal")
             .order(egui::Order::Foreground)
             .title_bar(false)
             .collapsible(false)
             .resizable(false)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-            .fixed_size([690.0, 620.0])
+            .fixed_size([720.0, 620.0])
             .frame(
                 egui::Frame::window(&ctx.style())
-                    .fill(Color32::from_rgb(40, 40, 45))
-                    .stroke(Stroke::new(1.0, Color32::from_rgb(64, 66, 75)))
-                    .rounding(Rounding::same(4.0))
-                    .inner_margin(egui::Margin::symmetric(14.0, 10.0)),
+                    .fill(Color32::from_rgb(32, 32, 35))
+                    .stroke(Stroke::new(1.0, Color32::from_rgb(52, 54, 62)))
+                    .rounding(Rounding::same(8.0))
+                    .inner_margin(egui::Margin::same(14.0)),
             )
             .show(ctx, |ui| {
-                // =============================================================
-                // 0. CABECERA DE PESTAÑA ESTILO UNITY ("Build Settings" Tab)
-                // =============================================================
+                // -------------------------------------------------------------
+                // 1. CABECERA ELEGANTE ESTILO ROBLOX STUDIO
+                // -------------------------------------------------------------
                 ui.horizontal(|ui| {
-                    // Pestaña Unity "Build Settings"
-                    let tab_rect = ui.allocate_space(Vec2::new(105.0, 24.0)).1;
-                    ui.painter().rect_filled(
-                        tab_rect,
-                        Rounding { nw: 3.0, ne: 3.0, sw: 0.0, se: 0.0 },
-                        Color32::from_rgb(52, 54, 62),
-                    );
-                    ui.painter().text(
-                        tab_rect.center(),
-                        egui::Align2::CENTER_CENTER,
-                        "Build Settings",
-                        FontId::proportional(11.5),
-                        Color32::WHITE,
+                    ui.label(egui::RichText::new("⚙").font(FontId::proportional(16.0)).color(Color32::from_rgb(0, 162, 255)));
+                    ui.label(
+                        egui::RichText::new("Configuración de Compilación y Exportación (Build Settings)")
+                            .font(FontId::proportional(13.5))
+                            .strong()
+                            .color(Color32::WHITE),
                     );
 
-                    // Botones de la esquina superior derecha (⋮ y ✕)
+                    // Botón de cerrar tipo Roblox Studio (X con hover circular suave)
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.add_sized(Vec2::new(22.0, 20.0), egui::Button::new(egui::RichText::new("✕").font(FontId::proportional(11.0)))).clicked() {
-                            self.is_open = false;
+                        let (close_rect, close_resp) = ui.allocate_exact_size(Vec2::new(24.0, 24.0), Sense::click());
+                        if close_resp.hovered() {
+                            ui.painter().circle_filled(close_rect.center(), 12.0, Color32::from_rgb(54, 56, 64));
                         }
-                        ui.label(egui::RichText::new("⋮").font(FontId::proportional(14.0)).color(Color32::from_rgb(160, 160, 160)));
+                        ui.painter().text(
+                            close_rect.center(),
+                            egui::Align2::CENTER_CENTER,
+                            "✕",
+                            FontId::proportional(12.0),
+                            if close_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(180, 182, 190) },
+                        );
+                        if close_resp.clicked() {
+                            is_still_open = false;
+                        }
                     });
                 });
 
-                // Línea inferior de la pestaña
-                let (line_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0), Sense::hover());
-                ui.painter().line_segment(
-                    [Pos2::new(line_rect.min.x, line_rect.min.y), Pos2::new(line_rect.max.x, line_rect.min.y)],
-                    Stroke::new(1.0, Color32::from_rgb(46, 47, 52)),
-                );
+                ui.add_space(8.0);
+                ui.separator();
                 ui.add_space(8.0);
 
-                // =============================================================
-                // 1. SECCIÓN SUPERIOR: "Scenes In Build"
-                // =============================================================
-                ui.label(
-                    egui::RichText::new("Scenes In Build")
-                        .font(FontId::proportional(12.5))
-                        .strong()
-                        .color(Color32::from_rgb(220, 220, 220)),
-                );
-                ui.add_space(3.0);
+                // -------------------------------------------------------------
+                // 2. SECCIÓN: ESCENAS A COMPILAR (SCENES IN BUILD)
+                // -------------------------------------------------------------
+                ui.horizontal(|ui| {
+                    ui.label(
+                        egui::RichText::new("ESCENAS A COMPILAR (SCENES IN BUILD)")
+                            .font(FontId::proportional(11.0))
+                            .strong()
+                            .color(Color32::from_rgb(170, 173, 185)),
+                    );
 
-                let scenes_box_h = 100.0;
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.add_sized(
+                            Vec2::new(145.0, 22.0),
+                            egui::Button::new(
+                                egui::RichText::new("+ Añadir escena actual")
+                                    .font(FontId::proportional(11.0))
+                                    .color(Color32::from_rgb(220, 222, 230)),
+                            )
+                            .fill(Color32::from_rgb(42, 44, 52)),
+                        ).clicked() {
+                            let active_scene_name = "Place1 (Current Scene)".to_string();
+                            if !self.scenes.iter().any(|(_, s)| s == &active_scene_name) {
+                                self.scenes.push((true, active_scene_name));
+                            }
+                        }
+                    });
+                });
+
+                ui.add_space(4.0);
+
+                let scenes_box_h = 76.0;
                 let scenes_box_rect = ui.allocate_space(Vec2::new(ui.available_width(), scenes_box_h)).1;
-                
-                // Fondo oscuro del recuadro de escenas
-                ui.painter().rect_filled(scenes_box_rect, Rounding::same(2.0), Color32::from_rgb(22, 22, 25));
-                ui.painter().rect_stroke(scenes_box_rect, Rounding::same(2.0), Stroke::new(1.0, Color32::from_rgb(46, 48, 56)));
+                ui.painter().rect_filled(scenes_box_rect, Rounding::same(4.0), Color32::from_rgb(22, 22, 25));
+                ui.painter().rect_stroke(scenes_box_rect, Rounding::same(4.0), Stroke::new(1.0, Color32::from_rgb(46, 48, 56)));
 
-                // Render de las escenas dentro del recuadro
                 let mut scene_y = scenes_box_rect.min.y + 4.0;
                 for (idx, (enabled, path)) in self.scenes.iter_mut().enumerate() {
                     if scene_y + 20.0 > scenes_box_rect.max.y {
@@ -331,27 +359,25 @@ impl BuildExportState {
                         *enabled = !*enabled;
                     }
 
-                    // Dibuja checkbox
-                    ui.painter().rect_filled(chk_rect, Rounding::same(2.0), Color32::from_rgb(32, 34, 40));
-                    ui.painter().rect_stroke(chk_rect, Rounding::same(2.0), Stroke::new(1.0, Color32::from_rgb(70, 74, 86)));
+                    // Checkbox visual Studio
+                    ui.painter().rect_filled(chk_rect, Rounding::same(3.0), Color32::from_rgb(32, 34, 40));
+                    ui.painter().rect_stroke(chk_rect, Rounding::same(3.0), Stroke::new(1.0, Color32::from_rgb(70, 74, 86)));
                     if *enabled {
-                        ui.painter().text(chk_rect.center(), egui::Align2::CENTER_CENTER, "✔", FontId::proportional(11.0), Color32::WHITE);
+                        ui.painter().text(chk_rect.center(), egui::Align2::CENTER_CENTER, "✔", FontId::proportional(11.0), Color32::from_rgb(0, 162, 255));
                     }
 
-                    // Nombre de la escena
                     ui.painter().text(
                         Pos2::new(item_rect.min.x + 26.0, item_rect.center().y),
                         egui::Align2::LEFT_CENTER,
                         path,
                         FontId::proportional(11.0),
-                        Color32::from_rgb(210, 212, 220),
+                        Color32::from_rgb(215, 218, 225),
                     );
 
-                    // Índice numérico a la derecha (estilo Unity: 0, 1...)
                     ui.painter().text(
                         Pos2::new(item_rect.max.x - 12.0, item_rect.center().y),
                         egui::Align2::RIGHT_CENTER,
-                        idx.to_string(),
+                        format!("[{}]", idx),
                         FontId::proportional(11.0),
                         Color32::from_rgb(130, 134, 145),
                     );
@@ -359,59 +385,48 @@ impl BuildExportState {
                     scene_y += 22.0;
                 }
 
-                // Botón "Add Open Scenes" alineado a la derecha debajo de la caja
-                ui.add_space(4.0);
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.add_sized(Vec2::new(135.0, 22.0), egui::Button::new("Add Open Scenes")).clicked() {
-                        let active_scene_name = "Place1 (Current Scene)".to_string();
-                        if !self.scenes.iter().any(|(_, s)| s == &active_scene_name) {
-                            self.scenes.push((true, active_scene_name));
-                        }
-                    }
-                });
-
-                ui.add_space(6.0);
+                ui.add_space(8.0);
                 ui.separator();
-                ui.add_space(6.0);
+                ui.add_space(8.0);
 
-                // =============================================================
-                // 2. SECCIÓN MEDIA: DOS COLUMNAS (Platform a la izquierda, Parámetros a la derecha)
-                // =============================================================
+                // -------------------------------------------------------------
+                // 3. SECCIÓN MEDIA: DOS COLUMNAS (Plataformas & Parámetros)
+                // -------------------------------------------------------------
                 let avail_w = ui.available_width();
                 let left_col_w = 230.0;
                 let right_col_w = avail_w - left_col_w - 14.0;
-                let middle_h = 280.0;
+                let middle_h = 295.0;
 
                 ui.horizontal(|ui| {
                     // --- COLUMNA IZQUIERDA: LISTA DE PLATAFORMAS ---
                     ui.vertical(|ui| {
                         ui.set_width(left_col_w);
                         ui.label(
-                            egui::RichText::new("Platform")
-                                .font(FontId::proportional(12.5))
+                            egui::RichText::new("PLATAFORMAS")
+                                .font(FontId::proportional(11.0))
                                 .strong()
-                                .color(Color32::from_rgb(220, 220, 220)),
+                                .color(Color32::from_rgb(170, 173, 185)),
                         );
                         ui.add_space(3.0);
 
                         let list_rect = ui.allocate_space(Vec2::new(left_col_w, middle_h)).1;
-                        ui.painter().rect_filled(list_rect, Rounding::same(2.0), Color32::from_rgb(22, 22, 25));
-                        ui.painter().rect_stroke(list_rect, Rounding::same(2.0), Stroke::new(1.0, Color32::from_rgb(46, 48, 56)));
+                        ui.painter().rect_filled(list_rect, Rounding::same(4.0), Color32::from_rgb(22, 22, 25));
+                        ui.painter().rect_stroke(list_rect, Rounding::same(4.0), Stroke::new(1.0, Color32::from_rgb(46, 48, 56)));
 
                         let platforms = [
-                            ExportPlatform::Windows,
                             ExportPlatform::PlayStation3,
                             ExportPlatform::PSP,
                             ExportPlatform::PSVita,
+                            ExportPlatform::Windows,
                             ExportPlatform::DedicatedServer,
                             ExportPlatform::Android,
                         ];
 
-                        let mut plat_y = list_rect.min.y + 2.0;
+                        let mut plat_y = list_rect.min.y + 4.0;
                         for plat in platforms {
                             let item_rect = Rect::from_min_size(
-                                Pos2::new(list_rect.min.x + 2.0, plat_y),
-                                Vec2::new(list_rect.width() - 4.0, 36.0),
+                                Pos2::new(list_rect.min.x + 4.0, plat_y),
+                                Vec2::new(list_rect.width() - 8.0, 42.0),
                             );
 
                             let is_selected = self.selected_platform == plat;
@@ -419,46 +434,61 @@ impl BuildExportState {
 
                             let resp = ui.interact(item_rect, ui.id().with(("plat_item", plat.badge())), Sense::click());
 
-                            // Fondo: Azul sólido estilo Unity si está seleccionado (#2c5d88)
+                            // Fondo elegante Roblox Studio
                             let bg_color = if is_selected {
-                                Color32::from_rgb(44, 93, 136)
+                                Color32::from_rgb(0, 110, 210) // Roblox Blue
                             } else if resp.hovered() {
                                 Color32::from_rgb(38, 40, 48)
                             } else {
                                 Color32::TRANSPARENT
                             };
 
+                            let border_stroke = if is_selected {
+                                Stroke::new(1.0, Color32::from_rgb(0, 162, 255))
+                            } else {
+                                Stroke::NONE
+                            };
+
                             if bg_color != Color32::TRANSPARENT {
-                                ui.painter().rect_filled(item_rect, Rounding::same(2.0), bg_color);
+                                ui.painter().rect(item_rect, Rounding::same(4.0), bg_color, border_stroke);
                             }
 
-                            // Icono de la plataforma
+                            // Icono
                             ui.painter().text(
-                                Pos2::new(item_rect.min.x + 12.0, item_rect.center().y),
+                                Pos2::new(item_rect.min.x + 10.0, item_rect.center().y),
                                 egui::Align2::LEFT_CENTER,
                                 plat.icon(),
-                                FontId::proportional(14.0),
+                                FontId::proportional(15.0),
                                 Color32::WHITE,
                             );
 
-                            // Nombre de la plataforma
-                            let text_color = if is_selected { Color32::WHITE } else { Color32::from_rgb(210, 212, 218) };
+                            // Nombre
+                            let text_color = if is_selected { Color32::WHITE } else { Color32::from_rgb(215, 218, 225) };
                             ui.painter().text(
-                                Pos2::new(item_rect.min.x + 36.0, item_rect.center().y),
+                                Pos2::new(item_rect.min.x + 36.0, item_rect.center().y - 6.0),
                                 egui::Align2::LEFT_CENTER,
                                 plat.name(),
                                 FontId::proportional(11.5),
                                 text_color,
                             );
 
-                            // Indicador de plataforma activa (icono de Unity o marca si es la activa)
+                            // Badge pequeño (ej: PS3, PSP)
+                            ui.painter().text(
+                                Pos2::new(item_rect.min.x + 36.0, item_rect.center().y + 8.0),
+                                egui::Align2::LEFT_CENTER,
+                                plat.badge(),
+                                FontId::proportional(9.5),
+                                if is_selected { Color32::from_rgb(210, 235, 255) } else { Color32::from_rgb(140, 144, 155) },
+                            );
+
+                            // Indicador de plataforma activa
                             if is_active {
                                 ui.painter().text(
                                     Pos2::new(item_rect.max.x - 10.0, item_rect.center().y),
                                     egui::Align2::RIGHT_CENTER,
-                                    "❖",
-                                    FontId::proportional(12.0),
-                                    if is_selected { Color32::WHITE } else { Color32::from_rgb(0, 162, 255) },
+                                    "✔ ACTIVA",
+                                    FontId::proportional(9.0),
+                                    if is_selected { Color32::WHITE } else { Color32::from_rgb(0, 200, 120) },
                                 );
                             }
 
@@ -466,35 +496,49 @@ impl BuildExportState {
                                 self.select_platform(plat);
                             }
 
-                            plat_y += 38.0;
+                            plat_y += 46.0;
                         }
                     });
 
-                    // --- COLUMNA DERECHA: CONFIGURACIÓN DETALLADA (ESTILO INSPECTOR UNITY) ---
+                    // --- COLUMNA DERECHA: AJUSTES DE LA PLATAFORMA SELECCIONADA ---
                     ui.vertical(|ui| {
                         ui.set_width(right_col_w);
 
-                        // Cabecera: Icono + Nombre de la plataforma
+                        // Cabecera de plataforma
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new(self.selected_platform.icon()).font(FontId::proportional(15.0)));
+                            ui.label(egui::RichText::new(self.selected_platform.icon()).font(FontId::proportional(16.0)));
                             ui.label(
                                 egui::RichText::new(self.selected_platform.name())
-                                    .font(FontId::proportional(13.0))
+                                    .font(FontId::proportional(14.0))
                                     .strong()
                                     .color(Color32::WHITE),
                             );
                         });
-                        ui.add_space(4.0);
+
+                        // Tarjeta de Hardware & VRAM
+                        ui.add_space(2.0);
+                        let hw_rect = ui.allocate_space(Vec2::new(right_col_w - 4.0, 32.0)).1;
+                        ui.painter().rect_filled(hw_rect, Rounding::same(4.0), Color32::from_rgb(24, 25, 29));
+                        ui.painter().rect_stroke(hw_rect, Rounding::same(4.0), Stroke::new(1.0, Color32::from_rgb(44, 46, 54)));
+                        ui.painter().text(
+                            Pos2::new(hw_rect.min.x + 8.0, hw_rect.center().y),
+                            egui::Align2::LEFT_CENTER,
+                            self.selected_platform.hardware_desc(),
+                            FontId::proportional(10.0),
+                            Color32::from_rgb(165, 170, 185),
+                        );
+
+                        ui.add_space(6.0);
 
                         egui::ScrollArea::vertical()
-                            .max_height(middle_h - 26.0)
+                            .max_height(middle_h - 48.0)
                             .show(ui, |ui| {
-                                egui::Grid::new("unity_build_settings_grid")
+                                egui::Grid::new("roblox_build_grid")
                                     .num_columns(2)
-                                    .spacing([12.0, 7.0])
+                                    .spacing([12.0, 6.0])
                                     .show(ui, |ui| {
                                         // Target Platform
-                                        ui.label(egui::RichText::new("Target Platform").font(FontId::proportional(11.0)));
+                                        ui.label(egui::RichText::new("Formato Destino:").font(FontId::proportional(11.0)));
                                         let targets = self.selected_platform.supported_targets();
                                         egui::ComboBox::from_id_source("cb_target_platform")
                                             .width(220.0)
@@ -507,7 +551,7 @@ impl BuildExportState {
                                         ui.end_row();
 
                                         // Architecture
-                                        ui.label(egui::RichText::new("Architecture").font(FontId::proportional(11.0)));
+                                        ui.label(egui::RichText::new("Arquitectura CPU:").font(FontId::proportional(11.0)));
                                         let archs = self.selected_platform.supported_architectures();
                                         egui::ComboBox::from_id_source("cb_architecture")
                                             .width(220.0)
@@ -519,61 +563,46 @@ impl BuildExportState {
                                             });
                                         ui.end_row();
 
-                                        // Title ID / Game ID
-                                        ui.label(egui::RichText::new("Game Title").font(FontId::proportional(11.0)));
+                                        // Game Title
+                                        ui.label(egui::RichText::new("Nombre del Juego:").font(FontId::proportional(11.0)));
                                         ui.add_sized(Vec2::new(220.0, 20.0), egui::TextEdit::singleline(&mut self.game_title));
                                         ui.end_row();
 
-                                        ui.label(egui::RichText::new("Title ID / App ID").font(FontId::proportional(11.0)));
+                                        // Title ID
+                                        ui.label(egui::RichText::new("Title ID / App ID:").font(FontId::proportional(11.0)));
                                         ui.add_sized(Vec2::new(220.0, 20.0), egui::TextEdit::singleline(&mut self.title_id));
                                         ui.end_row();
 
                                         // Export Folder
-                                        ui.label(egui::RichText::new("Destination Path").font(FontId::proportional(11.0)));
+                                        ui.label(egui::RichText::new("Ruta de Salida:").font(FontId::proportional(11.0)));
                                         ui.horizontal(|ui| {
-                                            ui.add_sized(Vec2::new(160.0, 20.0), egui::TextEdit::singleline(&mut self.export_path));
-                                            if ui.add_sized(Vec2::new(55.0, 20.0), egui::Button::new("Default")).clicked() {
+                                            ui.add_sized(Vec2::new(155.0, 20.0), egui::TextEdit::singleline(&mut self.export_path));
+                                            if ui.add_sized(Vec2::new(60.0, 20.0), egui::Button::new("Defecto")).clicked() {
                                                 self.export_path = self.selected_platform.default_output_folder().to_string();
                                             }
                                         });
                                         ui.end_row();
 
-                                        // Checkboxes estilo Unity
+                                        // Checkboxes
                                         ui.label("");
-                                        ui.checkbox(&mut self.copy_pdb, "Copy PDB files");
+                                        ui.checkbox(&mut self.development_build, "Compilación de desarrollo (Development Build)");
                                         ui.end_row();
 
                                         ui.label("");
-                                        ui.checkbox(&mut self.create_vs_solution, "Create Visual Studio Solution");
+                                        ui.checkbox(&mut self.auto_downscale_textures, "Optimizar y reducir texturas para la VRAM");
                                         ui.end_row();
 
                                         ui.label("");
-                                        ui.checkbox(&mut self.development_build, "Development Build");
+                                        ui.checkbox(&mut self.compile_native_shaders, "Compilar shaders nativos de consola");
                                         ui.end_row();
 
                                         ui.label("");
-                                        ui.checkbox(&mut self.autoconnect_profiler, "Autoconnect Profiler");
-                                        ui.end_row();
-
-                                        ui.label("");
-                                        ui.checkbox(&mut self.script_debugging, "Script Debugging");
-                                        ui.end_row();
-
-                                        ui.label("");
-                                        ui.checkbox(&mut self.auto_downscale_textures, "Optimize & Downscale Textures");
-                                        ui.end_row();
-
-                                        ui.label("");
-                                        ui.checkbox(&mut self.compile_native_shaders, "Compile Native Shaders");
-                                        ui.end_row();
-
-                                        ui.label("");
-                                        ui.checkbox(&mut self.clean_destination, "Clean Destination Folder");
+                                        ui.checkbox(&mut self.clean_destination, "Limpiar carpeta destino antes de exportar");
                                         ui.end_row();
 
                                         // Compression Method
-                                        ui.label(egui::RichText::new("Compression Method").font(FontId::proportional(11.0)));
-                                        let compressions = ["Default", "LZ4", "LZ4HC", "Fast (Uncompressed)"];
+                                        ui.label(egui::RichText::new("Método Compresión:").font(FontId::proportional(11.0)));
+                                        let compressions = ["Por Defecto", "LZ4 (Recomendado)", "LZ4HC (Máxima)", "Sin Compresión (Rápido)"];
                                         egui::ComboBox::from_id_source("cb_compression_method")
                                             .width(220.0)
                                             .selected_text(compressions[self.compression_method_idx.min(compressions.len() - 1)])
@@ -590,23 +619,23 @@ impl BuildExportState {
 
                 ui.add_space(8.0);
                 ui.separator();
-                ui.add_space(4.0);
+                ui.add_space(6.0);
 
-                // =============================================================
-                // 3. SECCIÓN INFERIOR: Asset Import Overrides, Player Settings y Botones
-                // =============================================================
+                // -------------------------------------------------------------
+                // 4. BARRA INFERIOR DE ACCIONES (ROBLOX STUDIO BUTTONS)
+                // -------------------------------------------------------------
                 ui.horizontal(|ui| {
-                    // Lado izquierdo: Asset Import Overrides colapsable
+                    // Lado izquierdo: Opciones de textura y Player Settings
                     ui.vertical(|ui| {
-                        let header_txt = if self.asset_overrides_open { "▼ Asset Import Overrides" } else { "▶ Asset Import Overrides" };
+                        let header_txt = if self.asset_overrides_open { "▼ Ajustes de Texturas (Overrides)" } else { "▶ Ajustes de Texturas (Overrides)" };
                         if ui.selectable_label(self.asset_overrides_open, egui::RichText::new(header_txt).font(FontId::proportional(11.0))).clicked() {
                             self.asset_overrides_open = !self.asset_overrides_open;
                         }
 
                         if self.asset_overrides_open {
                             ui.horizontal(|ui| {
-                                ui.label(egui::RichText::new("Max Texture Size:").font(FontId::proportional(10.5)));
-                                let tex_sizes = ["No Override", "256", "512", "1024", "2048"];
+                                ui.label(egui::RichText::new("Max Textura:").font(FontId::proportional(10.5)));
+                                let tex_sizes = ["Sin límite", "256", "512", "1024", "2048"];
                                 egui::ComboBox::from_id_source("cb_max_tex_size")
                                     .width(95.0)
                                     .selected_text(tex_sizes[self.max_texture_size_idx.min(tex_sizes.len() - 1)])
@@ -617,8 +646,8 @@ impl BuildExportState {
                                     });
 
                                 ui.add_space(6.0);
-                                ui.label(egui::RichText::new("Texture Compression:").font(FontId::proportional(10.5)));
-                                let tex_comps = ["No Override", "DXT1 / RSX", "DXT5 / RGBA", "Fast"];
+                                ui.label(egui::RichText::new("Compresión:").font(FontId::proportional(10.5)));
+                                let tex_comps = ["Sin Override", "DXT1 / RSX", "DXT5 / RGBA", "Sin Compresión"];
                                 egui::ComboBox::from_id_source("cb_tex_compression")
                                     .width(95.0)
                                     .selected_text(tex_comps[self.texture_compression_idx.min(tex_comps.len() - 1)])
@@ -631,46 +660,47 @@ impl BuildExportState {
                         }
 
                         ui.add_space(3.0);
-                        if ui.add_sized(Vec2::new(120.0, 24.0), egui::Button::new("Player Settings...")).clicked() {
-                            self.status_message = "Player Settings: Configuración del juego abierta.".to_string();
+                        if ui.add_sized(Vec2::new(135.0, 24.0), egui::Button::new("Configuración del Juego...")).clicked() {
+                            self.status_message = "Configuración del juego (Player Settings) abierta.".to_string();
                         }
                     });
 
-                    // Lado derecho: Botones de acción principales (Switch Platform, Build, Build And Run)
+                    // Lado derecho: Botones de compilación principales
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Max), |ui| {
-                        // Botón "Build And Run"
+                        // Botón "Compilar y Ejecutar"
                         let build_run_btn = ui.add_sized(
-                            Vec2::new(105.0, 24.0),
+                            Vec2::new(135.0, 26.0),
                             egui::Button::new(
-                                egui::RichText::new("Build And Run")
+                                egui::RichText::new("▶ Compilar y Abrir")
                                     .font(FontId::proportional(11.5))
                                     .color(Color32::WHITE),
                             )
-                            .fill(Color32::from_rgb(44, 46, 54)),
+                            .fill(Color32::from_rgb(46, 48, 56)),
                         );
 
-                        // Botón "Build"
+                        // Botón Principal "Compilar" (Roblox Blue destacado)
                         let build_btn = ui.add_sized(
-                            Vec2::new(85.0, 24.0),
+                            Vec2::new(95.0, 26.0),
                             egui::Button::new(
-                                egui::RichText::new("Build")
+                                egui::RichText::new("Compilar")
                                     .font(FontId::proportional(11.5))
+                                    .strong()
                                     .color(Color32::WHITE),
                             )
-                            .fill(Color32::from_rgb(44, 46, 54)),
+                            .fill(Color32::from_rgb(0, 122, 204)),
                         );
 
-                        // Botón "Switch Platform"
+                        // Botón "Cambiar Plataforma"
                         let is_already_active = self.active_build_platform == self.selected_platform;
                         let switch_btn = ui.add_enabled_ui(!is_already_active, |ui| {
                             ui.add_sized(
-                                Vec2::new(115.0, 24.0),
+                                Vec2::new(125.0, 26.0),
                                 egui::Button::new(
-                                    egui::RichText::new("Switch Platform")
+                                    egui::RichText::new("Fijar como Activa")
                                         .font(FontId::proportional(11.5))
-                                        .color(if is_already_active { Color32::from_rgb(120, 120, 120) } else { Color32::WHITE }),
+                                        .color(if is_already_active { Color32::from_rgb(130, 130, 140) } else { Color32::WHITE }),
                                 )
-                                .fill(Color32::from_rgb(44, 46, 54)),
+                                .fill(Color32::from_rgb(42, 44, 52)),
                             )
                         }).inner;
 
@@ -689,10 +719,10 @@ impl BuildExportState {
                     });
                 });
 
-                // Barra de estado muy sutil al pie
+                // Estado sutil
                 ui.add_space(4.0);
                 let status_color = if self.is_success {
-                    Color32::from_rgb(80, 220, 100)
+                    Color32::from_rgb(0, 200, 120)
                 } else if self.is_exporting {
                     Color32::from_rgb(0, 162, 255)
                 } else {
@@ -759,7 +789,7 @@ impl BuildExportState {
                     self.game_title, self.title_id, out_dir
                 ));
 
-                // Si seleccionó "Build And Run", abrimos la carpeta en el explorador
+                // Si seleccionó "Compilar y Abrir", abrimos la carpeta en el explorador
                 if run_after {
                     let _ = std::process::Command::new("explorer").arg(&out_dir).spawn();
                 }
