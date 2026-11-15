@@ -39,6 +39,29 @@ pub enum RobloxClass {
 }
 
 impl RobloxClass {
+    pub fn is_service(&self) -> bool {
+        matches!(
+            self,
+            RobloxClass::Workspace
+                | RobloxClass::Players
+                | RobloxClass::Lighting
+                | RobloxClass::MaterialService
+                | RobloxClass::NetworkClient
+                | RobloxClass::ReplicatedFirst
+                | RobloxClass::ReplicatedStorage
+                | RobloxClass::ServerScriptService
+                | RobloxClass::ServerStorage
+                | RobloxClass::StarterGui
+                | RobloxClass::StarterPack
+                | RobloxClass::StarterPlayer
+                | RobloxClass::StarterCharacterScripts
+                | RobloxClass::StarterPlayerScripts
+                | RobloxClass::Teams
+                | RobloxClass::SoundService
+                | RobloxClass::TextChatService
+        )
+    }
+
     /// Índice exacto de icono en el spritesheet oficial ClassImages.PNG (según ReflectionMetadata.xml)
     pub fn explorer_image_index(&self) -> usize {
         match self {
@@ -926,10 +949,54 @@ impl SceneHierarchyState {
             plus_resp.on_hover_text("Insert Object");
         }
 
-        if row_resp.clicked() {
+        if row_resp.clicked() || row_resp.secondary_clicked() {
             *selected_id = Some(node.id);
             *clicked_name = Some(node.name.clone());
         }
+
+        // Menú contextual clic derecho (idéntico a Roblox Studio oficial)
+        row_resp.context_menu(|ui| {
+            ui.set_min_width(175.0);
+            if node.class.is_service() {
+                // Menú específico para Servicios de Roblox Studio
+                draw_context_menu_item(ui, "Copiar como", true);
+
+                draw_context_menu_divider(ui);
+
+                draw_context_menu_item(ui, "Renombrar", false);
+                draw_context_menu_item(ui, "Insertar", true);
+                draw_context_menu_item(ui, "Jerarquía", true);
+
+                draw_context_menu_divider(ui);
+
+                draw_context_menu_item(ui, "Guardar / Exportar", true);
+
+                draw_context_menu_divider(ui);
+
+                draw_context_menu_item(ui, "Mostrar Servicios...", false);
+                draw_context_menu_item(ui, "Ocultar Service en Explorador", false);
+
+                draw_context_menu_divider(ui);
+
+                draw_context_menu_item(ui, "Ayuda", false);
+            } else {
+                // Menú para instancias regulares (Part, Model, Script, etc.)
+                draw_context_menu_item(ui, "Cortar", false);
+                draw_context_menu_item(ui, "Copiar", false);
+                draw_context_menu_item(ui, "Pegar en", false);
+                draw_context_menu_item(ui, "Duplicar", false);
+                draw_context_menu_item(ui, "Eliminar", false);
+
+                draw_context_menu_divider(ui);
+
+                draw_context_menu_item(ui, "Renombrar", false);
+                draw_context_menu_item(ui, "Insertar objeto...", true);
+
+                draw_context_menu_divider(ui);
+
+                draw_context_menu_item(ui, "Zoom a selección", false);
+            }
+        });
 
         // Hijos
         if has_children && node.is_expanded {
@@ -938,4 +1005,52 @@ impl SceneHierarchyState {
             }
         }
     }
+}
+
+// =========================================================================
+// ELEMENTOS DEL MENÚ CONTEXTUAL DE EXPLORER (ESTILO OFICIAL ROBLOX STUDIO)
+// =========================================================================
+
+fn draw_context_menu_item(ui: &mut egui::Ui, label: &str, has_submenu: bool) -> egui::Response {
+    let item_h = 22.0;
+    let item_w = ui.available_width();
+    let (rect, resp) = ui.allocate_exact_size(Vec2::new(item_w, item_h), Sense::click());
+
+    if resp.hovered() {
+        ui.painter().rect_filled(rect, Rounding::same(2.0), Color32::from_rgb(0, 116, 217));
+    }
+
+    let text_col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(220, 222, 230) };
+    ui.painter().text(
+        Pos2::new(rect.min.x + 10.0, rect.center().y),
+        egui::Align2::LEFT_CENTER,
+        label,
+        FontId::proportional(11.5),
+        text_col,
+    );
+
+    if has_submenu {
+        let arrow_x = rect.max.x - 12.0;
+        let p1 = Pos2::new(arrow_x - 3.0, rect.center().y - 3.5);
+        let p2 = Pos2::new(arrow_x + 1.5, rect.center().y);
+        let p3 = Pos2::new(arrow_x - 3.0, rect.center().y + 3.5);
+        ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], text_col, Stroke::NONE));
+    }
+
+    if resp.clicked() {
+        ui.close_menu();
+    }
+
+    resp
+}
+
+fn draw_context_menu_divider(ui: &mut egui::Ui) {
+    ui.add_space(2.0);
+    let w = ui.available_width();
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(w, 1.0), Sense::hover());
+    ui.painter().line_segment(
+        [Pos2::new(rect.min.x + 4.0, rect.center().y), Pos2::new(rect.max.x - 4.0, rect.center().y)],
+        Stroke::new(1.0, Color32::from_rgb(45, 48, 54)),
+    );
+    ui.add_space(2.0);
 }
