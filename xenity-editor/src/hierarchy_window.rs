@@ -864,24 +864,26 @@ impl SceneHierarchyState {
         let textures_ref = self.textures.as_ref();
         let mut pending_context_menu = None;
 
+        let selected_id = &mut self.selected_id;
+        let search_query = &self.search_query;
+        let items = &mut self.items;
+
         egui::ScrollArea::vertical()
             .id_salt("roblox_explorer_scroll")
             .show(ui, |ui| {
                 ui.add_space(2.0);
-                let mut items = self.items.clone();
-                for item in &mut items {
+                for item in items.iter_mut() {
                     Self::draw_explorer_node(
                         ui,
                         item,
                         0,
-                        &mut self.selected_id,
-                        &self.search_query,
+                        selected_id,
+                        search_query,
                         &mut clicked_object_name,
                         textures_ref,
                         &mut pending_context_menu,
                     );
                 }
-                self.items = items;
             });
 
         if pending_context_menu.is_some() {

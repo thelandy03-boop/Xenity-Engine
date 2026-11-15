@@ -137,6 +137,7 @@ impl eframe::App for RobloxStudioApp {
                         if let Some(e) = &mut self.engine {
                             e.set_sim_state(1);
                         }
+                        self.viewport.request_render();
                         self.output.add_log(LogType::Info, "Server", "Simulation started (Player joined, Xenity physics active).");
                     }
                     RibbonAction::PauseSimulation => {
@@ -145,6 +146,7 @@ impl eframe::App for RobloxStudioApp {
                         if let Some(e) = &mut self.engine {
                             e.set_sim_state(sim_state);
                         }
+                        self.viewport.request_render();
                         let msg = if self.is_paused { "Simulation paused." } else { "Simulation resumed." };
                         self.output.add_log(LogType::Info, "Server", msg);
                     }
@@ -154,6 +156,7 @@ impl eframe::App for RobloxStudioApp {
                         if let Some(e) = &mut self.engine {
                             e.set_sim_state(0);
                         }
+                        self.viewport.request_render();
                         self.output.add_log(LogType::Info, "Server", "Simulation stopped.");
                     }
                     RibbonAction::InsertPart(shape) => {
@@ -204,6 +207,7 @@ impl eframe::App for RobloxStudioApp {
                         }
                         self.hierarchy.selected_id = Some(id);
                         self.ribbon.current_tool = crate::studio_ribbon::StudioTool::Move;
+                        self.viewport.request_render();
                         self.output.add_log(LogType::Info, "Workspace", format!("Created {} in Xenity Engine at [{:.1}, {:.1}, {:.1}]", name, initial_pos[0], initial_pos[1], initial_pos[2]));
                     }
                     RibbonAction::ToggleToolbox => {
@@ -385,6 +389,7 @@ impl eframe::App for RobloxStudioApp {
                             self.show_properties = false;
                         }
                         if prop_changed {
+                            self.viewport.request_render();
                             if let Some(sel_id) = self.hierarchy.selected_id {
                                 if let Some(x_idx) = self.hierarchy.get_xenity_index_for_id(sel_id) {
                                     if let Some(item) = self.hierarchy.find_item_mut(sel_id) {
@@ -412,6 +417,7 @@ impl eframe::App for RobloxStudioApp {
                         // Solo Explorer ocupa todo el panel
                         let (clicked_name, exp_close) = self.hierarchy.show(ui, icons);
                         if let Some(clicked_name) = clicked_name {
+                            self.viewport.request_render();
                             self.output.add_log(LogType::Info, "Explorer", format!("Selected: {}", clicked_name));
                         }
                         if exp_close {
@@ -425,6 +431,7 @@ impl eframe::App for RobloxStudioApp {
                             self.show_properties = false;
                         }
                         if prop_changed {
+                            self.viewport.request_render();
                             if let Some(sel_id) = self.hierarchy.selected_id {
                                 if let Some(x_idx) = self.hierarchy.get_xenity_index_for_id(sel_id) {
                                     if let Some(item) = self.hierarchy.find_item_mut(sel_id) {
@@ -463,6 +470,7 @@ impl eframe::App for RobloxStudioApp {
                     }
                 }
                 self.hierarchy.selected_id = None;
+                self.viewport.request_render();
             }
         }
 
@@ -495,6 +503,7 @@ impl eframe::App for RobloxStudioApp {
                 if let Some(hit_idx) = hit_opt {
                     if let Some(id) = self.hierarchy.get_id_for_xenity_index(hit_idx) {
                         self.hierarchy.selected_id = Some(id);
+                        self.viewport.request_render();
                     }
                 }
             });

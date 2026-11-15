@@ -13,6 +13,11 @@ pub struct StudioViewportState {
     pub viewport_texture: Option<egui::TextureHandle>,
     pub pixel_buffer: Vec<u8>,
     pub engine_rendered: bool,
+
+    pub last_width: u32,
+    pub last_height: u32,
+    pub last_tool: Option<crate::studio_ribbon::StudioTool>,
+    pub is_dirty: bool,
 }
 
 impl Default for StudioViewportState {
@@ -26,11 +31,18 @@ impl Default for StudioViewportState {
             viewport_texture: None,
             pixel_buffer: Vec::new(),
             engine_rendered: false,
+            last_width: 0,
+            last_height: 0,
+            last_tool: None,
+            is_dirty: true,
         }
     }
 }
 
 impl StudioViewportState {
+    pub fn request_render(&mut self) {
+        self.is_dirty = true;
+    }
     pub fn show(
         &mut self,
         ui: &mut egui::Ui,
@@ -113,6 +125,8 @@ impl StudioViewportState {
             };
             eng.set_tool_mode(tool_mode);
 
+            let mut scene_interacted = false;
+
             // Clic izquierdo en el Viewport 3D: Raycast & Selección de pieza
             if vp_resp.clicked_by(egui::PointerButton::Primary) && !ui.input(|i| i.modifiers.alt) {
                 if let Some(pos) = ui.ctx().pointer_latest_pos() {
@@ -123,6 +137,7 @@ impl StudioViewportState {
                         if hit >= 0 {
                             picked_object_index = Some(hit);
                         }
+                        scene_interacted = true;
                     }
                 }
             }
@@ -132,15 +147,18 @@ impl StudioViewportState {
                 let delta = vp_resp.drag_delta();
                 if tool_mode != 0 && (delta.x != 0.0 || delta.y != 0.0) {
                     eng.transform_selected(delta.x, delta.y, tool_mode, 0);
+                    scene_interacted = true;
                 }
             }
 
             // Controles de cámara de Studio: Arrastre con clic derecho o Alt + Clic izquierdo
             if vp_resp.dragged_by(egui::PointerButton::Secondary) || (vp_resp.dragged_by(egui::PointerButton::Primary) && ui.input(|i| i.modifiers.alt)) {
                 let delta = vp_resp.drag_delta();
-                // Sensibilidad y orientación natural de Roblox Studio (arrastrar a la derecha gira a la derecha)
-                let rot_sens = 0.35;
-                eng.camera_orbit(-delta.x * rot_sens, delta.y * rot_sens, 0.0, 0.0, 0.0);
+                if delta.x != 0.0 || delta.y != 0.0 {
+                    let rot_sens = 0.35;
+                    eng.camera_orbit(-delta.x * rot_sens, delta.y * rot_sens, 0.0, 0.0, 0.0);
+                    scene_interacted = true;
+                }
             }
 
             // Movimiento WASD + Zoom rueda si el ratón está sobre el viewport
@@ -169,34 +187,50 @@ impl StudioViewportState {
 
                 if fwd != 0.0 || right != 0.0 || up != 0.0 {
                     eng.camera_orbit(0.0, 0.0, fwd, right, up);
+                    scene_interacted = true;
                 }
             }
 
-            // Frame Tick en el motor C++
-            eng.tick();
+            let needs_render = is_playing
+                || self.is_dirty
+                || scene_interacted
+                || self.viewport_texture.is_none()
+                || vp_w != self.last_width
+                || vp_h != self.last_height
+                || Some(current_tool) != self.last_tool;
 
-            // Leer framebuffer RGBA del motor
-            if eng.read_frame(vp_w, vp_h, &mut self.pixel_buffer) {
-                let color_image = egui::ColorImage::from_rgba_unmultiplied(
-                    [vp_w as usize, vp_h as usize],
-                    &self.pixel_buffer,
-                );
-                match &mut self.viewport_texture {
-                    Some(tex) => tex.set(color_image, egui::TextureOptions::LINEAR),
-                    None => {
-                        self.viewport_texture = Some(ui.ctx().load_texture(
-                            "xenity_scene_viewport",
-                            color_image,
-                            egui::TextureOptions::LINEAR,
-                        ));
+            if needs_render {
+                self.is_dirty = false;
+                self.last_width = vp_w;
+                self.last_height = vp_h;
+                self.last_tool = Some(current_tool);
+
+                // Frame Tick en el motor C++
+                eng.tick();
+
+                // Leer framebuffer RGBA del motor
+                if eng.read_frame(vp_w, vp_h, &mut self.pixel_buffer) {
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(
+                        [vp_w as usize, vp_h as usize],
+                        &self.pixel_buffer,
+                    );
+                    match &mut self.viewport_texture {
+                        Some(tex) => tex.set(color_image, egui::TextureOptions::LINEAR),
+                        None => {
+                            self.viewport_texture = Some(ui.ctx().load_texture(
+                                "xenity_scene_viewport",
+                                color_image,
+                                egui::TextureOptions::LINEAR,
+                            ));
+                        }
                     }
+                    self.engine_rendered = true;
                 }
-                self.engine_rendered = true;
             }
         }
 
-        // Si el motor renderizó el frame, dibujamos la textura OpenGL (invertida en V por GPU para máxima velocidad)
-        if self.engine_rendered && self.viewport_texture.is_some() {
+        // Si el motor renderizó o ya tiene textura en caché VRAM, dibujamos la textura OpenGL (invertida en V por GPU para máxima velocidad)
+        if (self.engine_rendered || self.viewport_texture.is_some()) && self.viewport_texture.is_some() {
             let tex = self.viewport_texture.as_ref().unwrap();
             ui.painter().image(
                 tex.id(),
