@@ -31,7 +31,6 @@
 #include <engine/graphics/color/color.h>
 #include <engine/graphics/texture/texture.h>
 
-#include <editor/ui/menus/file_management/select_asset_menu.h>
 
 class Reflective;
 class ProjectDirectory;
@@ -92,6 +91,9 @@ enum class CopyType
 	Component,
 	Transform,
 };
+
+template <class T>
+class SelectAssetMenu;
 
 class EditorUI
 {
@@ -441,77 +443,7 @@ public:
 	*/
 	template <typename T>
 	std::enable_if_t<std::is_base_of<FileReference, T>::value, bool>
-		static DrawFileReference(ReflectiveDataToDraw* reflectiveDataToDraw, const std::reference_wrapper<std::shared_ptr<T>> valuePtr, const std::string& variableName, std::shared_ptr<T>& newValue)
-	{
-		bool valueChangedTemp = false;
-		const ClassRegistry::FileClassInfo* classInfo = ClassRegistry::GetFileClassInfoById(reflectiveDataToDraw->currentEntry.typeId);
-		std::string inputText = "None (" + classInfo->name + ")";
-		const std::shared_ptr<T> ptr = valuePtr.get();
-		if (ptr != nullptr)
-		{
-			if (ptr->m_file != nullptr)
-				inputText = ptr->m_file->GetFileName();
-			else
-				inputText = "Dynamic " + classInfo->name;
-
-			/*inputText += " " + std::to_string(ptr->m_fileId) + " ";
-			if (ptr->m_file)
-				inputText += " " + std::to_string(ptr->m_file->GetUniqueId()) + " ";*/
-		}
-		const InputButtonState returnValue = DrawInputButton(variableName, inputText, true);
-		if (returnValue == InputButtonState::ResetValue)
-		{
-			newValue = nullptr;
-			valueChangedTemp = true;
-		}
-		else if (returnValue == InputButtonState::OpenAssetMenu)
-		{
-			if (currentSelectAssetMenu)
-				Editor::RemoveMenu(currentSelectAssetMenu.get());
-
-			std::shared_ptr<SelectAssetMenu<T>> selectMenu = Editor::AddMenu<SelectAssetMenu<T>>(true);
-			selectMenu->onValueChangedEvent = onValueChangedEvent;
-			selectMenu->valuePtr = valuePtr;
-			selectMenu->SearchFiles(classInfo->fileType);
-			if (reflectiveDataToDraw)
-			{
-				selectMenu->reflectiveDataToDraw = *reflectiveDataToDraw;
-				selectMenu->hasReflectiveDataToDraw = true;
-
-				// Keep a weak reference to the owner of the variable to know when valuePtr becomes invalid
-				std::shared_ptr<void> owner = nullptr;
-				if (reflectiveDataToDraw->ownerType == ReflectiveDataToDraw::OwnerTypeEnum::GameObject)
-				{
-					owner = FindGameObjectById(reflectiveDataToDraw->ownerUniqueId);
-				}
-				else if (reflectiveDataToDraw->ownerType == ReflectiveDataToDraw::OwnerTypeEnum::Component)
-				{
-					owner = FindComponentById(reflectiveDataToDraw->ownerUniqueId);
-				}
-				if (owner)
-				{
-					selectMenu->owner = owner;
-					selectMenu->hasOwner = true;
-				}
-			}
-			currentSelectAssetMenu = selectMenu;
-			selectMenu->Focus();
-		}
-
-		std::shared_ptr <FileReference> ref = nullptr;
-		const std::string payloadName = "Files" + std::to_string((int)classInfo->fileType);
-		if (DragDropTarget(payloadName, ref))
-		{
-			newValue = std::dynamic_pointer_cast<T>(ref);
-			valueChangedTemp = true;
-		}
-		if (!variableName.empty())
-			ImGui::Separator();
-		else
-			ImGui::Spacing();
-
-		return valueChangedTemp;
-	}
+		static DrawFileReference(ReflectiveDataToDraw* reflectiveDataToDraw, const std::reference_wrapper<std::shared_ptr<T>> valuePtr, const std::string& variableName, std::shared_ptr<T>& newValue);
 
 	/**
 	* @brief Draw a vector of file references
@@ -951,3 +883,74 @@ private:
 	static bool s_isEditingElement;
 	static float s_uiScale;
 };
+
+#include <editor/ui/menus/file_management/select_asset_menu.h>
+
+template <typename T>
+std::enable_if_t<std::is_base_of<FileReference, T>::value, bool>
+EditorUI::DrawFileReference(ReflectiveDataToDraw* reflectiveDataToDraw, const std::reference_wrapper<std::shared_ptr<T>> valuePtr, const std::string& variableName, std::shared_ptr<T>& newValue)
+{
+	bool valueChangedTemp = false;
+	const ClassRegistry::FileClassInfo* classInfo = ClassRegistry::GetFileClassInfoById(reflectiveDataToDraw->currentEntry.typeId);
+	std::string inputText = "None (" + classInfo->name + ")";
+	const std::shared_ptr<T> ptr = valuePtr.get();
+	if (ptr != nullptr)
+	{
+		if (ptr->m_file != nullptr)
+			inputText = ptr->m_file->GetFileName();
+		else
+			inputText = "Dynamic " + classInfo->name;
+	}
+	const InputButtonState returnValue = DrawInputButton(variableName, inputText, true);
+	if (returnValue == InputButtonState::ResetValue)
+	{
+		newValue = nullptr;
+		valueChangedTemp = true;
+	}
+	else if (returnValue == InputButtonState::OpenAssetMenu)
+	{
+		if (currentSelectAssetMenu)
+			Editor::RemoveMenu(currentSelectAssetMenu.get());
+
+		std::shared_ptr<SelectAssetMenu<T>> selectMenu = Editor::AddMenu<SelectAssetMenu<T>>(true);
+		selectMenu->onValueChangedEvent = onValueChangedEvent;
+		selectMenu->valuePtr = valuePtr;
+		selectMenu->SearchFiles(classInfo->fileType);
+		if (reflectiveDataToDraw)
+		{
+			selectMenu->reflectiveDataToDraw = *reflectiveDataToDraw;
+			selectMenu->hasReflectiveDataToDraw = true;
+
+			std::shared_ptr<void> owner = nullptr;
+			if (reflectiveDataToDraw->ownerType == ReflectiveDataToDraw::OwnerTypeEnum::GameObject)
+			{
+				owner = FindGameObjectById(reflectiveDataToDraw->ownerUniqueId);
+			}
+			else if (reflectiveDataToDraw->ownerType == ReflectiveDataToDraw::OwnerTypeEnum::Component)
+			{
+				owner = FindComponentById(reflectiveDataToDraw->ownerUniqueId);
+			}
+			if (owner)
+			{
+				selectMenu->owner = owner;
+				selectMenu->hasOwner = true;
+			}
+		}
+		currentSelectAssetMenu = selectMenu;
+		selectMenu->Focus();
+	}
+
+	std::shared_ptr<FileReference> ref = nullptr;
+	const std::string payloadName = "Files" + std::to_string((int)classInfo->fileType);
+	if (DragDropTarget(payloadName, ref))
+	{
+		newValue = std::dynamic_pointer_cast<T>(ref);
+		valueChangedTemp = true;
+	}
+	if (!variableName.empty())
+		ImGui::Separator();
+	else
+		ImGui::Spacing();
+
+	return valueChangedTemp;
+}

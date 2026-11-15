@@ -23,6 +23,7 @@
 #include <engine/graphics/texture/texture.h>
 #include <engine/event_system/event_system.h>
 #include <engine/tools/string_utils.h>
+#include <editor/ui/editor_ui.h>
 
 template <class T>
 class SelectAssetMenu : public Menu

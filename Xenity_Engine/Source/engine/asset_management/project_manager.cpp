@@ -46,7 +46,7 @@
 
 #include <engine/debug/debug.h>
 
-#if !defined(EDITOR) && !defined(_WIN32) && !defined(_WIN64)
+#if !defined(EDITOR) && !defined(_WIN32) && !defined(_WIN64) && !defined(__LINUX__)
 #include "game_code/source/game.h"
 #endif
 #include <engine/engine_settings.h>
@@ -1305,11 +1305,10 @@ void ProjectManager::LoadMetaFile(FileReference& fileReference)
 void ProjectManager::CreateGame()
 {
 	// Load dynamic library and create game
-#if !defined(__LINUX__)
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32) || defined(_WIN64) || defined(__LINUX__)
 	bool isDebugMode = false;
 	bool is64Bits = false;
-#if defined(_WIN64)
+#if defined(_WIN64) || defined(__LINUX__)
 	is64Bits = true;
 #endif
 #if defined(DEBUG)
@@ -1329,7 +1328,7 @@ void ProjectManager::CreateGame()
 
 		if (!ProjectManager::s_projectSettings.isCompiled)
 		{
-			Debug::PrintWarning("The project DLL is not found, please recompile the game.");
+			Debug::PrintWarning("The project library is not found, please recompile the game.");
 		}
 
 		Engine::s_game = DynamicLibrary::CreateGame();
@@ -1341,8 +1340,7 @@ void ProjectManager::CreateGame()
 	}
 #else
 	Engine::s_game = std::make_unique<Game>();
-#endif //  defined(_WIN32) || defined(_WIN64)
-#endif // !defined(__LINUX__)
+#endif //  defined(_WIN32) || defined(_WIN64) || defined(__LINUX__)
 
 	// Fill class registery
 	if (Engine::s_game)

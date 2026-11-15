@@ -22,6 +22,7 @@
 #include <editor/command/command_manager.h>
 #include <editor/ui/editor_ui.h>
 #include <editor/update_checker/update_checker.h>
+#include <curl/curl.h>
 #include <editor/ui/menus/other/update_available_menu.h>
 #include "command/commands/delete.h"
 #include "command/commands/create.h"
@@ -91,6 +92,7 @@ void Editor::Init()
 	SaveMenuSettings();
 	CreateMenus();
 
+	curl_global_init(CURL_GLOBAL_ALL);
 	s_onUpdateCheckedEvent->Bind(&OnUpdateChecked);
 	std::thread thread(&UpdateChecker::CheckForUpdate, s_onUpdateCheckedEvent);
 	thread.detach();

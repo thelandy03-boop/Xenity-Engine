@@ -9,10 +9,10 @@
 #include <memory>
 #include <string>
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 #define XENITY_API __declspec(dllexport)
 #else
-#define XENITY_API
+#define XENITY_API __attribute__((visibility("default")))
 #endif
 
 class Camera;

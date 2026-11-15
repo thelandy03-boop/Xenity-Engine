@@ -4,4 +4,5 @@
 //
 // This file is part of Xenity Engine
 
+#include <editor/ui/editor_ui.h>
 #include "select_asset_menu.h"

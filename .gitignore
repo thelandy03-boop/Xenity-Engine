@@ -12,69 +12,36 @@
 *.vscode
 *.Identifier
 
+/build/
+*.so
+!Xenity_Engine/libs/*.so
+!Xenity_Engine/libs/*.so.*
+xenity-editor/*.so
+xenity-editor/*.dll
+xenity-editor/engine_assets
+xenity-editor/public_engine_assets
+xenity-editor/icons
+xenity-editor/psp_images
+xenity-editor/psvita_images
+xenity-editor/Source
+xenity-editor/include
+xenity-editor/main.cpp
+xenity-editor/Dockerfile
+xenity-editor/compile_shaders.sh
+xenity-editor/Roboto Regular.ttf
+/engine_assets
+/public_engine_assets
+/icons
+/psp_images
+/psvita_images
+/Source
+/include
+/main.cpp
+/Dockerfile
+/compile_shaders.sh
+/Roboto Regular.ttf
 Xenity_Engine/build/
 XenityBuild/
-xenity-editor/*.dll
-xenity-editor/engine_assets/
-xenity-editor/public_engine_assets/
-xenity-editor/Roboto Regular.ttf
-engine_assets/
-public_engine_assets/
-Roboto Regular.ttfCMakeFiles/
-Xenity_Engine/build/
-XenityBuild/
-xenity-editor/*.dll
-xenity-editor/engine_assets/
-xenity-editor/public_engine_assets/
-xenity-editor/Roboto Regular.ttf
-engine_assets/
-public_engine_assets/
-Roboto Regular.ttfcmake_install.cmake
-Xenity_Engine/build/
-XenityBuild/
-xenity-editor/*.dll
-xenity-editor/engine_assets/
-xenity-editor/public_engine_assets/
-xenity-editor/Roboto Regular.ttf
-engine_assets/
-public_engine_assets/
-Roboto Regular.ttfCMakeCache.txt
-Xenity_Engine/build/
-XenityBuild/
-xenity-editor/*.dll
-xenity-editor/engine_assets/
-xenity-editor/public_engine_assets/
-xenity-editor/Roboto Regular.ttf
-engine_assets/
-public_engine_assets/
-Roboto Regular.ttfMakefile
-Xenity_Engine/build/
-XenityBuild/
-xenity-editor/*.dll
-xenity-editor/engine_assets/
-xenity-editor/public_engine_assets/
-xenity-editor/Roboto Regular.ttf
-engine_assets/
-public_engine_assets/
-Roboto Regular.ttfPARAM.SFO
-Xenity_Engine/build/
-XenityBuild/
-xenity-editor/*.dll
-xenity-editor/engine_assets/
-xenity-editor/public_engine_assets/
-xenity-editor/Roboto Regular.ttf
-engine_assets/
-public_engine_assets/
-Roboto Regular.ttfEBOOT.PBP
-Xenity_Engine/build/
-XenityBuild/
-xenity-editor/*.dll
-xenity-editor/engine_assets/
-xenity-editor/public_engine_assets/
-xenity-editor/Roboto Regular.ttf
-engine_assets/
-public_engine_assets/
-Roboto Regular.ttfhello
 Xenity_Engine/buildvita/
 Xenity_Engine/Xenity Editor/
 Xenity_Engine/plugins/*.dll

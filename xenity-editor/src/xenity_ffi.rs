@@ -101,6 +101,15 @@ pub struct XenityEngine {
 impl XenityEngine {
     pub fn try_load() -> Option<Self> {
         let candidates = [
+            // Linux candidates
+            PathBuf::from("libXenity_Editor.so"),
+            PathBuf::from("Xenity_Editor.so"),
+            PathBuf::from("build/libXenity_Editor.so"),
+            PathBuf::from("../build/libXenity_Editor.so"),
+            PathBuf::from("build/Xenity_Editor.so"),
+            PathBuf::from("../build/Xenity_Editor.so"),
+            PathBuf::from("xenity-editor/libXenity_Editor.so"),
+            // Windows candidates
             PathBuf::from("Xenity_Editor.dll"),
             PathBuf::from("xenity-editor/Xenity_Editor.dll"),
             PathBuf::from("../XenityBuild/x64/Release Editor/Xenity_Editor.dll"),
@@ -117,9 +126,9 @@ impl XenityEngine {
         }
 
         let dll_path = match found_path {
-            Some(p) => p,
+            Some(p) => std::fs::canonicalize(&p).unwrap_or(p),
             None => {
-                warn!("[Xenity FFI] Could not locate Xenity_Editor.dll in candidate paths");
+                warn!("[Xenity FFI] Could not locate Xenity_Editor library in candidate paths");
                 return None;
             }
         };
