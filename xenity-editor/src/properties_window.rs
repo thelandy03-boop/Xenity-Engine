@@ -49,8 +49,9 @@ impl PropertiesWindowState {
         ui: &mut egui::Ui,
         selected_item: Option<&mut ExplorerItem>,
         icons: &StudioIcons,
-    ) -> bool {
+    ) -> (bool, bool) {
         let mut close_requested = false;
+        let mut changed = false;
 
         // =====================================================================
         // 1. DOCK TAB BAR OFICIAL (Properties Tab con acento cian #00A2FF y botón ⋮)
@@ -185,7 +186,7 @@ impl PropertiesWindowState {
                         .size(12.0),
                 );
             });
-            return close_requested;
+            return (close_requested, false);
         };
 
         let filter = self.search_query.to_lowercase();
@@ -210,13 +211,17 @@ impl PropertiesWindowState {
                             draw_read_only_dimmed_row(ui, col_name_w, "ClassName", &item.properties.class_name);
                         }
                         if filter.is_empty() || "name".contains(&filter) {
-                            draw_text_edit_row(ui, col_name_w, "Name", &mut item.name);
+                            if draw_text_edit_row(ui, col_name_w, "Name", &mut item.name) {
+                                changed = true;
+                            }
                         }
                         if filter.is_empty() || "parent".contains(&filter) {
                             draw_read_only_dimmed_row(ui, col_name_w, "Parent", &item.properties.parent_name);
                         }
                         if filter.is_empty() || "archivable".contains(&filter) {
-                            draw_bool_row(ui, col_name_w, "Archivable", &mut item.properties.archivable);
+                            if draw_bool_row(ui, col_name_w, "Archivable", &mut item.properties.archivable) {
+                                changed = true;
+                            }
                         }
                     }
                 }
@@ -235,34 +240,40 @@ impl PropertiesWindowState {
                         draw_category_header(ui, "Transform", &mut self.transform_expanded, false);
                         if self.transform_expanded {
                             if filter.is_empty() || "position".contains(&filter) {
-                                draw_vector3_expandable_row(
+                                if draw_vector3_expandable_row(
                                     ui,
                                     col_name_w,
                                     "Position",
                                     &mut item.properties.position,
                                     &mut self.pos_sub_expanded,
                                     0.1,
-                                );
+                                ) {
+                                    changed = true;
+                                }
                             }
                             if filter.is_empty() || "orientation".contains(&filter) {
-                                draw_vector3_expandable_row(
+                                if draw_vector3_expandable_row(
                                     ui,
                                     col_name_w,
                                     "Orientation",
                                     &mut item.properties.orientation,
                                     &mut self.rot_sub_expanded,
                                     0.5,
-                                );
+                                ) {
+                                    changed = true;
+                                }
                             }
                             if filter.is_empty() || "size".contains(&filter) {
-                                draw_vector3_expandable_row(
+                                if draw_vector3_expandable_row(
                                     ui,
                                     col_name_w,
                                     "Size",
                                     &mut item.properties.size,
                                     &mut self.size_sub_expanded,
                                     0.1,
-                                );
+                                ) {
+                                    changed = true;
+                                }
                             }
                         }
                     }
@@ -284,19 +295,29 @@ impl PropertiesWindowState {
                         draw_category_header(ui, "Appearance", &mut self.appearance_expanded, false);
                         if self.appearance_expanded {
                             if filter.is_empty() || "color".contains(&filter) {
-                                draw_color_row(ui, col_name_w, "Color", &mut item.properties.color);
+                                if draw_color_row(ui, col_name_w, "Color", &mut item.properties.color) {
+                                    changed = true;
+                                }
                             }
                             if filter.is_empty() || "material".contains(&filter) {
-                                draw_material_dropdown_row(ui, col_name_w, "Material", &mut item.properties.material);
+                                if draw_material_dropdown_row(ui, col_name_w, "Material", &mut item.properties.material) {
+                                    changed = true;
+                                }
                             }
                             if filter.is_empty() || "reflectance".contains(&filter) {
-                                draw_float_row(ui, col_name_w, "Reflectance", &mut item.properties.reflectance, 0.0..=1.0, 0.02);
+                                if draw_float_row(ui, col_name_w, "Reflectance", &mut item.properties.reflectance, 0.0..=1.0, 0.02) {
+                                    changed = true;
+                                }
                             }
                             if filter.is_empty() || "transparency".contains(&filter) {
-                                draw_float_row(ui, col_name_w, "Transparency", &mut item.properties.transparency, 0.0..=1.0, 0.02);
+                                if draw_float_row(ui, col_name_w, "Transparency", &mut item.properties.transparency, 0.0..=1.0, 0.02) {
+                                    changed = true;
+                                }
                             }
                             if filter.is_empty() || "castshadow".contains(&filter) {
-                                draw_bool_row(ui, col_name_w, "CastShadow", &mut item.properties.cast_shadow);
+                                if draw_bool_row(ui, col_name_w, "CastShadow", &mut item.properties.cast_shadow) {
+                                    changed = true;
+                                }
                             }
                         }
                     }
@@ -315,13 +336,19 @@ impl PropertiesWindowState {
                         draw_category_header(ui, "Collision", &mut self.collision_expanded, false);
                         if self.collision_expanded {
                             if filter.is_empty() || "cancollide".contains(&filter) {
-                                draw_bool_row(ui, col_name_w, "CanCollide", &mut item.properties.can_collide);
+                                if draw_bool_row(ui, col_name_w, "CanCollide", &mut item.properties.can_collide) {
+                                    changed = true;
+                                }
                             }
                             if filter.is_empty() || "cantouch".contains(&filter) {
-                                draw_bool_row(ui, col_name_w, "CanTouch", &mut item.properties.can_touch);
+                                if draw_bool_row(ui, col_name_w, "CanTouch", &mut item.properties.can_touch) {
+                                    changed = true;
+                                }
                             }
                             if filter.is_empty() || "canquery".contains(&filter) {
-                                draw_bool_row(ui, col_name_w, "CanQuery", &mut item.properties.can_query);
+                                if draw_bool_row(ui, col_name_w, "CanQuery", &mut item.properties.can_query) {
+                                    changed = true;
+                                }
                             }
                             if filter.is_empty() || "collisiongroup".contains(&filter) {
                                 draw_read_only_dimmed_row(ui, col_name_w, "CollisionGroup", &item.properties.collision_group);
@@ -342,10 +369,14 @@ impl PropertiesWindowState {
                         draw_category_header(ui, "Assembly", &mut self.assembly_expanded, false);
                         if self.assembly_expanded {
                             if filter.is_empty() || "anchored".contains(&filter) {
-                                draw_bool_row(ui, col_name_w, "Anchored", &mut item.properties.anchored);
+                                if draw_bool_row(ui, col_name_w, "Anchored", &mut item.properties.anchored) {
+                                    changed = true;
+                                }
                             }
                             if filter.is_empty() || "massless".contains(&filter) {
-                                draw_bool_row(ui, col_name_w, "Massless", &mut item.properties.massless);
+                                if draw_bool_row(ui, col_name_w, "Massless", &mut item.properties.massless) {
+                                    changed = true;
+                                }
                             }
                             if filter.is_empty() || "mass".contains(&filter) {
                                 draw_read_only_dimmed_row(ui, col_name_w, "AssemblyMass", &format!("{:.2}", item.properties.mass));
@@ -394,43 +425,43 @@ impl PropertiesWindowState {
                     RobloxClass::Light => {
                         draw_category_header(ui, "Luz", &mut self.specific_expanded, false);
                         if self.specific_expanded {
-                            draw_bool_row(ui, col_name_w, "Enabled", &mut item.properties.light_enabled);
-                            draw_float_row(ui, col_name_w, "Brightness", &mut item.properties.brightness, 0.0..=10.0, 0.1);
-                            draw_float_row(ui, col_name_w, "Range", &mut item.properties.range, 0.0..=120.0, 1.0);
-                            draw_bool_row(ui, col_name_w, "Shadows", &mut item.properties.shadows);
+                            if draw_bool_row(ui, col_name_w, "Enabled", &mut item.properties.light_enabled) { changed = true; }
+                            if draw_float_row(ui, col_name_w, "Brightness", &mut item.properties.brightness, 0.0..=10.0, 0.1) { changed = true; }
+                            if draw_float_row(ui, col_name_w, "Range", &mut item.properties.range, 0.0..=120.0, 1.0) { changed = true; }
+                            if draw_bool_row(ui, col_name_w, "Shadows", &mut item.properties.shadows) { changed = true; }
                         }
                     }
                     RobloxClass::Sound | RobloxClass::SoundService => {
                         draw_category_header(ui, "Sonido", &mut self.specific_expanded, false);
                         if self.specific_expanded {
-                            draw_text_edit_row(ui, col_name_w, "SoundId", &mut item.properties.sound_id);
-                            draw_float_row(ui, col_name_w, "Volume", &mut item.properties.volume, 0.0..=2.0, 0.05);
-                            draw_float_row(ui, col_name_w, "PlaybackSpeed", &mut item.properties.playback_speed, 0.1..=5.0, 0.1);
-                            draw_bool_row(ui, col_name_w, "Playing", &mut item.properties.playing);
-                            draw_bool_row(ui, col_name_w, "Looped", &mut item.properties.looped);
+                            if draw_text_edit_row(ui, col_name_w, "SoundId", &mut item.properties.sound_id) { changed = true; }
+                            if draw_float_row(ui, col_name_w, "Volume", &mut item.properties.volume, 0.0..=2.0, 0.05) { changed = true; }
+                            if draw_float_row(ui, col_name_w, "PlaybackSpeed", &mut item.properties.playback_speed, 0.1..=5.0, 0.1) { changed = true; }
+                            if draw_bool_row(ui, col_name_w, "Playing", &mut item.properties.playing) { changed = true; }
+                            if draw_bool_row(ui, col_name_w, "Looped", &mut item.properties.looped) { changed = true; }
                         }
                     }
                     RobloxClass::Script | RobloxClass::ServerScriptService | RobloxClass::StarterCharacterScripts | RobloxClass::StarterPlayerScripts => {
                         draw_category_header(ui, "Script", &mut self.specific_expanded, false);
                         if self.specific_expanded {
-                            draw_bool_row(ui, col_name_w, "Enabled", &mut item.properties.script_enabled);
+                            if draw_bool_row(ui, col_name_w, "Enabled", &mut item.properties.script_enabled) { changed = true; }
                             draw_read_only_dimmed_row(ui, col_name_w, "RunContext", &item.properties.run_context);
                         }
                     }
                     RobloxClass::Humanoid => {
                         draw_category_header(ui, "Humanoid", &mut self.specific_expanded, false);
                         if self.specific_expanded {
-                            draw_float_row(ui, col_name_w, "Health", &mut item.properties.health, 0.0..=item.properties.max_health, 1.0);
-                            draw_float_row(ui, col_name_w, "MaxHealth", &mut item.properties.max_health, 1.0..=1000.0, 1.0);
-                            draw_float_row(ui, col_name_w, "WalkSpeed", &mut item.properties.walk_speed, 0.0..=100.0, 1.0);
-                            draw_float_row(ui, col_name_w, "JumpPower", &mut item.properties.jump_power, 0.0..=200.0, 1.0);
-                            draw_bool_row(ui, col_name_w, "AutoRotate", &mut item.properties.auto_rotate);
+                            if draw_float_row(ui, col_name_w, "Health", &mut item.properties.health, 0.0..=item.properties.max_health, 1.0) { changed = true; }
+                            if draw_float_row(ui, col_name_w, "MaxHealth", &mut item.properties.max_health, 1.0..=1000.0, 1.0) { changed = true; }
+                            if draw_float_row(ui, col_name_w, "WalkSpeed", &mut item.properties.walk_speed, 0.0..=100.0, 1.0) { changed = true; }
+                            if draw_float_row(ui, col_name_w, "JumpPower", &mut item.properties.jump_power, 0.0..=200.0, 1.0) { changed = true; }
+                            if draw_bool_row(ui, col_name_w, "AutoRotate", &mut item.properties.auto_rotate) { changed = true; }
                         }
                     }
                     RobloxClass::Camera => {
                         draw_category_header(ui, "Camera", &mut self.specific_expanded, false);
                         if self.specific_expanded {
-                            draw_float_row(ui, col_name_w, "FieldOfView", &mut item.properties.fov, 10.0..=120.0, 1.0);
+                            if draw_float_row(ui, col_name_w, "FieldOfView", &mut item.properties.fov, 10.0..=120.0, 1.0) { changed = true; }
                             draw_read_only_dimmed_row(ui, col_name_w, "CameraType", &item.properties.camera_type);
                         }
                     }
@@ -438,7 +469,7 @@ impl PropertiesWindowState {
                 }
             });
 
-        close_requested
+        (close_requested, changed)
     }
 }
 
@@ -574,7 +605,7 @@ fn draw_empty_placeholder_row(ui: &mut egui::Ui, text: &str) {
     );
 }
 
-fn draw_text_edit_row(ui: &mut egui::Ui, name_w: f32, label: &str, value: &mut String) {
+fn draw_text_edit_row(ui: &mut egui::Ui, name_w: f32, label: &str, value: &mut String) -> bool {
     let (_, _, val_rect, _) = allocate_property_row(ui, name_w, label, false);
     let edit_rect = Rect::from_min_max(
         Pos2::new(val_rect.min.x + 3.0, val_rect.min.y + 2.0),
@@ -589,7 +620,7 @@ fn draw_text_edit_row(ui: &mut egui::Ui, name_w: f32, label: &str, value: &mut S
     );
     let mut child = ui.child_ui(text_inner, egui::Layout::left_to_right(egui::Align::Center), None);
     child.spacing_mut().item_spacing = Vec2::ZERO;
-    child.add(
+    let resp = child.add(
         egui::TextEdit::singleline(value)
             .frame(false)
             .margin(egui::Margin::symmetric(0.0, 1.0))
@@ -597,9 +628,10 @@ fn draw_text_edit_row(ui: &mut egui::Ui, name_w: f32, label: &str, value: &mut S
             .text_color(Color32::WHITE)
             .desired_width(text_inner.width()),
     );
+    resp.changed()
 }
 
-fn draw_bool_row(ui: &mut egui::Ui, name_w: f32, label: &str, value: &mut bool) {
+fn draw_bool_row(ui: &mut egui::Ui, name_w: f32, label: &str, value: &mut bool) -> bool {
     let (_, _, val_rect, _) = allocate_property_row(ui, name_w, label, false);
 
     // Roblox Studio Checkbox
@@ -607,7 +639,8 @@ fn draw_bool_row(ui: &mut egui::Ui, name_w: f32, label: &str, value: &mut bool) 
     let box_rect = Rect::from_center_size(box_center, Vec2::new(14.0, 14.0));
     let resp = ui.interact(box_rect, ui.id().with(label).with("bool_box"), Sense::click());
 
-    if resp.clicked() {
+    let changed = resp.clicked();
+    if changed {
         *value = !*value;
     }
 
@@ -635,6 +668,8 @@ fn draw_bool_row(ui: &mut egui::Ui, name_w: f32, label: &str, value: &mut bool) 
         ui.painter().line_segment([p1, p2], Stroke::new(1.6, Color32::WHITE));
         ui.painter().line_segment([p2, p3], Stroke::new(1.6, Color32::WHITE));
     }
+
+    changed
 }
 
 fn draw_float_row(
@@ -644,22 +679,23 @@ fn draw_float_row(
     val: &mut f32,
     range: std::ops::RangeInclusive<f32>,
     speed: f64,
-) {
+) -> bool {
     let (_, _, val_rect, _) = allocate_property_row(ui, name_w, label, false);
     let edit_rect = Rect::from_min_max(
         Pos2::new(val_rect.min.x + 4.0, val_rect.min.y + 2.0),
         Pos2::new(val_rect.max.x - 4.0, val_rect.max.y - 2.0),
     );
     let mut child = ui.child_ui(edit_rect, egui::Layout::left_to_right(egui::Align::Center), None);
-    child.add(
+    let resp = child.add(
         egui::DragValue::new(val)
             .range(range)
             .speed(speed)
             .max_decimals(3),
     );
+    resp.changed()
 }
 
-fn draw_color_row(ui: &mut egui::Ui, name_w: f32, label: &str, color: &mut Color32) {
+fn draw_color_row(ui: &mut egui::Ui, name_w: f32, label: &str, color: &mut Color32) -> bool {
     let (_, _, val_rect, _) = allocate_property_row(ui, name_w, label, false);
 
     // Color Swatch Rect
@@ -667,6 +703,7 @@ fn draw_color_row(ui: &mut egui::Ui, name_w: f32, label: &str, color: &mut Color
     let swatch_rect = Rect::from_center_size(swatch_center, Vec2::new(14.0, 14.0));
 
     let resp = ui.interact(swatch_rect, ui.id().with(label).with("color_swatch"), Sense::click());
+    let mut changed = false;
     if resp.clicked() {
         let presets = [
             Color32::from_rgb(163, 162, 165), // Medium stone grey
@@ -679,6 +716,7 @@ fn draw_color_row(ui: &mut egui::Ui, name_w: f32, label: &str, color: &mut Color
         ];
         let cur = presets.iter().position(|c| *c == *color).unwrap_or(0);
         *color = presets[(cur + 1) % presets.len()];
+        changed = true;
     }
 
     ui.painter().rect_filled(swatch_rect, Rounding::same(2.0), *color);
@@ -693,9 +731,11 @@ fn draw_color_row(ui: &mut egui::Ui, name_w: f32, label: &str, color: &mut Color
         FontId::proportional(11.0),
         Color32::from_rgb(180, 180, 185),
     );
+
+    changed
 }
 
-fn draw_material_dropdown_row(ui: &mut egui::Ui, name_w: f32, label: &str, current: &mut String) {
+fn draw_material_dropdown_row(ui: &mut egui::Ui, name_w: f32, label: &str, current: &mut String) -> bool {
     let (_, _, val_rect, _) = allocate_property_row(ui, name_w, label, false);
     let edit_rect = Rect::from_min_max(
         Pos2::new(val_rect.min.x + 4.0, val_rect.min.y + 2.0),
@@ -706,15 +746,19 @@ fn draw_material_dropdown_row(ui: &mut egui::Ui, name_w: f32, label: &str, curre
         "Plastic", "SmoothPlastic", "Neon", "Wood", "WoodPlanks", "Slate", "Concrete", "CorrodedMetal", "DiamondPlate", "Foil", "Grass", "Ice", "Brick", "Sand", "Fabric", "Marble", "Granite", "Pebble", "Glass", "ForceField"
     ];
 
+    let mut changed = false;
     let mut child = ui.child_ui(edit_rect, egui::Layout::left_to_right(egui::Align::Center), None);
     egui::ComboBox::from_id_salt("material_select_combo")
         .selected_text(current.as_str())
         .width(edit_rect.width() - 8.0)
         .show_ui(&mut child, |ui| {
             for mat in materials {
-                ui.selectable_value(current, mat.to_string(), mat);
+                if ui.selectable_value(current, mat.to_string(), mat).changed() {
+                    changed = true;
+                }
             }
         });
+    changed
 }
 
 fn draw_vector3_expandable_row(
@@ -724,7 +768,8 @@ fn draw_vector3_expandable_row(
     vals: &mut [f32; 3],
     is_expanded: &mut bool,
     speed: f64,
-) {
+) -> bool {
+    let mut changed = false;
     let (_, name_rect, val_rect, _) = allocate_property_row(ui, name_w, label, false);
 
     // Flecha foldout en name_rect
@@ -773,11 +818,15 @@ fn draw_vector3_expandable_row(
                 Pos2::new(sub_val.max.x - 4.0, sub_val.max.y - 2.0),
             );
             let mut child = ui.child_ui(edit_rect, egui::Layout::left_to_right(egui::Align::Center), None);
-            child.add(
+            let resp = child.add(
                 egui::DragValue::new(&mut vals[i])
                     .speed(speed)
                     .max_decimals(3),
             );
+            if resp.changed() {
+                changed = true;
+            }
         }
     }
+    changed
 }

@@ -380,9 +380,33 @@ impl eframe::App for RobloxStudioApp {
                         let mut prop_ui = ui.child_ui(properties_rect, egui::Layout::top_down(egui::Align::Min), None);
                         prop_ui.set_clip_rect(properties_rect);
                         let selected_item = self.hierarchy.get_selected_item_mut();
-                        let prop_close = self.properties.show(&mut prop_ui, selected_item, icons);
+                        let (prop_close, prop_changed) = self.properties.show(&mut prop_ui, selected_item, icons);
                         if prop_close {
                             self.show_properties = false;
+                        }
+                        if prop_changed {
+                            if let Some(sel_id) = self.hierarchy.selected_id {
+                                if let Some(x_idx) = self.hierarchy.get_xenity_index_for_id(sel_id) {
+                                    if let Some(item) = self.hierarchy.find_item_mut(sel_id) {
+                                        if let Some(ref mut eng) = self.engine {
+                                            eng.set_gameobject_transform(
+                                                x_idx,
+                                                item.properties.position,
+                                                item.properties.orientation,
+                                                item.properties.size,
+                                            );
+                                            eng.set_gameobject_name(x_idx, &item.name);
+                                            let c = item.properties.color;
+                                            eng.set_gameobject_color(x_idx, [
+                                                c.r() as f32 / 255.0,
+                                                c.g() as f32 / 255.0,
+                                                c.b() as f32 / 255.0,
+                                                1.0,
+                                            ]);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     } else if self.show_explorer {
                         // Solo Explorer ocupa todo el panel
@@ -396,13 +420,50 @@ impl eframe::App for RobloxStudioApp {
                     } else if self.show_properties {
                         // Solo Properties ocupa todo el panel
                         let selected_item = self.hierarchy.get_selected_item_mut();
-                        let prop_close = self.properties.show(ui, selected_item, icons);
+                        let (prop_close, prop_changed) = self.properties.show(ui, selected_item, icons);
                         if prop_close {
                             self.show_properties = false;
+                        }
+                        if prop_changed {
+                            if let Some(sel_id) = self.hierarchy.selected_id {
+                                if let Some(x_idx) = self.hierarchy.get_xenity_index_for_id(sel_id) {
+                                    if let Some(item) = self.hierarchy.find_item_mut(sel_id) {
+                                        if let Some(ref mut eng) = self.engine {
+                                            eng.set_gameobject_transform(
+                                                x_idx,
+                                                item.properties.position,
+                                                item.properties.orientation,
+                                                item.properties.size,
+                                            );
+                                            eng.set_gameobject_name(x_idx, &item.name);
+                                            let c = item.properties.color;
+                                            eng.set_gameobject_color(x_idx, [
+                                                c.r() as f32 / 255.0,
+                                                c.g() as f32 / 255.0,
+                                                c.b() as f32 / 255.0,
+                                                1.0,
+                                            ]);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 });
             self.right_width = panel_resp.response.rect.width();
+        }
+
+        // Manejar tecla Delete para eliminar la pieza seleccionada tanto en C++ como en la jerarquía
+        if ctx.input(|i| i.key_pressed(egui::Key::Delete)) {
+            if let Some(sel_id) = self.hierarchy.selected_id {
+                if let Some(x_idx) = self.hierarchy.get_xenity_index_for_id(sel_id) {
+                    if let Some(ref mut eng) = self.engine {
+                        eng.delete_gameobject(x_idx);
+                        eng.select_gameobject(-1);
+                    }
+                }
+                self.hierarchy.selected_id = None;
+            }
         }
 
         // Sincronizar selección con el motor C++ antes de renderizar el Viewport

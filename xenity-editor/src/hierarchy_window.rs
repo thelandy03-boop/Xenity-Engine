@@ -309,13 +309,13 @@ impl Default for SceneHierarchyState {
     fn default() -> Self {
         Self {
             search_query: String::new(),
-            selected_id: Some(100), // Player seleccionado por defecto (exactamente como en la imagen 1)
+            selected_id: None,
             next_id: 200,
             textures: None,
             context_menu: None,
             xenity_mappings: std::collections::HashMap::new(),
             items: vec![
-                // 1. Workspace (Expandido por defecto con Camera, Terrain y Player)
+                // 1. Workspace (Servicio raíz de Roblox)
                 ExplorerItem {
                     id: 10,
                     name: "Workspace".into(),
@@ -341,89 +341,6 @@ impl Default for SceneHierarchyState {
                             is_expanded: false,
                             properties: InstanceProperties::default_for(&RobloxClass::Terrain, "Workspace"),
                             children: vec![],
-                        },
-                        // Player (Model) - Seleccionado en la imagen 1
-                        ExplorerItem {
-                            id: 100,
-                            name: "Player".into(),
-                            class: RobloxClass::Model,
-                            is_active: true,
-                            is_expanded: true,
-                            properties: {
-                                let mut p = InstanceProperties::default_for(&RobloxClass::Model, "Workspace");
-                                p.position = [0.00, 1.25, 0.00];
-                                p.orientation = [0.00, 0.00, 0.00];
-                                p.size = [4.00, 5.00, 4.00];
-                                p
-                            },
-                            children: vec![
-                                ExplorerItem {
-                                    id: 101,
-                                    name: "Humanoid".into(),
-                                    class: RobloxClass::Humanoid,
-                                    is_active: true,
-                                    is_expanded: false,
-                                    properties: InstanceProperties::default_for(&RobloxClass::Humanoid, "Player"),
-                                    children: vec![],
-                                },
-                                ExplorerItem {
-                                    id: 102,
-                                    name: "Weapon_Holder".into(),
-                                    class: RobloxClass::Model,
-                                    is_active: true,
-                                    is_expanded: true,
-                                    properties: InstanceProperties::default_for(&RobloxClass::Model, "Player"),
-                                    children: vec![
-                                        ExplorerItem {
-                                            id: 103,
-                                            name: "Pistol_Mesh".into(),
-                                            class: RobloxClass::MeshPart,
-                                            is_active: true,
-                                            is_expanded: false,
-                                            properties: InstanceProperties::default_for(&RobloxClass::MeshPart, "Weapon_Holder"),
-                                            children: vec![],
-                                        },
-                                    ],
-                                },
-                                ExplorerItem {
-                                    id: 104,
-                                    name: "Environment".into(),
-                                    class: RobloxClass::Model,
-                                    is_active: true,
-                                    is_expanded: true,
-                                    properties: InstanceProperties::default_for(&RobloxClass::Model, "Player"),
-                                    children: vec![
-                                        ExplorerItem {
-                                            id: 105,
-                                            name: "Ground_Plane".into(),
-                                            class: RobloxClass::MeshPart,
-                                            is_active: true,
-                                            is_expanded: false,
-                                            properties: InstanceProperties::default_for(&RobloxClass::MeshPart, "Environment"),
-                                            children: vec![],
-                                        },
-                                    ],
-                                },
-                                ExplorerItem {
-                                    id: 106,
-                                    name: "Tree_01".into(),
-                                    class: RobloxClass::Model,
-                                    is_active: true,
-                                    is_expanded: true,
-                                    properties: InstanceProperties::default_for(&RobloxClass::Model, "Player"),
-                                    children: vec![
-                                        ExplorerItem {
-                                            id: 107,
-                                            name: "Trunk".into(),
-                                            class: RobloxClass::MeshPart,
-                                            is_active: true,
-                                            is_expanded: false,
-                                            properties: InstanceProperties::default_for(&RobloxClass::MeshPart, "Tree_01"),
-                                            children: vec![],
-                                        },
-                                    ],
-                                },
-                            ],
                         },
                     ],
                 },
@@ -724,12 +641,15 @@ impl SceneHierarchyState {
             None => return,
         };
 
+        let mut active_indices = std::collections::HashSet::new();
+
         for i in 0..count {
             if let Some(info) = engine.get_gameobject_info(i) {
                 let name = info.name_as_str();
                 if name.is_empty() || name == "EditorCamera" {
                     continue;
                 }
+                active_indices.insert(i);
 
                 let color = Color32::from_rgb(
                     (info.color[0] * 255.0).clamp(0.0, 255.0) as u8,
@@ -737,46 +657,74 @@ impl SceneHierarchyState {
                     (info.color[2] * 255.0).clamp(0.0, 255.0) as u8,
                 );
 
-                // Check if existing item in Workspace has this name
-                let found = self.items[ws_idx]
-                    .children
-                    .iter_mut()
-                    .find(|c| c.name == name);
+                // Buscar si ya está mapeado al índice del motor i
+                let mapped_id = self.xenity_mappings.iter()
+                    .find_map(|(&id, &x_i)| if x_i == i { Some(id) } else { None });
 
-                if let Some(item) = found {
-                    item.properties.position = info.pos;
-                    item.properties.orientation = info.rot;
-                    item.properties.size = info.scale;
-                    item.properties.color = color;
-                    self.xenity_mappings.insert(item.id, i);
+                if let Some(id) = mapped_id {
+                    if let Some(item) = self.items[ws_idx].children.iter_mut().find(|c| c.id == id) {
+                        item.name = name.to_string();
+                        item.properties.position = info.pos;
+                        item.properties.orientation = info.rot;
+                        item.properties.size = info.scale;
+                        item.properties.color = color;
+                        item.is_active = info.is_active != 0;
+                    }
                 } else {
-                    let roblox_class = if info.has_light != 0 {
-                        RobloxClass::Light
-                    } else if name == "Camera" {
-                        RobloxClass::Camera
+                    // Si no está mapeado, verificar si hay un hijo en Workspace con el mismo nombre
+                    let unmapped_item = self.items[ws_idx].children.iter_mut()
+                        .find(|c| c.name == name && !self.xenity_mappings.contains_key(&c.id));
+
+                    if let Some(item) = unmapped_item {
+                        item.properties.position = info.pos;
+                        item.properties.orientation = info.rot;
+                        item.properties.size = info.scale;
+                        item.properties.color = color;
+                        item.is_active = info.is_active != 0;
+                        self.xenity_mappings.insert(item.id, i);
                     } else {
-                        RobloxClass::Part
-                    };
+                        let roblox_class = if info.has_light != 0 {
+                            RobloxClass::Light
+                        } else if name == "Camera" {
+                            RobloxClass::Camera
+                        } else {
+                            RobloxClass::Part
+                        };
 
-                    let new_id = self.next_id;
-                    self.next_id += 1;
-                    let mut props = InstanceProperties::default_for(&roblox_class, "Workspace");
-                    props.position = info.pos;
-                    props.orientation = info.rot;
-                    props.size = info.scale;
-                    props.color = color;
+                        let new_id = self.next_id;
+                        self.next_id += 1;
+                        let mut props = InstanceProperties::default_for(&roblox_class, "Workspace");
+                        props.position = info.pos;
+                        props.orientation = info.rot;
+                        props.size = info.scale;
+                        props.color = color;
 
-                    self.items[ws_idx].children.push(ExplorerItem {
-                        id: new_id,
-                        name: name.to_string(),
-                        class: roblox_class,
-                        is_active: info.is_active != 0,
-                        is_expanded: false,
-                        properties: props,
-                        children: vec![],
-                    });
-                    self.xenity_mappings.insert(new_id, i);
+                        self.items[ws_idx].children.push(ExplorerItem {
+                            id: new_id,
+                            name: name.to_string(),
+                            class: roblox_class,
+                            is_active: info.is_active != 0,
+                            is_expanded: false,
+                            properties: props,
+                            children: vec![],
+                        });
+                        self.xenity_mappings.insert(new_id, i);
+                    }
                 }
+            }
+        }
+
+        // Limpiar objetos y mapeos que ya no existen en C++
+        let ids_to_remove: Vec<usize> = self.xenity_mappings.iter()
+            .filter(|(_, x_i)| !active_indices.contains(x_i))
+            .map(|(&id, _)| id)
+            .collect();
+
+        for id in ids_to_remove {
+            self.xenity_mappings.remove(&id);
+            self.items[ws_idx].children.retain(|c| c.id != id);
+            if self.selected_id == Some(id) {
+                self.selected_id = None;
             }
         }
     }
