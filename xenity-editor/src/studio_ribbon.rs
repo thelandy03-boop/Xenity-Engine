@@ -142,6 +142,7 @@ impl StudioRibbonState {
         let mut menu_cur_x = menu_bar_rect.min.x + 8.0;
         let font_menu = FontId::proportional(11.2);
         let mut opened_menu_pos: Option<(usize, Pos2)> = None;
+        let mut clicked_menu_bar_this_frame = false;
 
         for (idx, &name) in top_menu_names.iter().enumerate() {
             let galley = ui.painter().layout_no_wrap(name.to_string(), font_menu.clone(), Color32::WHITE);
@@ -185,6 +186,7 @@ impl StudioRibbonState {
             );
 
             if item_resp.clicked() {
+                clicked_menu_bar_this_frame = true;
                 self.active_top_menu = if is_open { None } else { Some(idx) };
             }
 
@@ -207,7 +209,7 @@ impl StudioRibbonState {
                 .show(ui.ctx(), |ui| {
                     let mut close_menu = false;
 
-                    egui::Frame::popup(ui.style())
+                    let frame_res = egui::Frame::popup(ui.style())
                         .fill(Color32::from_rgb(22, 22, 25))
                         .stroke(Stroke::new(1.0, Color32::from_rgb(46, 46, 52)))
                         .rounding(Rounding::same(4.0))
@@ -434,7 +436,13 @@ impl StudioRibbonState {
                             }
                         });
 
-                    if close_menu || ui.input(|i| i.pointer.any_click() && !ui.available_rect_before_wrap().contains(i.pointer.interact_pos().unwrap_or(Pos2::ZERO))) {
+                    let popup_rect = frame_res.response.rect;
+                    let clicked_outside = ui.input(|i| {
+                        i.pointer.any_click() && i.pointer.interact_pos().map_or(false, |p| !popup_rect.contains(p))
+                    });
+                    let esc_pressed = ui.input(|i| i.key_pressed(egui::Key::Escape));
+
+                    if close_menu || esc_pressed || (!clicked_menu_bar_this_frame && clicked_outside) {
                         self.active_top_menu = None;
                     }
                 });
