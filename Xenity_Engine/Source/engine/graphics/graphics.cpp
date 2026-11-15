@@ -1090,15 +1090,44 @@ namespace
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glDisable(GL_LIGHTING);
+		glDisable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		// CRITICAL: Unbind any VAO/VBO left bound by scene mesh renderers!
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+		// Disable all shader vertex attributes
+		for (int a = 0; a < 8; ++a)
+		{
+			glDisableVertexAttribArray(a);
+		}
+
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glDisableClientState(GL_NORMAL_ARRAY);
+
+		// In Xenity's OpenGL camera view matrix, X is inverted:
+		// Every vertex passed to fixed-function OpenGL must have x = -x
+		static std::vector<Vector3> flippedVerts;
+		flippedVerts.resize(vertices.size());
+		for (size_t i = 0; i < vertices.size(); ++i)
+		{
+			flippedVerts[i] = vertices[i];
+			flippedVerts[i].x = -flippedVerts[i].x;
+		}
+
+		glVertexPointer(3, GL_FLOAT, sizeof(Vector3), flippedVerts.data());
 
 		const RGBA& rgba = color.GetRGBA();
 		glColor4f(rgba.r, rgba.g, rgba.b, rgba.a);
 
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(3, GL_FLOAT, sizeof(Vector3), vertices.data());
-		glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()));
-		glDisableClientState(GL_VERTEX_ARRAY);
+		glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(flippedVerts.size()));
 
+		glDisableClientState(GL_VERTEX_ARRAY);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(GL_TRUE);
@@ -1131,7 +1160,19 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 		return;
 	}
 
-	const Vector3 pos = selectedGo->GetTransform()->GetPosition();
+	// Restaurar la matriz de la cámara y limpiar búfer de profundidad para que los gizmos siempre se vean en primer plano
+	Engine::GetRenderer().SetCameraPosition(*usedCamera);
+	Engine::GetRenderer().Clear(ClearMode::Depth);
+
+	// Calcular el centro geométrico exacto de la pieza en el espacio de renderizado de OpenGL de Xenity
+	const std::shared_ptr<MeshRenderer> mr = selectedGo->GetComponent<MeshRenderer>();
+	Vector3 centerLocal(0.0f);
+	if (mr && mr->GetMeshData())
+	{
+		centerLocal = (mr->GetMeshData()->GetMinBoundingBox() + mr->GetMeshData()->GetMaxBoundingBox()) * 0.5f;
+	}
+	const glm::mat4x4& matrix = selectedGo->GetTransform()->GetTransformationMatrix();
+	const Vector3 pos = Vector3(matrix * glm::vec4(centerLocal.x, centerLocal.y, centerLocal.z, 1.0f));
 
 	float dist = 1.0f;
 	if (usedCamera->GetProjectionType() == ProjectionType::Perspective)
@@ -1156,14 +1197,16 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 	const Color blueColor = Color::CreateFromRGBAFloat(0.08f, 0.40f, 1.0f, 1.0f);
 	const Color whiteColor = Color::CreateFromRGBAFloat(1.0f, 1.0f, 1.0f, 1.0f);
 
-	Quaternion baseRot = Quaternion::Identity();
+	// Ejes en el espacio de renderizado OpenGL (X invertido en la matriz de vista/mundo de Xenity)
+	Vector3 right = Vector3(-1.0f, 0.0f, 0.0f);
+	Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
+	Vector3 fwd = Vector3(0.0f, 0.0f, 1.0f);
 	if (Editor::s_isToolLocalMode)
 	{
-		baseRot = selectedGo->GetTransform()->GetRotation();
+		right = Vector3(-matrix[0][0], matrix[0][1], matrix[0][2]).Normalized();
+		up = Vector3(-matrix[1][0], matrix[1][1], matrix[1][2]).Normalized();
+		fwd = Vector3(-matrix[2][0], matrix[2][1], matrix[2][2]).Normalized();
 	}
-	const Vector3 right = baseRot.GetRight();
-	const Vector3 up = baseRot.GetUp();
-	const Vector3 fwd = baseRot.GetForward();
 
 	if (toolMode == ToolMode::Tool_Move || toolMode == ToolMode::Tool_Scale)
 	{
