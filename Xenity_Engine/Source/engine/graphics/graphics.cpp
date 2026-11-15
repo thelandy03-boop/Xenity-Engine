@@ -956,15 +956,15 @@ namespace
 			const Vector3 p1 = baseCenter + (u * std::cos(a1) + v * std::sin(a1)) * radius;
 			const Vector3 p2 = baseCenter + (u * std::cos(a2) + v * std::sin(a2)) * radius;
 
-			// Triángulo lateral (invertir X para la matriz fija de OpenGL de Xenity)
-			outVerts.push_back(Vector3(-tip.x, tip.y, tip.z));
-			outVerts.push_back(Vector3(-p1.x, p1.y, p1.z));
-			outVerts.push_back(Vector3(-p2.x, p2.y, p2.z));
+			// Triángulo lateral
+			outVerts.push_back(tip);
+			outVerts.push_back(p1);
+			outVerts.push_back(p2);
 
 			// Tapa de la base
-			outVerts.push_back(Vector3(-baseCenter.x, baseCenter.y, baseCenter.z));
-			outVerts.push_back(Vector3(-p2.x, p2.y, p2.z));
-			outVerts.push_back(Vector3(-p1.x, p1.y, p1.z));
+			outVerts.push_back(baseCenter);
+			outVerts.push_back(p2);
+			outVerts.push_back(p1);
 		}
 	}
 
@@ -995,13 +995,13 @@ namespace
 			const Vector3 p3 = end + offset1;
 			const Vector3 p4 = end + offset2;
 
-			outVerts.push_back(Vector3(-p1.x, p1.y, p1.z));
-			outVerts.push_back(Vector3(-p3.x, p3.y, p3.z));
-			outVerts.push_back(Vector3(-p2.x, p2.y, p2.z));
+			outVerts.push_back(p1);
+			outVerts.push_back(p3);
+			outVerts.push_back(p2);
 
-			outVerts.push_back(Vector3(-p2.x, p2.y, p2.z));
-			outVerts.push_back(Vector3(-p3.x, p3.y, p3.z));
-			outVerts.push_back(Vector3(-p4.x, p4.y, p4.z));
+			outVerts.push_back(p2);
+			outVerts.push_back(p3);
+			outVerts.push_back(p4);
 		}
 	}
 
@@ -1027,13 +1027,13 @@ namespace
 				const Vector3 p3 = center + Vector3(cos2 * std::cos(lon1), sin2, cos2 * std::sin(lon1)) * radius;
 				const Vector3 p4 = center + Vector3(cos2 * std::cos(lon2), sin2, cos2 * std::sin(lon2)) * radius;
 
-				outVerts.push_back(Vector3(-p1.x, p1.y, p1.z));
-				outVerts.push_back(Vector3(-p3.x, p3.y, p3.z));
-				outVerts.push_back(Vector3(-p2.x, p2.y, p2.z));
+				outVerts.push_back(p1);
+				outVerts.push_back(p3);
+				outVerts.push_back(p2);
 
-				outVerts.push_back(Vector3(-p2.x, p2.y, p2.z));
-				outVerts.push_back(Vector3(-p3.x, p3.y, p3.z));
-				outVerts.push_back(Vector3(-p4.x, p4.y, p4.z));
+				outVerts.push_back(p2);
+				outVerts.push_back(p3);
+				outVerts.push_back(p4);
 			}
 		}
 	}
@@ -1042,9 +1042,11 @@ namespace
 	{
 		if (vertices.empty()) return;
 
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-		glDepthRange(0, 1);
+		Engine::GetRenderer().UseShaderProgram(0);
+		Graphics::s_currentShader = nullptr;
+
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
 		glEnable(GL_BLEND);
 		glDisable(GL_ALPHA_TEST);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1072,6 +1074,45 @@ namespace
 		glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()));
 		glColor4f(1, 1, 1, 1);
 	}
+
+	void DrawArrowLines(const Vector3& pos, const Vector3& dir, float len, float coneH, float coneR, float shaftR, const Color& color)
+	{
+		RenderingSettings lineSettings;
+		lineSettings.renderingMode = MaterialRenderingMode::Transparent;
+		lineSettings.useDepth = false;
+
+		const Vector3 shaftEnd = pos + dir * (len - coneH);
+		const Vector3 tip = pos + dir * len;
+
+		// Eje principal
+		Engine::GetRenderer().DrawLine(pos, shaftEnd, color, lineSettings);
+
+		// Vectores perpendiculares
+		Vector3 u;
+		if (std::abs(dir.x) < 0.9f)
+			u = Vector3::Cross(dir, Vector3(1, 0, 0)).Normalized();
+		else
+			u = Vector3::Cross(dir, Vector3(0, 1, 0)).Normalized();
+		const Vector3 v = Vector3::Cross(dir, u).Normalized();
+
+		// Líneas de grosor del vástago
+		Engine::GetRenderer().DrawLine(pos + u * shaftR, shaftEnd + u * shaftR, color, lineSettings);
+		Engine::GetRenderer().DrawLine(pos - u * shaftR, shaftEnd - u * shaftR, color, lineSettings);
+		Engine::GetRenderer().DrawLine(pos + v * shaftR, shaftEnd + v * shaftR, color, lineSettings);
+		Engine::GetRenderer().DrawLine(pos - v * shaftR, shaftEnd - v * shaftR, color, lineSettings);
+
+		// Líneas de contorno y base del cono
+		const int segs = 12;
+		Vector3 prevP = shaftEnd + u * coneR;
+		for (int i = 1; i <= segs; ++i)
+		{
+			const float a = 2.0f * GIZMO_PI * static_cast<float>(i) / static_cast<float>(segs);
+			const Vector3 curP = shaftEnd + (u * std::cos(a) + v * std::sin(a)) * coneR;
+			Engine::GetRenderer().DrawLine(prevP, curP, color, lineSettings);
+			Engine::GetRenderer().DrawLine(curP, tip, color, lineSettings);
+			prevP = curP;
+		}
+	}
 }
 
 void Graphics::DrawEditorTool(const Vector3& cameraPosition)
@@ -1080,115 +1121,157 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 
 	SCOPED_PROFILER("Graphics::DrawEditorTool", scopeBenchmark);
 
-	const std::shared_ptr<SceneMenu> sceneMenu = Editor::GetMenu<SceneMenu>();
-	if (Editor::GetSelectedGameObjects().size() == 1 && sceneMenu)
+	if (Editor::GetSelectedGameObjects().size() != 1)
+		return;
+
+	const std::shared_ptr<GameObject> selectedGo = Editor::GetSelectedGameObjects()[0].lock();
+	if (!selectedGo)
+		return;
+
+	ToolMode toolMode = Editor::s_toolMode;
+	const std::shared_ptr<SceneMenu> sceneMenu = Editor::GetMenu<SceneMenu>(false);
+	if (sceneMenu)
 	{
-		const std::shared_ptr<GameObject> selectedGo = Editor::GetSelectedGameObjects()[0].lock();
-		if (!selectedGo)
-			return;
+		toolMode = sceneMenu->toolMode;
+	}
 
-		// Limpiar el búfer de profundidad para que los manipuladores del gizmo se dibujen siempre en primer plano
-		Engine::GetRenderer().Clear(ClearMode::Depth);
+	if (toolMode != ToolMode::Tool_Move && toolMode != ToolMode::Tool_Scale && toolMode != ToolMode::Tool_Rotate)
+	{
+		return;
+	}
 
-		const Vector3& pos = selectedGo->GetTransform()->GetPosition();
+	// Limpiar búfer de profundidad para que los gizmos se dibujen en primer plano
+	Engine::GetRenderer().Clear(ClearMode::Depth);
 
-		float dist = 1.0f;
-		if (usedCamera->GetProjectionType() == ProjectionType::Perspective)
-			dist = Vector3::Distance(pos, cameraPosition);
-		else
-			dist = usedCamera->GetProjectionSize() * 1.5f;
+	const Vector3& pos = selectedGo->GetTransform()->GetPosition();
 
-		dist = std::max(0.5f, dist);
+	float dist = 1.0f;
+	if (usedCamera->GetProjectionType() == ProjectionType::Perspective)
+		dist = Vector3::Distance(pos, cameraPosition);
+	else
+		dist = usedCamera->GetProjectionSize() * 1.5f;
 
-		// Proporciones fieles a Roblox Studio
-		const float s = dist * 0.040f;
-		const float len = s * 3.8f;
-		const float coneH = s * 1.25f;
-		const float coneR = s * 0.32f;
-		const float shaftR = s * 0.065f;
-		const float centerR = s * 0.28f;
-		const float shaftLen = len - coneH;
+	dist = std::max(0.5f, dist);
 
-		// Colores vivos y puros de Roblox Studio
-		const Color redColor = Color::CreateFromRGBAFloat(0.96f, 0.16f, 0.16f, 1.0f);
-		const Color greenColor = Color::CreateFromRGBAFloat(0.16f, 0.90f, 0.16f, 1.0f);
-		const Color blueColor = Color::CreateFromRGBAFloat(0.12f, 0.45f, 1.0f, 1.0f);
-		const Color whiteColor = Color::CreateFromRGBAFloat(1.0f, 1.0f, 1.0f, 1.0f);
+	// Proporciones fieles a Roblox Studio
+	const float s = dist * 0.040f;
+	const float len = s * 4.2f;
+	const float coneH = s * 1.35f;
+	const float coneR = s * 0.35f;
+	const float shaftR = s * 0.07f;
+	const float centerR = s * 0.30f;
+	const float shaftLen = len - coneH;
 
-		// Orientación según modo local o global
+	// Colores vivos y puros de Roblox Studio
+	const Color redColor = Color::CreateFromRGBAFloat(0.96f, 0.16f, 0.16f, 1.0f);
+	const Color greenColor = Color::CreateFromRGBAFloat(0.16f, 0.90f, 0.16f, 1.0f);
+	const Color blueColor = Color::CreateFromRGBAFloat(0.08f, 0.40f, 1.0f, 1.0f);
+	const Color whiteColor = Color::CreateFromRGBAFloat(1.0f, 1.0f, 1.0f, 1.0f);
+
+	Vector3 right = Vector3(1, 0, 0);
+	Vector3 up = Vector3(0, 1, 0);
+	Vector3 fwd = Vector3(0, 0, 1);
+	if (Editor::s_isToolLocalMode)
+	{
 		Quaternion rot = selectedGo->GetTransform()->GetRotation();
-		if (!Editor::s_isToolLocalMode)
+		right = rot.GetRight();
+		up = rot.GetUp();
+		fwd = rot.GetForward();
+	}
+
+	if (toolMode == ToolMode::Tool_Move || toolMode == ToolMode::Tool_Scale)
+	{
+		// 1. Esfera central blanca (Punto de pivote)
+		std::vector<Vector3> centerVerts;
+		AddSphereTriangles(centerVerts, pos, centerR, 8, 12);
+		RenderSolidGeometry(centerVerts, whiteColor);
+
+		RenderingSettings lineSettings;
+		lineSettings.renderingMode = MaterialRenderingMode::Transparent;
+		lineSettings.useDepth = false;
+
+		// Anillos blancos del centro
+		const int circleSteps = 16;
+		for (int i = 0; i < circleSteps; ++i)
 		{
-			rot = Quaternion::Identity();
+			const float a1 = 2.0f * GIZMO_PI * static_cast<float>(i) / static_cast<float>(circleSteps);
+			const float a2 = 2.0f * GIZMO_PI * static_cast<float>(i + 1) / static_cast<float>(circleSteps);
+
+			const Vector3 c1 = pos + (right * std::cos(a1) + up * std::sin(a1)) * centerR;
+			const Vector3 c2 = pos + (right * std::cos(a2) + up * std::sin(a2)) * centerR;
+			Engine::GetRenderer().DrawLine(c1, c2, whiteColor, lineSettings);
+
+			const Vector3 c3 = pos + (right * std::cos(a1) + fwd * std::sin(a1)) * centerR;
+			const Vector3 c4 = pos + (right * std::cos(a2) + fwd * std::sin(a2)) * centerR;
+			Engine::GetRenderer().DrawLine(c3, c4, whiteColor, lineSettings);
+
+			const Vector3 c5 = pos + (up * std::cos(a1) + fwd * std::sin(a1)) * centerR;
+			const Vector3 c6 = pos + (up * std::cos(a2) + fwd * std::sin(a2)) * centerR;
+			Engine::GetRenderer().DrawLine(c5, c6, whiteColor, lineSettings);
 		}
-		const Vector3 right = rot.GetRight();
-		const Vector3 up = rot.GetUp();
-		const Vector3 fwd = rot.GetForward();
 
-		if (sceneMenu->toolMode == ToolMode::Tool_Move || sceneMenu->toolMode == ToolMode::Tool_Scale)
+		// 2. Eje X (Rojo) - Flechas bidireccionales (+X y -X)
+		std::vector<Vector3> xVerts;
+		AddCylinderTriangles(xVerts, pos - right * shaftLen, pos + right * shaftLen, shaftR, 8);
+		AddConeTriangles(xVerts, pos + right * shaftLen, pos + right * len, coneR, 16);
+		AddConeTriangles(xVerts, pos - right * shaftLen, pos - right * len, coneR, 16);
+		RenderSolidGeometry(xVerts, redColor);
+		DrawArrowLines(pos, right, len, coneH, coneR, shaftR, redColor);
+		DrawArrowLines(pos, -right, len, coneH, coneR, shaftR, redColor);
+
+		// 3. Eje Y (Verde) - Flechas bidireccionales (+Y arriba y -Y abajo)
+		std::vector<Vector3> yVerts;
+		AddCylinderTriangles(yVerts, pos - up * shaftLen, pos + up * shaftLen, shaftR, 8);
+		AddConeTriangles(yVerts, pos + up * shaftLen, pos + up * len, coneR, 16);
+		AddConeTriangles(yVerts, pos - up * shaftLen, pos - up * len, coneR, 16);
+		RenderSolidGeometry(yVerts, greenColor);
+		DrawArrowLines(pos, up, len, coneH, coneR, shaftR, greenColor);
+		DrawArrowLines(pos, -up, len, coneH, coneR, shaftR, greenColor);
+
+		// 4. Eje Z (Azul) - Flechas bidireccionales (+Z adelante y -Z atrás)
+		std::vector<Vector3> zVerts;
+		AddCylinderTriangles(zVerts, pos - fwd * shaftLen, pos + fwd * shaftLen, shaftR, 8);
+		AddConeTriangles(zVerts, pos + fwd * shaftLen, pos + fwd * len, coneR, 16);
+		AddConeTriangles(zVerts, pos - fwd * shaftLen, pos - fwd * len, coneR, 16);
+		RenderSolidGeometry(zVerts, blueColor);
+		DrawArrowLines(pos, fwd, len, coneH, coneR, shaftR, blueColor);
+		DrawArrowLines(pos, -fwd, len, coneH, coneR, shaftR, blueColor);
+	}
+	else if (toolMode == ToolMode::Tool_Rotate)
+	{
+		// Círculos de rotación
+		const int circleSteps = 48;
+		const float circleRadius = len * 0.95f;
+
+		for (int axis = 0; axis < 3; ++axis)
 		{
-			// 1. Esfera central blanca (Punto de pivote)
-			std::vector<Vector3> centerVerts;
-			AddSphereTriangles(centerVerts, pos, centerR, 8, 12);
-			RenderSolidGeometry(centerVerts, whiteColor);
-
-			// 2. Eje X (Rojo) - Flechas bidireccionales (+X y -X)
-			std::vector<Vector3> xVerts;
-			AddCylinderTriangles(xVerts, pos - right * shaftLen, pos + right * shaftLen, shaftR, 8);
-			AddConeTriangles(xVerts, pos + right * shaftLen, pos + right * len, coneR, 16);
-			AddConeTriangles(xVerts, pos - right * shaftLen, pos - right * len, coneR, 16);
-			RenderSolidGeometry(xVerts, redColor);
-
-			// 3. Eje Y (Verde) - Flechas bidireccionales (+Y arriba y -Y abajo)
-			std::vector<Vector3> yVerts;
-			AddCylinderTriangles(yVerts, pos - up * shaftLen, pos + up * shaftLen, shaftR, 8);
-			AddConeTriangles(yVerts, pos + up * shaftLen, pos + up * len, coneR, 16);
-			AddConeTriangles(yVerts, pos - up * shaftLen, pos - up * len, coneR, 16);
-			RenderSolidGeometry(yVerts, greenColor);
-
-			// 4. Eje Z (Azul) - Flechas bidireccionales (+Z adelante y -Z atrás)
-			std::vector<Vector3> zVerts;
-			AddCylinderTriangles(zVerts, pos - fwd * shaftLen, pos + fwd * shaftLen, shaftR, 8);
-			AddConeTriangles(zVerts, pos + fwd * shaftLen, pos + fwd * len, coneR, 16);
-			AddConeTriangles(zVerts, pos - fwd * shaftLen, pos - fwd * len, coneR, 16);
-			RenderSolidGeometry(zVerts, blueColor);
-		}
-		else if (sceneMenu->toolMode == ToolMode::Tool_Rotate)
-		{
-			// Círculos de rotación en Rojo, Verde y Azul
-			const int circleSteps = 48;
-			const float circleRadius = len * 0.95f;
-
-			for (int axis = 0; axis < 3; ++axis)
+			const Color& circleCol = (axis == 0) ? redColor : ((axis == 1) ? greenColor : blueColor);
+			for (int i = 0; i < circleSteps; ++i)
 			{
-				const Color& circleCol = (axis == 0) ? redColor : ((axis == 1) ? greenColor : blueColor);
-				for (int i = 0; i < circleSteps; ++i)
+				const float a1 = 2.0f * GIZMO_PI * static_cast<float>(i) / static_cast<float>(circleSteps);
+				const float a2 = 2.0f * GIZMO_PI * static_cast<float>(i + 1) / static_cast<float>(circleSteps);
+
+				Vector3 p1, p2;
+				if (axis == 0) // X
 				{
-					const float a1 = 2.0f * GIZMO_PI * static_cast<float>(i) / static_cast<float>(circleSteps);
-					const float a2 = 2.0f * GIZMO_PI * static_cast<float>(i + 1) / static_cast<float>(circleSteps);
-
-					Vector3 p1, p2;
-					if (axis == 0) // X
-					{
-						p1 = pos + (up * std::cos(a1) + fwd * std::sin(a1)) * circleRadius;
-						p2 = pos + (up * std::cos(a2) + fwd * std::sin(a2)) * circleRadius;
-					}
-					else if (axis == 1) // Y
-					{
-						p1 = pos + (right * std::cos(a1) + fwd * std::sin(a1)) * circleRadius;
-						p2 = pos + (right * std::cos(a2) + fwd * std::sin(a2)) * circleRadius;
-					}
-					else // Z
-					{
-						p1 = pos + (right * std::cos(a1) + up * std::sin(a1)) * circleRadius;
-						p2 = pos + (right * std::cos(a2) + up * std::sin(a2)) * circleRadius;
-					}
-
-					RenderingSettings lineSettings = RenderingSettings();
-					lineSettings.renderingMode = MaterialRenderingMode::Transparent;
-					lineSettings.useDepth = true;
-					Engine::GetRenderer().DrawLine(Vector3(-p1.x, p1.y, p1.z), Vector3(-p2.x, p2.y, p2.z), circleCol, lineSettings);
+					p1 = pos + (up * std::cos(a1) + fwd * std::sin(a1)) * circleRadius;
+					p2 = pos + (up * std::cos(a2) + fwd * std::sin(a2)) * circleRadius;
 				}
+				else if (axis == 1) // Y
+				{
+					p1 = pos + (right * std::cos(a1) + fwd * std::sin(a1)) * circleRadius;
+					p2 = pos + (right * std::cos(a2) + fwd * std::sin(a2)) * circleRadius;
+				}
+				else // Z
+				{
+					p1 = pos + (right * std::cos(a1) + up * std::sin(a1)) * circleRadius;
+					p2 = pos + (right * std::cos(a2) + up * std::sin(a2)) * circleRadius;
+				}
+
+				RenderingSettings lineSettings = RenderingSettings();
+				lineSettings.renderingMode = MaterialRenderingMode::Transparent;
+				lineSettings.useDepth = false;
+				Engine::GetRenderer().DrawLine(p1, p2, circleCol, lineSettings);
 			}
 		}
 	}

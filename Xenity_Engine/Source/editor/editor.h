@@ -14,6 +14,7 @@
 #include <atomic>
 
 #include <editor/ui/menus/menu.h>
+#include <editor/tool_mode.h>
 
 #include <engine/game_elements/gameobject.h>
 #include <engine/file_system/file_type.h>
@@ -449,6 +450,7 @@ public:
 	static std::vector<std::shared_ptr<Menu>> s_menus;
 	static std::weak_ptr <Menu> s_lastFocusedGameMenu;
 	static bool s_isToolLocalMode;
+	static ToolMode s_toolMode;
 	static float s_cameraSpeed;
 
 	static MenuGroup s_currentMenu;

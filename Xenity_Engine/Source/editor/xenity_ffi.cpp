@@ -554,7 +554,8 @@ void XenityFFI::Shutdown()
 void XenityFFI::SetToolMode(int mode)
 {
 	s_currentToolMode = mode;
-	auto sceneMenu = Editor::GetMenu<SceneMenu>();
+	Editor::s_toolMode = static_cast<ToolMode>(mode);
+	auto sceneMenu = Editor::GetMenu<SceneMenu>(false);
 	if (sceneMenu)
 	{
 		// mode: 0: Tool_MoveCamera (Select), 1: Tool_Move, 2: Tool_Rotate, 3: Tool_Scale

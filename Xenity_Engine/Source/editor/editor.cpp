@@ -74,7 +74,8 @@ std::vector<std::string> Editor::s_dragdropEntries;
 Editor::MenuSettings Editor::s_menuSettings;
 
 int Editor::s_menuCount = 0;
-bool Editor::s_isToolLocalMode;
+bool Editor::s_isToolLocalMode = false;
+ToolMode Editor::s_toolMode = ToolMode::Tool_Move;
 Event<bool>* Editor::s_onUpdateCheckedEvent = new Event<bool>();
 bool Editor::s_updateAvailable = false;
 float Editor::s_cameraSpeed = 30;
