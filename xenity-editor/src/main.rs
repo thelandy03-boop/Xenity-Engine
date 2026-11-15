@@ -457,7 +457,7 @@ fn main() -> eframe::Result<()> {
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("Roblox Studio - [Xenity Engine Edition]")
+            .with_title("Place2 - Roblox Studio")
             .with_inner_size([1440.0, 900.0])
             .with_min_inner_size([1024.0, 680.0]),
         renderer: eframe::Renderer::Wgpu,
@@ -465,7 +465,7 @@ fn main() -> eframe::Result<()> {
     };
 
     eframe::run_native(
-        "Roblox Studio",
+        "Place2 - Roblox Studio",
         native_options,
         Box::new(|cc| {
             setup_fonts(&cc.egui_ctx);

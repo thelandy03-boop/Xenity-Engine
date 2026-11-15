@@ -132,53 +132,14 @@ impl StudioRibbonState {
         let mut action = RibbonAction::None;
 
         // =====================================================================
-        // 1. BARRA SUPERIOR DE TÍTULO
+        // 1. BARRA DE MENÚ CLÁSICA OFICIAL (ARCHIVO, EDICIÓN, VISTA, PLUGINS, PRUEBA, VENTANA, AYUDA)
         // =====================================================================
-        let title_bar_h = 30.0;
-        let (title_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), title_bar_h), Sense::hover());
-        ui.painter().rect_filled(title_rect, 0.0, STUDIO_TOP_BG);
-
-        // Título de la experiencia centrado
-        ui.painter().text(
-            title_rect.center(),
-            egui::Align2::CENTER_CENTER,
-            "Place1* - Roblox Studio [Official Icons Embedded]",
-            FontId::proportional(11.5),
-            Color32::from_rgb(180, 180, 180),
-        );
-
-        // Lado derecho: Botón Collaborate con icono real + Avatar
-        let right_x = title_rect.max.x - 16.0;
-
-        // Avatar de usuario
-        let avatar_center = Pos2::new(right_x - 10.0, title_rect.center().y);
-        ui.painter().circle_filled(avatar_center, 9.0, Color32::from_rgb(50, 120, 220));
-        ui.painter().circle_stroke(avatar_center, 9.0, Stroke::new(1.0, Color32::from_rgb(80, 150, 240)));
-        ui.painter().text(avatar_center, egui::Align2::CENTER_CENTER, "👤", FontId::proportional(10.0), Color32::WHITE);
-
-        // Botón Collaborate azul con icono PNG real
-        let collab_rect = Rect::from_min_max(Pos2::new(right_x - 130.0, title_rect.center().y - 11.0), Pos2::new(right_x - 30.0, title_rect.center().y + 11.0));
-        let collab_resp = ui.interact(collab_rect, ui.id().with("btn_collaborate"), Sense::click());
-        let collab_bg = if collab_resp.hovered() { Color32::from_rgb(28, 142, 230) } else { STUDIO_SELECTION };
-        ui.painter().rect_filled(collab_rect, Rounding::same(4.0), collab_bg);
-        let collab_icon_rect = Rect::from_center_size(Pos2::new(collab_rect.min.x + 14.0, collab_rect.center().y), Vec2::new(14.0, 14.0));
-        ui.painter().image(icons.action_collab.id(), collab_icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        ui.painter().text(Pos2::new(collab_rect.min.x + 28.0, collab_rect.center().y), egui::Align2::LEFT_CENTER, "Collaborate", FontId::proportional(11.0), Color32::WHITE);
-
-        ui.painter().line_segment(
-            [Pos2::new(title_rect.min.x, title_rect.max.y), Pos2::new(title_rect.max.x, title_rect.max.y)],
-            Stroke::new(1.0, STUDIO_DARK_BORDER),
-        );
-
-        // =====================================================================
-        // 1.5. BARRA DE MENÚ CLÁSICA (ARCHIVO, EDICIÓN, VISTA, PLUGINS, PRUEBA, VENTANA, AYUDA)
-        // =====================================================================
-        let menu_bar_h = 23.0;
+        let menu_bar_h = 22.0;
         let (menu_bar_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), menu_bar_h), Sense::hover());
-        ui.painter().rect_filled(menu_bar_rect, 0.0, Color32::from_rgb(25, 27, 33));
+        ui.painter().rect_filled(menu_bar_rect, 0.0, Color32::from_rgb(24, 26, 31));
 
         let top_menu_names = ["Archivo", "Edición", "Vista", "Plugins", "Prueba", "Ventana", "Ayuda"];
-        let mut menu_cur_x = menu_bar_rect.min.x + 6.0;
+        let mut menu_cur_x = menu_bar_rect.min.x + 8.0;
         let font_menu = FontId::proportional(11.2);
         let mut opened_menu_pos: Option<(usize, Pos2)> = None;
 
@@ -194,31 +155,25 @@ impl StudioRibbonState {
             let is_open = self.active_top_menu == Some(idx);
 
             let bg = if is_open {
-                Color32::from_rgb(42, 47, 58)
+                Color32::from_rgb(46, 50, 60)
             } else if item_resp.hovered() {
-                Color32::from_rgb(38, 42, 52)
-            } else if idx == 0 {
-                Color32::from_rgb(34, 38, 48)
+                Color32::from_rgba_unmultiplied(255, 255, 255, 14)
             } else {
                 Color32::TRANSPARENT
             };
 
             let stroke = if is_open {
                 Stroke::new(1.0, Color32::from_rgb(0, 162, 255))
-            } else if idx == 0 {
-                Stroke::new(1.0, Color32::from_rgb(46, 52, 66))
             } else {
                 Stroke::NONE
             };
 
             ui.painter().rect(item_rect, Rounding::same(3.0), bg, stroke);
 
-            let text_color = if is_open || idx == 0 {
-                Color32::from_rgb(230, 235, 245)
-            } else if item_resp.hovered() {
+            let text_color = if is_open || item_resp.hovered() {
                 Color32::WHITE
             } else {
-                Color32::from_rgb(170, 173, 185)
+                Color32::from_rgb(205, 210, 222)
             };
 
             ui.painter().text(
@@ -241,12 +196,12 @@ impl StudioRibbonState {
                 opened_menu_pos = Some((idx, Pos2::new(item_rect.min.x, item_rect.max.y + 1.0)));
             }
 
-            menu_cur_x += item_w + 3.0;
+            menu_cur_x += item_w + 2.0;
         }
 
         ui.painter().line_segment(
             [Pos2::new(menu_bar_rect.min.x, menu_bar_rect.max.y), Pos2::new(menu_bar_rect.max.x, menu_bar_rect.max.y)],
-            Stroke::new(1.0, Color32::from_rgb(38, 40, 48)),
+            Stroke::new(1.0, Color32::from_rgb(34, 36, 42)),
         );
 
         // Desplegables de la barra de menú clásica
@@ -586,26 +541,6 @@ impl StudioRibbonState {
             Stroke::new(1.0, dev_col),
         );
         dev_resp.on_hover_text("Emulación de dispositivo");
-
-        cur_x += 24.0;
-
-        // Botón "Exportar a Consola / PC" 🚀 (Acceso Rápido)
-        let exp_bar_rect = Rect::from_center_size(Pos2::new(cur_x + 8.0, bar_center_y), Vec2::new(22.0, 22.0));
-        let exp_bar_resp = ui.interact(exp_bar_rect, ui.id().with("quick_export_dialog_btn"), Sense::click());
-        if exp_bar_resp.hovered() {
-            ui.painter().rect_filled(exp_bar_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 24));
-        }
-        ui.painter().text(
-            exp_bar_rect.center(),
-            egui::Align2::CENTER_CENTER,
-            "🚀",
-            FontId::proportional(12.0),
-            Color32::WHITE,
-        );
-        if exp_bar_resp.clicked() {
-            action = RibbonAction::OpenBuildDialog;
-        }
-        exp_bar_resp.on_hover_text("Exportar y Compilar para Consola (Ctrl+B)");
 
         // Atajo de teclado Ctrl+B para abrir Build Settings
         if ui.input(|i| i.modifiers.command && i.key_pressed(egui::Key::B)) {
