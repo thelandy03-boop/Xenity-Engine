@@ -963,6 +963,147 @@ void Graphics::DrawEditorGrid(const Vector3& cameraPosition, int gridAxis)
 namespace
 {
 	constexpr float GIZMO_PI = 3.14159265359f;
+
+	void AddCylinderTriangles(std::vector<Vector3>& outVerts, const Vector3& start, const Vector3& end, float radius, int segments = 24)
+	{
+		Vector3 dir = end - start;
+		const float len = dir.Magnitude();
+		if (len < 0.0001f) return;
+		dir = dir / len;
+
+		Vector3 u;
+		if (std::abs(dir.x) < 0.9f)
+			u = Vector3::Cross(dir, Vector3(1, 0, 0)).Normalized();
+		else
+			u = Vector3::Cross(dir, Vector3(0, 1, 0)).Normalized();
+		const Vector3 v = Vector3::Cross(dir, u).Normalized();
+
+		for (int i = 0; i < segments; ++i)
+		{
+			const float a1 = 2.0f * GIZMO_PI * static_cast<float>(i) / static_cast<float>(segments);
+			const float a2 = 2.0f * GIZMO_PI * static_cast<float>(i + 1) / static_cast<float>(segments);
+
+			const Vector3 r1 = (u * std::cos(a1) + v * std::sin(a1)) * radius;
+			const Vector3 r2 = (u * std::cos(a2) + v * std::sin(a2)) * radius;
+
+			const Vector3 p1 = start + r1;
+			const Vector3 p2 = start + r2;
+			const Vector3 p3 = end + r1;
+			const Vector3 p4 = end + r2;
+
+			outVerts.push_back(p1);
+			outVerts.push_back(p2);
+			outVerts.push_back(p3);
+
+			outVerts.push_back(p2);
+			outVerts.push_back(p4);
+			outVerts.push_back(p3);
+		}
+	}
+
+	void AddConeTriangles(std::vector<Vector3>& outVerts, const Vector3& baseCenter, const Vector3& tip, float radius, int segments = 24)
+	{
+		Vector3 dir = tip - baseCenter;
+		const float len = dir.Magnitude();
+		if (len < 0.0001f) return;
+		dir = dir / len;
+
+		Vector3 u;
+		if (std::abs(dir.x) < 0.9f)
+			u = Vector3::Cross(dir, Vector3(1, 0, 0)).Normalized();
+		else
+			u = Vector3::Cross(dir, Vector3(0, 1, 0)).Normalized();
+		const Vector3 v = Vector3::Cross(dir, u).Normalized();
+
+		for (int i = 0; i < segments; ++i)
+		{
+			const float a1 = 2.0f * GIZMO_PI * static_cast<float>(i) / static_cast<float>(segments);
+			const float a2 = 2.0f * GIZMO_PI * static_cast<float>(i + 1) / static_cast<float>(segments);
+
+			const Vector3 r1 = (u * std::cos(a1) + v * std::sin(a1)) * radius;
+			const Vector3 r2 = (u * std::cos(a2) + v * std::sin(a2)) * radius;
+
+			const Vector3 p1 = baseCenter + r1;
+			const Vector3 p2 = baseCenter + r2;
+
+			// Base
+			outVerts.push_back(baseCenter);
+			outVerts.push_back(p2);
+			outVerts.push_back(p1);
+
+			// Sides
+			outVerts.push_back(p1);
+			outVerts.push_back(p2);
+			outVerts.push_back(tip);
+		}
+	}
+
+	void AddSphereTriangles(std::vector<Vector3>& outVerts, const Vector3& center, float radius, int rings = 16, int sectors = 24)
+	{
+		for (int r = 0; r < rings; ++r)
+		{
+			const float theta1 = GIZMO_PI * static_cast<float>(r) / static_cast<float>(rings);
+			const float theta2 = GIZMO_PI * static_cast<float>(r + 1) / static_cast<float>(rings);
+
+			const float y1 = center.y + radius * std::cos(theta1);
+			const float y2 = center.y + radius * std::cos(theta2);
+
+			const float r1 = radius * std::sin(theta1);
+			const float r2 = radius * std::sin(theta2);
+
+			for (int s = 0; s < sectors; ++s)
+			{
+				const float phi1 = 2.0f * GIZMO_PI * static_cast<float>(s) / static_cast<float>(sectors);
+				const float phi2 = 2.0f * GIZMO_PI * static_cast<float>(s + 1) / static_cast<float>(sectors);
+
+				const Vector3 v1(center.x + r1 * std::cos(phi1), y1, center.z + r1 * std::sin(phi1));
+				const Vector3 v2(center.x + r1 * std::cos(phi2), y1, center.z + r1 * std::sin(phi2));
+				const Vector3 v3(center.x + r2 * std::cos(phi1), y2, center.z + r2 * std::sin(phi1));
+				const Vector3 v4(center.x + r2 * std::cos(phi2), y2, center.z + r2 * std::sin(phi2));
+
+				outVerts.push_back(v1);
+				outVerts.push_back(v2);
+				outVerts.push_back(v3);
+
+				outVerts.push_back(v2);
+				outVerts.push_back(v4);
+				outVerts.push_back(v3);
+			}
+		}
+	}
+
+	void RenderSolidGeometry(const std::vector<Vector3>& vertices, const Color& color)
+	{
+		if (vertices.empty())
+			return;
+
+		if constexpr (!s_UseOpenGLFixedFunctions)
+		{
+			Engine::GetRenderer().UseShaderProgram(0);
+			Graphics::s_currentShader = nullptr;
+			Graphics::s_currentMaterial = nullptr;
+		}
+
+		glDisable(GL_DEPTH_TEST);
+		glDepthMask(GL_FALSE);
+		glDisable(GL_CULL_FACE);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		const RGBA& rgba = color.GetRGBA();
+		glColor4f(rgba.r, rgba.g, rgba.b, rgba.a);
+
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glVertexPointer(3, GL_FLOAT, sizeof(Vector3), vertices.data());
+		glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()));
+		glDisableClientState(GL_VERTEX_ARRAY);
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_TRUE);
+		glColor4f(1, 1, 1, 1);
+	}
 }
 
 void Graphics::DrawEditorTool(const Vector3& cameraPosition)
@@ -980,7 +1121,7 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 
 	ToolMode toolMode = Editor::s_toolMode;
 	const std::shared_ptr<SceneMenu> sceneMenu = Editor::GetMenu<SceneMenu>(false);
-	if (sceneMenu)
+	if (sceneMenu && sceneMenu->toolMode != ToolMode::Tool_MoveCamera)
 	{
 		toolMode = sceneMenu->toolMode;
 	}
@@ -988,23 +1129,6 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 	if (toolMode != ToolMode::Tool_Move && toolMode != ToolMode::Tool_Scale && toolMode != ToolMode::Tool_Rotate)
 	{
 		return;
-	}
-
-	// Lazy load gizmo meshes si aún no se han cargado
-	if (!s_gizmoConeMesh)
-	{
-		FileReference::LoadOptions loadOptions;
-		loadOptions.platform = Application::GetPlatform();
-		loadOptions.threaded = false;
-
-		s_gizmoConeMesh = AssetManager::LoadEngineAsset<MeshData>("public_engine_assets/models/Cone.obj");
-		if (s_gizmoConeMesh) s_gizmoConeMesh->LoadFileReference(loadOptions);
-
-		s_gizmoCylinderMesh = AssetManager::LoadEngineAsset<MeshData>("public_engine_assets/models/Cylinder.obj");
-		if (s_gizmoCylinderMesh) s_gizmoCylinderMesh->LoadFileReference(loadOptions);
-
-		s_gizmoSphereMesh = AssetManager::LoadEngineAsset<MeshData>("public_engine_assets/models/Sphere.obj");
-		if (s_gizmoSphereMesh) s_gizmoSphereMesh->LoadFileReference(loadOptions);
 	}
 
 	const Vector3 pos = selectedGo->GetTransform()->GetPosition();
@@ -1043,56 +1167,35 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 
 	if (toolMode == ToolMode::Tool_Move || toolMode == ToolMode::Tool_Scale)
 	{
-		if (!s_gizmoConeMesh || s_gizmoConeMesh->m_subMeshCount == 0 || !s_gizmoConeMesh->m_subMeshes[0] ||
-			!s_gizmoCylinderMesh || s_gizmoCylinderMesh->m_subMeshCount == 0 || !s_gizmoCylinderMesh->m_subMeshes[0] ||
-			!s_gizmoSphereMesh || s_gizmoSphereMesh->m_subMeshCount == 0 || !s_gizmoSphereMesh->m_subMeshes[0] ||
-			!AssetManager::unlitMaterial)
-		{
-			return;
-		}
-
-		RenderingSettings renderSettings = RenderingSettings();
-		renderSettings.renderingMode = MaterialRenderingMode::Opaque;
-		renderSettings.useDepth = false; // Siempre visible por encima
-		renderSettings.useTexture = false;
-		renderSettings.useLighting = false;
-		renderSettings.wireframe = false;
-
-		const Vector3 coneScale = Vector3(coneR, coneH * 0.5f, coneR);
-		const Vector3 cylScale = Vector3(shaftR * 2.0f, shaftLen, shaftR * 2.0f);
-		const Vector3 sphereScale = Vector3(centerR * 2.0f);
-
 		// 1. Esfera central blanca sólida pura (Punto de pivote)
-		AssetManager::unlitMaterial->SetColor(whiteColor);
-		Graphics::DrawSubMesh(pos, Quaternion::Identity(), sphereScale, *s_gizmoSphereMesh->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
+		static std::vector<Vector3> centerVerts;
+		centerVerts.clear();
+		AddSphereTriangles(centerVerts, pos, centerR, 16, 24);
+		RenderSolidGeometry(centerVerts, whiteColor);
 
 		// 2. Eje X (Rojo sólido puro) - Flechas bidireccionales (+X y -X)
-		AssetManager::unlitMaterial->SetColor(redColor);
-		const Quaternion rotCylX = baseRot * Quaternion::AngleAxis(90.0f, Vector3(0.0f, 0.0f, 1.0f));
-		Graphics::DrawSubMesh(pos, rotCylX, cylScale, *s_gizmoCylinderMesh->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
-		const Quaternion rotConePlusX = baseRot * Quaternion::AngleAxis(-90.0f, Vector3(0.0f, 0.0f, 1.0f));
-		Graphics::DrawSubMesh(pos + right * shaftLen, rotConePlusX, coneScale, *s_gizmoConeMesh->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
-		const Quaternion rotConeMinusX = baseRot * Quaternion::AngleAxis(90.0f, Vector3(0.0f, 0.0f, 1.0f));
-		Graphics::DrawSubMesh(pos - right * shaftLen, rotConeMinusX, coneScale, *s_gizmoConeMesh->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
+		static std::vector<Vector3> xVerts;
+		xVerts.clear();
+		AddCylinderTriangles(xVerts, pos - right * shaftLen, pos + right * shaftLen, shaftR, 20);
+		AddConeTriangles(xVerts, pos + right * shaftLen, pos + right * len, coneR, 24);
+		AddConeTriangles(xVerts, pos - right * shaftLen, pos - right * len, coneR, 24);
+		RenderSolidGeometry(xVerts, redColor);
 
 		// 3. Eje Y (Verde sólido puro) - Flechas bidireccionales (+Y arriba y -Y abajo)
-		AssetManager::unlitMaterial->SetColor(greenColor);
-		Graphics::DrawSubMesh(pos, baseRot, cylScale, *s_gizmoCylinderMesh->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
-		Graphics::DrawSubMesh(pos + up * shaftLen, baseRot, coneScale, *s_gizmoConeMesh->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
-		const Quaternion rotConeMinusY = baseRot * Quaternion::AngleAxis(180.0f, Vector3(1.0f, 0.0f, 0.0f));
-		Graphics::DrawSubMesh(pos - up * shaftLen, rotConeMinusY, coneScale, *s_gizmoConeMesh->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
+		static std::vector<Vector3> yVerts;
+		yVerts.clear();
+		AddCylinderTriangles(yVerts, pos - up * shaftLen, pos + up * shaftLen, shaftR, 20);
+		AddConeTriangles(yVerts, pos + up * shaftLen, pos + up * len, coneR, 24);
+		AddConeTriangles(yVerts, pos - up * shaftLen, pos - up * len, coneR, 24);
+		RenderSolidGeometry(yVerts, greenColor);
 
 		// 4. Eje Z (Azul sólido puro) - Flechas bidireccionales (+Z adelante y -Z atrás)
-		AssetManager::unlitMaterial->SetColor(blueColor);
-		const Quaternion rotCylZ = baseRot * Quaternion::AngleAxis(90.0f, Vector3(1.0f, 0.0f, 0.0f));
-		Graphics::DrawSubMesh(pos, rotCylZ, cylScale, *s_gizmoCylinderMesh->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
-		const Quaternion rotConePlusZ = baseRot * Quaternion::AngleAxis(90.0f, Vector3(1.0f, 0.0f, 0.0f));
-		Graphics::DrawSubMesh(pos + fwd * shaftLen, rotConePlusZ, coneScale, *s_gizmoConeMesh->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
-		const Quaternion rotConeMinusZ = baseRot * Quaternion::AngleAxis(-90.0f, Vector3(1.0f, 0.0f, 0.0f));
-		Graphics::DrawSubMesh(pos - fwd * shaftLen, rotConeMinusZ, coneScale, *s_gizmoConeMesh->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
-
-		// Restaurar color del material unlit
-		AssetManager::unlitMaterial->SetColor(Color::CreateFromRGBA(255, 255, 255, 255));
+		static std::vector<Vector3> zVerts;
+		zVerts.clear();
+		AddCylinderTriangles(zVerts, pos - fwd * shaftLen, pos + fwd * shaftLen, shaftR, 20);
+		AddConeTriangles(zVerts, pos + fwd * shaftLen, pos + fwd * len, coneR, 24);
+		AddConeTriangles(zVerts, pos - fwd * shaftLen, pos - fwd * len, coneR, 24);
+		RenderSolidGeometry(zVerts, blueColor);
 	}
 	else if (toolMode == ToolMode::Tool_Rotate)
 	{

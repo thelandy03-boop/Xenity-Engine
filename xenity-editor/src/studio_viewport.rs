@@ -18,6 +18,7 @@ pub struct StudioViewportState {
     pub last_height: u32,
     pub last_tool: Option<crate::studio_ribbon::StudioTool>,
     pub is_dirty: bool,
+    pub is_transforming_object: bool,
 }
 
 impl Default for StudioViewportState {
@@ -35,6 +36,7 @@ impl Default for StudioViewportState {
             last_height: 0,
             last_tool: None,
             is_dirty: true,
+            is_transforming_object: false,
         }
     }
 }
@@ -127,8 +129,8 @@ impl StudioViewportState {
 
             let mut scene_interacted = false;
 
-            // Clic izquierdo en el Viewport 3D: Raycast & Selección de pieza
-            if vp_resp.clicked_by(egui::PointerButton::Primary) && !ui.input(|i| i.modifiers.alt) {
+            // Clic izquierdo / Inicio de arrastre en el Viewport 3D: Raycast & Selección precisa
+            if vp_resp.drag_started_by(egui::PointerButton::Primary) && !ui.input(|i| i.modifiers.alt) {
                 if let Some(pos) = ui.ctx().pointer_latest_pos() {
                     if vp_rect.contains(pos) {
                         let norm_x = (pos.x - vp_rect.min.x) / vp_rect.width();
@@ -136,14 +138,34 @@ impl StudioViewportState {
                         let hit = eng.pick_gameobject(norm_x, norm_y);
                         if hit >= 0 {
                             picked_object_index = Some(hit);
+                            self.is_transforming_object = true;
+                        } else {
+                            picked_object_index = Some(-1);
+                            eng.select_gameobject(-1);
+                            self.is_transforming_object = false;
                         }
+                        scene_interacted = true;
+                    }
+                }
+            } else if vp_resp.clicked_by(egui::PointerButton::Primary) && !ui.input(|i| i.modifiers.alt) {
+                if let Some(pos) = ui.ctx().pointer_latest_pos() {
+                    if vp_rect.contains(pos) {
+                        let norm_x = (pos.x - vp_rect.min.x) / vp_rect.width();
+                        let norm_y = (pos.y - vp_rect.min.y) / vp_rect.height();
+                        let hit = eng.pick_gameobject(norm_x, norm_y);
+                        picked_object_index = Some(hit);
                         scene_interacted = true;
                     }
                 }
             }
 
-            // Arrastre con clic izquierdo: Transformar el objeto seleccionado mediante el Gizmo 3D
-            if vp_resp.dragged_by(egui::PointerButton::Primary) && !ui.input(|i| i.modifiers.alt) {
+            // Al soltar el clic principal, terminar la transformación
+            if !ui.input(|i| i.pointer.primary_down()) {
+                self.is_transforming_object = false;
+            }
+
+            // Arrastre con clic izquierdo: Transformar ÚNICAMENTE si se inició sobre un objeto válido
+            if self.is_transforming_object && vp_resp.dragged_by(egui::PointerButton::Primary) && !ui.input(|i| i.modifiers.alt) {
                 let delta = vp_resp.drag_delta();
                 if tool_mode != 0 && (delta.x != 0.0 || delta.y != 0.0) {
                     eng.transform_selected(delta.x, delta.y, tool_mode, 0);
@@ -155,8 +177,10 @@ impl StudioViewportState {
             if vp_resp.dragged_by(egui::PointerButton::Secondary) || (vp_resp.dragged_by(egui::PointerButton::Primary) && ui.input(|i| i.modifiers.alt)) {
                 let delta = vp_resp.drag_delta();
                 if delta.x != 0.0 || delta.y != 0.0 {
-                    let rot_sens = 0.35;
-                    eng.camera_orbit(-delta.x * rot_sens, delta.y * rot_sens, 0.0, 0.0, 0.0);
+                    let rot_sens = 0.28;
+                    // delta.x > 0 (derecha) -> delta_yaw negativo (girar a la derecha)
+                    // delta.y < 0 (arriba) -> delta_pitch positivo (mirar hacia arriba)
+                    eng.camera_orbit(-delta.x * rot_sens, -delta.y * rot_sens, 0.0, 0.0, 0.0);
                     scene_interacted = true;
                 }
             }
@@ -167,8 +191,8 @@ impl StudioViewportState {
                 let mut right = 0.0f32;
                 let mut up = 0.0f32;
                 
-                // Velocidad ágil de Roblox Studio (base rápida + sprint x3.5 con Shift)
-                let base_speed = 1.25f32;
+                let dt = ui.input(|i| i.unstable_dt).clamp(0.001, 0.05);
+                let base_speed = 45.0 * dt;
                 let speed = if ui.input(|i| i.modifiers.shift) { base_speed * 3.5 } else { base_speed };
 
                 if ui.input(|i| i.key_down(egui::Key::W)) { fwd += speed; }
@@ -178,7 +202,7 @@ impl StudioViewportState {
                 if ui.input(|i| i.key_down(egui::Key::E)) { up += speed; }
                 if ui.input(|i| i.key_down(egui::Key::Q)) { up -= speed; }
 
-                // Zoom con la rueda del ratón (desplazamiento suave adelante / atrás)
+                // Zoom con la rueda del ratón
                 let scroll_y = ui.input(|i| i.raw_scroll_delta.y);
                 if scroll_y != 0.0 {
                     let zoom_factor = if ui.input(|i| i.modifiers.shift) { 4.5 } else { 1.8 };
@@ -189,6 +213,10 @@ impl StudioViewportState {
                     eng.camera_orbit(0.0, 0.0, fwd, right, up);
                     scene_interacted = true;
                 }
+            }
+
+            if scene_interacted {
+                ui.ctx().request_repaint();
             }
 
             let needs_render = is_playing

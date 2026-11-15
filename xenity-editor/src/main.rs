@@ -545,7 +545,7 @@ impl eframe::App for RobloxStudioApp {
         if self.is_playing {
             ctx.request_repaint_after(std::time::Duration::from_millis(16));
         } else if self.engine.as_ref().map(|e| e.is_initialized).unwrap_or(false) {
-            let active = ctx.input(|i| i.pointer.any_down() || !i.events.is_empty());
+            let active = ctx.input(|i| i.pointer.any_down() || !i.keys_down.is_empty() || !i.events.is_empty());
             if active {
                 ctx.request_repaint_after(std::time::Duration::from_millis(16));
             }

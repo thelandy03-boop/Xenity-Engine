@@ -54,31 +54,33 @@ int XenityFFI::s_height = 720;
 bool XenityFFI::s_initialized = false;
 int XenityFFI::s_currentToolMode = 1; // 1 = ToolMode::Tool_Move
 
-static bool GetAABBDistance(const Vector3& corner1, const Vector3& corner2, const Vector3& dirfrac, const Vector3& startPosition, float* t)
+static bool RayLocalAABB(const glm::vec3& rayOrigin, const glm::vec3& rayDir, const glm::vec3& minB, const glm::vec3& maxB, float& outDist)
 {
-	float t1 = (corner1.x - startPosition.x) * dirfrac.x;
-	float t2 = (corner2.x - startPosition.x) * dirfrac.x;
-	float t3 = (corner1.y - startPosition.y) * dirfrac.y;
-	float t4 = (corner2.y - startPosition.y) * dirfrac.y;
-	float t5 = (corner1.z - startPosition.z) * dirfrac.z;
-	float t6 = (corner2.z - startPosition.z) * dirfrac.z;
+	float tmin = -1e9f;
+	float tmax = 1e9f;
 
-	float tmin = std::max(std::max(std::min(t1, t2), std::min(t3, t4)), std::min(t5, t6));
-	float tmax = std::min(std::min(std::max(t1, t2), std::max(t3, t4)), std::max(t5, t6));
-
-	if (tmax < 0.0f || tmin > tmax)
+	for (int i = 0; i < 3; ++i)
 	{
-		return false;
-	}
-	else
-	{
-		if (*t > tmin)
+		if (std::abs(rayDir[i]) < 1e-6f)
 		{
-			*t = tmin;
-			return true;
+			if (rayOrigin[i] < minB[i] || rayOrigin[i] > maxB[i])
+				return false;
+		}
+		else
+		{
+			float invD = 1.0f / rayDir[i];
+			float t0 = (minB[i] - rayOrigin[i]) * invD;
+			float t1 = (maxB[i] - rayOrigin[i]) * invD;
+			if (t0 > t1) std::swap(t0, t1);
+			tmin = std::max(tmin, t0);
+			tmax = std::min(tmax, t1);
+			if (tmin > tmax) return false;
 		}
 	}
-	return false;
+
+	if (tmax < 0.0f) return false;
+	outDist = (tmin >= 0.0f) ? tmin : tmax;
+	return true;
 }
 
 std::shared_ptr<Texture> XenityFFI::LoadTextureDirect(const std::string& relativePath)
@@ -364,6 +366,10 @@ int XenityFFI::ReadFrame(unsigned char* out_pixels, int width, int height)
 	return 1;
 }
 
+static float s_camPitch = 20.0f;
+static float s_camYaw = 0.0f;
+static bool s_camEulerInit = false;
+
 void XenityFFI::CameraOrbit(float delta_yaw, float delta_pitch, float move_fwd, float move_right, float move_up)
 {
 	if (!s_camera)
@@ -373,14 +379,22 @@ void XenityFFI::CameraOrbit(float delta_yaw, float delta_pitch, float move_fwd, 
 	if (!camTrans)
 		return;
 
-	// Rotation using quaternions for stable, gimbal-free orbit
+	if (!s_camEulerInit)
+	{
+		Vector3 euler = camTrans->GetEulerAngles();
+		s_camPitch = euler.x;
+		s_camYaw = euler.y;
+		s_camEulerInit = true;
+	}
+
+	// Rotation using yaw + pitch around global Y and local X, clamping pitch to prevent gimbal flipping
 	if (delta_yaw != 0.0f || delta_pitch != 0.0f)
 	{
-		const Quaternion& rotQ = camTrans->GetRotation();
-		Quaternion rotX = Quaternion::AngleAxis(delta_pitch, Vector3(1, 0, 0));
-		Quaternion rotY = Quaternion::AngleAxis(delta_yaw, Vector3(0, 1, 0));
-		Quaternion newRot = rotY * rotQ * rotX;
-		camTrans->SetRotation(newRot);
+		s_camYaw += delta_yaw;
+		s_camPitch = std::clamp(s_camPitch + delta_pitch, -89.0f, 89.0f);
+		Quaternion rotY = Quaternion::AngleAxis(s_camYaw, Vector3(0.0f, 1.0f, 0.0f));
+		Quaternion rotX = Quaternion::AngleAxis(s_camPitch, Vector3(1.0f, 0.0f, 0.0f));
+		camTrans->SetRotation(rotY * rotX);
 	}
 
 	// Translation
@@ -590,19 +604,26 @@ int XenityFFI::PickGameObject(float norm_x, float norm_y)
 		return -1;
 	}
 
-	InputSystem::mousePosition = Vector2(norm_x * s_camera->GetWidth(), norm_y * s_camera->GetHeight());
-	const Vector3 dir = s_camera->GetMouseRay();
-	if (dir.x == 0.0f && dir.y == 0.0f && dir.z == 0.0f)
-	{
+	// 1. Unproject mouse coordinate from NDC space directly to world space
+	// In egui norm_x in [0, 1] (0 is left, 1 is right)
+	// norm_y in [0, 1] (0 is TOP, 1 is BOTTOM)
+	// In OpenGL NDC: ndc_x in [-1, 1], ndc_y in [-1, 1] where +1 is TOP, -1 is BOTTOM
+	const float ndc_x = norm_x * 2.0f - 1.0f;
+	const float ndc_y = 1.0f - norm_y * 2.0f;
+
+	const glm::mat4 invVP = glm::inverse(s_camera->m_viewProjectionMatrix);
+	const glm::vec4 pNearNDC(ndc_x, ndc_y, -1.0f, 1.0f);
+	const glm::vec4 pFarNDC (ndc_x, ndc_y,  1.0f, 1.0f);
+
+	const glm::vec4 pNearW4 = invVP * pNearNDC;
+	const glm::vec4 pFarW4  = invVP * pFarNDC;
+
+	if (pNearW4.w == 0.0f || pFarW4.w == 0.0f)
 		return -1;
-	}
 
-	Vector3 dirfrac;
-	dirfrac.x = 1.0f / (dir.x != 0.0f ? dir.x : 0.00001f);
-	dirfrac.y = 1.0f / (dir.y != 0.0f ? dir.y : 0.00001f);
-	dirfrac.z = 1.0f / (dir.z != 0.0f ? dir.z : 0.00001f);
+	const glm::vec3 pNearWorld = glm::vec3(pNearW4) / pNearW4.w;
+	const glm::vec3 pFarWorld  = glm::vec3(pFarW4)  / pFarW4.w;
 
-	const Vector3 camPos = s_camera->GetTransform()->GetPosition();
 	float minDis = 999999.0f;
 	int hitIndex = -1;
 	std::shared_ptr<GameObject> hitGo = nullptr;
@@ -614,34 +635,43 @@ int XenityFFI::PickGameObject(float norm_x, float norm_y)
 		if (!go || !go->IsActive() || go->GetName() == "EditorCamera" || go->GetName() == "Camera")
 			continue;
 
-		Vector3 transformedMin;
-		Vector3 transformedMax;
+		glm::vec3 minB(-0.5f);
+		glm::vec3 maxB(0.5f);
+
 		auto meshRenderer = go->GetComponent<MeshRenderer>();
 		if (meshRenderer && meshRenderer->GetMeshData() && meshRenderer->IsEnabled())
 		{
-			const Vector3& minB = meshRenderer->GetMeshData()->GetMinBoundingBox();
-			const Vector3& maxB = meshRenderer->GetMeshData()->GetMaxBoundingBox();
-			glm::mat4 mat = go->GetTransform()->GetTransformationMatrix();
-			transformedMin = Vector3(mat * glm::vec4(minB.x, minB.y, minB.z, 1.0f));
-			transformedMax = Vector3(mat * glm::vec4(maxB.x, maxB.y, maxB.z, 1.0f));
-			transformedMin.x = -transformedMin.x;
-			transformedMax.x = -transformedMax.x;
-		}
-		else
-		{
-			Vector3 p = go->GetTransform()->GetPosition();
-			Vector3 s = go->GetTransform()->GetLocalScale() * 0.5f;
-			if (s.x < 0.5f) s = Vector3(0.5f);
-			transformedMin = p - s;
-			transformedMax = p + s;
+			const Vector3& minV = meshRenderer->GetMeshData()->GetMinBoundingBox();
+			const Vector3& maxV = meshRenderer->GetMeshData()->GetMaxBoundingBox();
+			minB = glm::vec3(std::min(minV.x, maxV.x), std::min(minV.y, maxV.y), std::min(minV.z, maxV.z));
+			maxB = glm::vec3(std::max(minV.x, maxV.x), std::max(minV.y, maxV.y), std::max(minV.z, maxV.z));
 		}
 
-		float dis = 999999.0f;
-		if (GetAABBDistance(transformedMin, transformedMax, dirfrac, camPos, &dis))
+		// Transform world ray into GameObject's local coordinate space
+		const glm::mat4& modelMat = go->GetTransform()->GetTransformationMatrix();
+		const glm::mat4 invModel = glm::inverse(modelMat);
+
+		const glm::vec4 pNearL4 = invModel * glm::vec4(pNearWorld, 1.0f);
+		const glm::vec4 pFarL4  = invModel * glm::vec4(pFarWorld, 1.0f);
+
+		if (pNearL4.w == 0.0f || pFarL4.w == 0.0f)
+			continue;
+
+		const glm::vec3 localNear = glm::vec3(pNearL4) / pNearL4.w;
+		const glm::vec3 localFar  = glm::vec3(pFarL4)  / pFarL4.w;
+		const glm::vec3 localDir  = glm::normalize(localFar - localNear);
+
+		float localHitDist = 0.0f;
+		if (RayLocalAABB(localNear, localDir, minB, maxB, localHitDist))
 		{
-			if (dis > 0.0f && dis < minDis)
+			// Calculate hit point in world coordinates
+			const glm::vec3 localHitPoint = localNear + localDir * localHitDist;
+			const glm::vec3 worldHitPoint = glm::vec3(modelMat * glm::vec4(localHitPoint, 1.0f));
+			const float worldDist = glm::distance(pNearWorld, worldHitPoint);
+
+			if (worldDist < minDis)
 			{
-				minDis = dis;
+				minDis = worldDist;
 				hitIndex = i;
 				hitGo = go;
 			}
@@ -651,6 +681,10 @@ int XenityFFI::PickGameObject(float norm_x, float norm_y)
 	if (hitGo)
 	{
 		Editor::SetSelectedGameObject(hitGo);
+	}
+	else
+	{
+		Editor::SetSelectedGameObject(nullptr);
 	}
 	return hitIndex;
 }
