@@ -414,7 +414,7 @@ impl eframe::App for RobloxStudioApp {
         }
 
         // 6. DIÁLOGO MODAL: BUILD & EXPORT (PS3, PSP, VITA, PC)
-        let build_action = self.build_dialog.show(ctx, &mut self.engine);
+        let build_action = self.build_dialog.show(ctx, &mut self.engine, icons);
         match build_action {
             BuildDialogAction::OpenOutputLog(msg) => {
                 self.output.add_log(LogType::Info, "Export", msg);

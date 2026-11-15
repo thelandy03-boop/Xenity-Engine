@@ -4,8 +4,9 @@
 // Integrates the 2-column + Scenes in Build architecture of Unity
 // styled seamlessly with Roblox Studio's authentic dark UI theme (#252526 / #1E1E1E / #007ACC).
 
-use eframe::egui::{self, Color32, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
+use eframe::egui::{self, Color32, FontId, Pos2, Rect, Rounding, Sense, Stroke, TextureHandle, Vec2};
 use crate::studio_style::*;
+use crate::studio_textures::StudioIcons;
 use crate::xenity_ffi::XenityEngine;
 use std::path::{Path, PathBuf};
 use std::fs;
@@ -32,14 +33,14 @@ impl ExportPlatform {
         }
     }
 
-    pub fn icon(&self) -> &'static str {
+    pub fn texture<'a>(&self, icons: &'a StudioIcons) -> &'a TextureHandle {
         match self {
-            ExportPlatform::Windows => "💻",
-            ExportPlatform::PlayStation3 => "🎮",
-            ExportPlatform::PSP => "🕹️",
-            ExportPlatform::PSVita => "📱",
-            ExportPlatform::DedicatedServer => "🖧",
-            ExportPlatform::Android => "🤖",
+            ExportPlatform::Windows => &icons.plat_pc,
+            ExportPlatform::PlayStation3 => &icons.plat_ps3,
+            ExportPlatform::PSP => &icons.plat_psp,
+            ExportPlatform::PSVita => &icons.plat_psvita,
+            ExportPlatform::DedicatedServer => &icons.plat_server,
+            ExportPlatform::Android => &icons.plat_android,
         }
     }
 
@@ -230,7 +231,7 @@ impl BuildExportState {
         }
     }
 
-    pub fn show(&mut self, ctx: &egui::Context, engine: &mut Option<XenityEngine>) -> BuildDialogAction {
+    pub fn show(&mut self, ctx: &egui::Context, engine: &mut Option<XenityEngine>, icons: &StudioIcons) -> BuildDialogAction {
         if !self.is_open {
             return BuildDialogAction::None;
         }
@@ -453,19 +454,23 @@ impl BuildExportState {
                                 ui.painter().rect(item_rect, Rounding::same(4.0), bg_color, border_stroke);
                             }
 
-                            // Icono
-                            ui.painter().text(
-                                Pos2::new(item_rect.min.x + 10.0, item_rect.center().y),
-                                egui::Align2::LEFT_CENTER,
-                                plat.icon(),
-                                FontId::proportional(15.0),
+                            // Icono real oficial de la consola (Textura de alta resolución)
+                            let icon_tex = plat.texture(icons);
+                            let icon_rect = Rect::from_center_size(
+                                Pos2::new(item_rect.min.x + 20.0, item_rect.center().y),
+                                Vec2::new(24.0, 24.0),
+                            );
+                            ui.painter().image(
+                                icon_tex.id(),
+                                icon_rect,
+                                Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
                                 Color32::WHITE,
                             );
 
                             // Nombre
                             let text_color = if is_selected { Color32::WHITE } else { Color32::from_rgb(215, 218, 225) };
                             ui.painter().text(
-                                Pos2::new(item_rect.min.x + 36.0, item_rect.center().y - 6.0),
+                                Pos2::new(item_rect.min.x + 38.0, item_rect.center().y - 6.0),
                                 egui::Align2::LEFT_CENTER,
                                 plat.name(),
                                 FontId::proportional(11.5),
@@ -474,7 +479,7 @@ impl BuildExportState {
 
                             // Badge pequeño (ej: PS3, PSP)
                             ui.painter().text(
-                                Pos2::new(item_rect.min.x + 36.0, item_rect.center().y + 8.0),
+                                Pos2::new(item_rect.min.x + 38.0, item_rect.center().y + 8.0),
                                 egui::Align2::LEFT_CENTER,
                                 plat.badge(),
                                 FontId::proportional(9.5),
@@ -504,9 +509,16 @@ impl BuildExportState {
                     ui.vertical(|ui| {
                         ui.set_width(right_col_w);
 
-                        // Cabecera de plataforma
+                        // Cabecera de plataforma con logo real
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new(self.selected_platform.icon()).font(FontId::proportional(16.0)));
+                            let head_tex = self.selected_platform.texture(icons);
+                            let (icon_rect, _) = ui.allocate_exact_size(Vec2::new(24.0, 24.0), Sense::hover());
+                            ui.painter().image(
+                                head_tex.id(),
+                                icon_rect,
+                                Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
+                                Color32::WHITE,
+                            );
                             ui.label(
                                 egui::RichText::new(self.selected_platform.name())
                                     .font(FontId::proportional(14.0))
