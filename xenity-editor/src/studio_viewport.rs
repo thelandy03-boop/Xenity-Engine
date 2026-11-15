@@ -32,50 +32,60 @@ impl StudioViewportState {
         show_grid: bool,
         show_view_selector: bool,
     ) {
-        // 1. PESTAÑA SUPERIOR DE DOCUMENTO VIEWPORT [ Experiencia sin título ✕ ]
+        // 1. PESTAÑA SUPERIOR DE DOCUMENTO VIEWPORT [ Place1* □ ] (Idéntico a Imagen 1)
         let doc_bar_h = 28.0;
         let (doc_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), doc_bar_h), Sense::hover());
-        ui.painter().rect_filled(doc_rect, 0.0, Color32::from_rgb(25, 26, 31)); // Fondo de barra de documentos
+        ui.painter().rect_filled(doc_rect, 0.0, Color32::from_rgb(18, 19, 23)); // Fondo de barra de documentos
 
-        let title = "Experiencia sin título";
+        let title = "Place1*";
         let font_id = FontId::proportional(12.0);
         let title_galley = ui.painter().layout_no_wrap(title.to_string(), font_id, Color32::WHITE);
         let title_w = title_galley.rect.width();
 
-        let tab_w = 14.0 + 16.0 + 8.0 + title_w + 12.0 + 14.0 + 10.0;
+        let tab_w = 12.0 + 16.0 + 8.0 + title_w + 16.0 + 14.0 + 10.0;
         let active_tab_rect = Rect::from_min_size(doc_rect.min, Vec2::new(tab_w, doc_bar_h));
-        ui.painter().rect_filled(active_tab_rect, Rounding { nw: 3.0, ne: 3.0, sw: 0.0, se: 0.0 }, Color32::from_rgb(32, 34, 39));
+        ui.painter().rect_filled(active_tab_rect, Rounding::ZERO, Color32::from_rgb(22, 23, 27));
+
+        // Franja azul superior de la pestaña activa (idéntico a la referencia de Roblox Studio)
+        ui.painter().line_segment(
+            [Pos2::new(active_tab_rect.min.x, active_tab_rect.min.y + 1.0), Pos2::new(active_tab_rect.max.x, active_tab_rect.min.y + 1.0)],
+            Stroke::new(2.0, Color32::from_rgb(0, 136, 255)),
+        );
 
         // Separador sutil derecho de la pestaña
         ui.painter().line_segment(
             [Pos2::new(active_tab_rect.max.x, active_tab_rect.min.y + 4.0), Pos2::new(active_tab_rect.max.x, active_tab_rect.max.y - 2.0)],
-            Stroke::new(1.0, STUDIO_BORDER),
+            Stroke::new(1.0, Color32::from_rgb(38, 40, 46)),
         );
 
-        // Icono oficial PlaceCloud.png (Documento de Place con nube de Roblox Studio)
-        let doc_icon_rect = Rect::from_center_size(Pos2::new(active_tab_rect.min.x + 16.0, active_tab_rect.center().y), Vec2::new(16.0, 16.0));
-        ui.painter().image(icons.doc_place_cloud.id(), doc_icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
+        // Icono oficial de árbol jerárquico / Place
+        let doc_icon_rect = Rect::from_center_size(Pos2::new(active_tab_rect.min.x + 18.0, active_tab_rect.center().y), Vec2::new(16.0, 16.0));
+        ui.painter().image(icons.win_explorer.id(), doc_icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
 
-        // Texto del título "Experiencia sin título"
-        let text_pos = Pos2::new(active_tab_rect.min.x + 30.0, active_tab_rect.center().y);
+        // Texto del título "Place1*"
+        let text_pos = Pos2::new(active_tab_rect.min.x + 32.0, active_tab_rect.center().y);
         ui.painter().galley(Pos2::new(text_pos.x, text_pos.y - title_galley.rect.height() * 0.5), title_galley, Color32::WHITE);
 
-        // Botón cerrar ✕ interactivo y dibujado con líneas nítidas (evita caracteres faltantes □)
+        // Botón cerrar / desacoplar □ interactivo (idéntico a Imagen 1)
         let close_center = Pos2::new(active_tab_rect.max.x - 14.0, active_tab_rect.center().y);
         let close_rect = Rect::from_center_size(close_center, Vec2::new(16.0, 16.0));
         let close_resp = ui.interact(close_rect, ui.id().with("vp_doc_close"), Sense::click());
         if close_resp.hovered() {
-            ui.painter().rect_filled(close_rect, Rounding::same(3.0), STUDIO_HOVER);
+            ui.painter().rect_filled(close_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
         }
-        let close_col = if close_resp.hovered() { Color32::WHITE } else { STUDIO_TEXT_MUTED };
-        let cs = 3.5;
-        ui.painter().line_segment([Pos2::new(close_center.x - cs, close_center.y - cs), Pos2::new(close_center.x + cs, close_center.y + cs)], Stroke::new(1.2, close_col));
-        ui.painter().line_segment([Pos2::new(close_center.x - cs, close_center.y + cs), Pos2::new(close_center.x + cs, close_center.y - cs)], Stroke::new(1.2, close_col));
+        let close_col = if close_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 153, 162) };
+        let sq_rect = Rect::from_center_size(close_center, Vec2::new(8.0, 8.0));
+        ui.painter().rect_stroke(sq_rect, Rounding::same(1.0), Stroke::new(1.0, close_col));
+        if close_resp.hovered() {
+            let cs = 2.5;
+            ui.painter().line_segment([Pos2::new(close_center.x - cs, close_center.y - cs), Pos2::new(close_center.x + cs, close_center.y + cs)], Stroke::new(1.0, close_col));
+            ui.painter().line_segment([Pos2::new(close_center.x - cs, close_center.y + cs), Pos2::new(close_center.x + cs, close_center.y - cs)], Stroke::new(1.0, close_col));
+        }
 
-        // Franja inferior azul de la pestaña / barra de documento (idéntico a la referencia #0067FF)
+        // Borde inferior sutil de la barra de documentos
         ui.painter().line_segment(
             [Pos2::new(doc_rect.min.x, doc_rect.max.y), Pos2::new(doc_rect.max.x, doc_rect.max.y)],
-            Stroke::new(2.0, Color32::from_rgb(0, 103, 255)),
+            Stroke::new(1.0, Color32::from_rgb(32, 34, 40)),
         );
 
         // 2. VIEWPORT 3D ÁREA CENTRAL

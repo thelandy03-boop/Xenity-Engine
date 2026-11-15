@@ -94,6 +94,20 @@ pub struct StudioIcons {
     pub rib_ui_constraint: TextureHandle,
     pub rib_ui_style_editor: TextureHandle,
 
+    // Official Ribbon Script Tab Icons
+    pub rib_back: TextureHandle,
+    pub rib_fwd: TextureHandle,
+    pub rib_format_doc: TextureHandle,
+    pub rib_find: TextureHandle,
+    pub rib_goto_line: TextureHandle,
+    pub rib_command: TextureHandle,
+    pub rib_output: TextureHandle,
+    pub rib_breakpoints: TextureHandle,
+    pub rib_callstack: TextureHandle,
+    pub rib_watch: TextureHandle,
+    pub rib_analysis: TextureHandle,
+    pub rib_performance: TextureHandle,
+
     // Top Right Official Studio Utility Icons
     pub top_avatar: TextureHandle,
     pub top_bell: TextureHandle,
@@ -207,6 +221,19 @@ impl StudioIcons {
             rib_ui_layout: load_png(ctx, "rbx_rib_ui_layout", include_bytes!("../assets/icons/ribbon/RibbonUITableLayout.png")),
             rib_ui_constraint: load_png(ctx, "rbx_rib_ui_constraint", include_bytes!("../assets/icons/ribbon/RibbonUISizeConstraint.png")),
             rib_ui_style_editor: load_png(ctx, "rbx_rib_ui_style_editor", include_bytes!("../assets/icons/ribbon/RibbonStyleEditor.png")),
+
+            rib_back: load_png(ctx, "rbx_rib_back", include_bytes!("../assets/icons/ribbon/RibbonBack.png")),
+            rib_fwd: load_png(ctx, "rbx_rib_fwd", include_bytes!("../assets/icons/ribbon/RibbonFwd.png")),
+            rib_format_doc: load_png(ctx, "rbx_rib_format_doc", include_bytes!("../assets/icons/ribbon/RibbonFormatDocument.png")),
+            rib_find: load_png(ctx, "rbx_rib_find", include_bytes!("../assets/icons/ribbon/RibbonFind.png")),
+            rib_goto_line: load_png(ctx, "rbx_rib_goto_line", include_bytes!("../assets/icons/ribbon/RibbonGoToLine.png")),
+            rib_command: load_png(ctx, "rbx_rib_command", include_bytes!("../assets/icons/ribbon/RibbonCommand.png")),
+            rib_output: load_png(ctx, "rbx_rib_output", include_bytes!("../assets/icons/ribbon/RibbonOutput.png")),
+            rib_breakpoints: load_png(ctx, "rbx_rib_breakpoints", include_bytes!("../assets/icons/ribbon/RibbonBreakpoints.png")),
+            rib_callstack: load_png(ctx, "rbx_rib_callstack", include_bytes!("../assets/icons/ribbon/RibbonCallStack.png")),
+            rib_watch: load_png(ctx, "rbx_rib_watch", include_bytes!("../assets/icons/ribbon/RibbonWatch.png")),
+            rib_analysis: load_png(ctx, "rbx_rib_analysis", include_bytes!("../assets/icons/ribbon/RibbonAnalysis.png")),
+            rib_performance: load_png(ctx, "rbx_rib_performance", include_bytes!("../assets/icons/ribbon/RibbonPerformance.png")),
 
             top_avatar: load_png(ctx, "rbx_top_avatar", include_bytes!("../assets/icons/top_avatar.png")),
             top_bell: load_png(ctx, "rbx_top_bell", include_bytes!("../assets/icons/top_bell.png")),
