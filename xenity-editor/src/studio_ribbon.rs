@@ -136,7 +136,7 @@ impl StudioRibbonState {
         // =====================================================================
         let menu_bar_h = 22.0;
         let (menu_bar_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), menu_bar_h), Sense::hover());
-        ui.painter().rect_filled(menu_bar_rect, 0.0, Color32::from_rgb(24, 26, 31));
+        ui.painter().rect_filled(menu_bar_rect, 0.0, Color32::from_rgb(18, 18, 20));
 
         let top_menu_names = ["Archivo", "Edición", "Vista", "Plugins", "Prueba", "Ventana", "Ayuda"];
         let mut menu_cur_x = menu_bar_rect.min.x + 8.0;
@@ -155,7 +155,7 @@ impl StudioRibbonState {
             let is_open = self.active_top_menu == Some(idx);
 
             let bg = if is_open {
-                Color32::from_rgb(46, 50, 60)
+                Color32::from_rgb(36, 36, 40)
             } else if item_resp.hovered() {
                 Color32::from_rgba_unmultiplied(255, 255, 255, 14)
             } else {
@@ -163,7 +163,7 @@ impl StudioRibbonState {
             };
 
             let stroke = if is_open {
-                Stroke::new(1.0, Color32::from_rgb(0, 162, 255))
+                Stroke::new(1.0, Color32::from_rgb(58, 58, 64))
             } else {
                 Stroke::NONE
             };
@@ -173,7 +173,7 @@ impl StudioRibbonState {
             let text_color = if is_open || item_resp.hovered() {
                 Color32::WHITE
             } else {
-                Color32::from_rgb(205, 210, 222)
+                Color32::from_rgb(195, 195, 195)
             };
 
             ui.painter().text(
@@ -199,11 +199,6 @@ impl StudioRibbonState {
             menu_cur_x += item_w + 2.0;
         }
 
-        ui.painter().line_segment(
-            [Pos2::new(menu_bar_rect.min.x, menu_bar_rect.max.y), Pos2::new(menu_bar_rect.max.x, menu_bar_rect.max.y)],
-            Stroke::new(1.0, Color32::from_rgb(34, 36, 42)),
-        );
-
         // Desplegables de la barra de menú clásica
         if let Some((menu_idx, pos)) = opened_menu_pos {
             egui::Area::new(ui.id().with("active_top_menu_popup"))
@@ -213,8 +208,8 @@ impl StudioRibbonState {
                     let mut close_menu = false;
 
                     egui::Frame::popup(ui.style())
-                        .fill(Color32::from_rgb(26, 28, 34))
-                        .stroke(Stroke::new(1.0, Color32::from_rgb(52, 56, 68)))
+                        .fill(Color32::from_rgb(22, 22, 25))
+                        .stroke(Stroke::new(1.0, Color32::from_rgb(46, 46, 52)))
                         .rounding(Rounding::same(4.0))
                         .inner_margin(egui::Margin::symmetric(4.0, 4.0))
                         .show(ui, |ui| {
@@ -365,28 +360,28 @@ impl StudioRibbonState {
         // =====================================================================
         // 2. BARRA SUPERIOR MODERNA (PROBAR + CONTROLES + PESTAÑAS PÍLDORA)
         // =====================================================================
-        let tabs_bar_h = 32.0;
+        let tabs_bar_h = 30.0;
         let (tabs_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), tabs_bar_h), Sense::hover());
-        ui.painter().rect_filled(tabs_rect, 0.0, Color32::from_rgb(22, 23, 27));
+        ui.painter().rect_filled(tabs_rect, 0.0, Color32::from_rgb(18, 18, 20));
 
         let mut cur_x = tabs_rect.min.x + 8.0;
         let bar_center_y = tabs_rect.center().y;
 
         // --- LADO IZQUIERDO: Botón "Probar ▾" ---
         let probar_w = 68.0;
-        let probar_rect = Rect::from_center_size(Pos2::new(cur_x + probar_w * 0.5, bar_center_y), Vec2::new(probar_w, 24.0));
+        let probar_rect = Rect::from_center_size(Pos2::new(cur_x + probar_w * 0.5, bar_center_y), Vec2::new(probar_w, 23.0));
         let probar_resp = ui.interact(probar_rect, ui.id().with("btn_probar_dropdown"), Sense::click());
         let probar_bg = if self.probar_dropdown_open {
-            Color32::from_rgb(34, 35, 40)
+            Color32::from_rgb(32, 32, 36)
         } else if probar_resp.hovered() {
-            Color32::from_rgb(46, 48, 54)
+            Color32::from_rgb(38, 38, 44)
         } else {
-            Color32::from_rgb(38, 40, 46)
+            Color32::from_rgb(28, 28, 32)
         };
         let probar_stroke = if self.probar_dropdown_open {
-            Stroke::new(1.5, Color32::from_rgb(0, 136, 255))
+            Stroke::new(1.0, Color32::from_rgb(60, 60, 66))
         } else {
-            Stroke::new(1.0, Color32::from_rgb(56, 58, 66))
+            Stroke::new(1.0, Color32::from_rgb(44, 44, 50))
         };
         ui.painter().rect(probar_rect, Rounding::same(4.0), probar_bg, probar_stroke);
 
@@ -400,7 +395,7 @@ impl StudioRibbonState {
             egui::Align2::LEFT_CENTER,
             cur_label,
             FontId::proportional(11.5),
-            Color32::from_rgb(225, 226, 232),
+            Color32::from_rgb(215, 215, 215),
         );
         let p_arrow_x = probar_rect.max.x - 12.0;
         if self.probar_dropdown_open {
@@ -414,7 +409,7 @@ impl StudioRibbonState {
             let p1 = Pos2::new(p_arrow_x - 3.0, bar_center_y - 1.5);
             let p2 = Pos2::new(p_arrow_x + 3.0, bar_center_y - 1.5);
             let p3 = Pos2::new(p_arrow_x, bar_center_y + 2.5);
-            ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], Color32::from_rgb(165, 167, 175), Stroke::NONE));
+            ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], Color32::from_rgb(160, 160, 160), Stroke::NONE));
         }
         if probar_resp.clicked() {
             // ÚNICAMENTE abre o cierra el menú desplegable, NUNCA ejecuta la simulación
@@ -441,13 +436,23 @@ impl StudioRibbonState {
                 .order(egui::Order::Foreground)
                 .show(ui.ctx(), |ui| {
                     let (popup_rect, _) = ui.allocate_exact_size(Vec2::new(menu_w, menu_h), Sense::hover());
-                    ui.painter().rect_filled(popup_rect, Rounding::same(4.0), Color32::from_rgb(26, 27, 32));
-                    ui.painter().rect_stroke(popup_rect, Rounding::same(4.0), Stroke::new(1.0, Color32::from_rgb(48, 50, 58)));
+                    ui.painter().rect_filled(popup_rect, Rounding::same(4.0), Color32::from_rgb(22, 22, 25));
+                    ui.painter().rect_stroke(popup_rect, Rounding::same(4.0), Stroke::new(1.0, Color32::from_rgb(46, 46, 52)));
 
                     let mut item_y = popup_rect.min.y + 4.0;
                     for (idx, text) in menu_items {
                         let it_rect = Rect::from_min_size(Pos2::new(popup_rect.min.x + 4.0, item_y), Vec2::new(menu_w - 8.0, item_h));
                         let it_resp = ui.interact(it_rect, ui.id().with(("probar_item", idx)), Sense::click());
+                        if it_resp.hovered() {
+                            ui.painter().rect_filled(it_rect, Rounding::same(3.0), Color32::from_rgb(38, 38, 44));
+                        }
+                        ui.painter().text(
+                            Pos2::new(it_rect.min.x + 8.0, it_rect.center().y),
+                            egui::Align2::LEFT_CENTER,
+                            text,
+                            FontId::proportional(11.0),
+                            if it_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(210, 210, 210) },
+                        );
                         let is_sel = self.probar_mode == idx;
 
                         if it_resp.hovered() || is_sel {
@@ -587,13 +592,13 @@ impl StudioRibbonState {
 
             if is_active {
                 // Píldora redondeada activa oficial
-                ui.painter().rect_filled(rect, Rounding::same(4.0), Color32::from_rgb(52, 54, 60));
+                ui.painter().rect_filled(rect, Rounding::same(4.0), Color32::from_rgb(42, 42, 48));
                 ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, *label, font_id.clone(), Color32::WHITE);
             } else {
                 if resp.hovered() {
                     ui.painter().rect_filled(rect, Rounding::same(4.0), Color32::from_rgba_unmultiplied(255, 255, 255, 12));
                 }
-                let col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(160, 163, 172) };
+                let col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(160, 160, 160) };
                 ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, *label, font_id.clone(), col);
             }
 
@@ -615,13 +620,13 @@ impl StudioRibbonState {
             egui::Align2::CENTER_CENTER,
             "+",
             FontId::proportional(13.0),
-            if add_tab_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 153, 162) },
+            if add_tab_resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 150, 150) },
         );
         add_tab_resp.on_hover_text("Nueva pestaña");
 
         ui.painter().line_segment(
             [Pos2::new(tabs_rect.min.x, tabs_rect.max.y), Pos2::new(tabs_rect.max.x, tabs_rect.max.y)],
-            Stroke::new(1.0, Color32::from_rgb(38, 40, 45)),
+            Stroke::new(1.0, Color32::from_rgb(32, 32, 36)),
         );
 
         // =====================================================================
@@ -1544,11 +1549,11 @@ fn draw_menu_entry(ui: &mut egui::Ui, text: &str, shortcut: &str) -> bool {
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), h), Sense::click());
 
     if resp.hovered() {
-        ui.painter().rect_filled(rect, Rounding::same(3.0), Color32::from_rgb(0, 120, 215));
+        ui.painter().rect_filled(rect, Rounding::same(3.0), Color32::from_rgb(38, 38, 44));
     }
 
-    let text_col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(220, 222, 228) };
-    let shortcut_col = if resp.hovered() { Color32::from_rgb(210, 235, 255) } else { Color32::from_rgb(140, 143, 155) };
+    let text_col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(215, 215, 215) };
+    let shortcut_col = if resp.hovered() { Color32::from_rgb(180, 180, 180) } else { Color32::from_rgb(130, 130, 130) };
 
     ui.painter().text(
         Pos2::new(rect.min.x + 10.0, rect.center().y),

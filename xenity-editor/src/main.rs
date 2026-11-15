@@ -113,7 +113,7 @@ impl eframe::App for RobloxStudioApp {
         // 1. RIBBON BAR SUPERIOR COMPLETO DE ROBLOX STUDIO
         // =====================================================================
         egui::TopBottomPanel::top("studio_ribbon_panel")
-            .frame(egui::Frame::none().fill(STUDIO_BG).inner_margin(egui::Margin::same(0.0)))
+            .frame(egui::Frame::none().fill(Color32::from_rgb(18, 18, 20)).inner_margin(egui::Margin::same(0.0)))
             .show(ctx, |ui| {
                 let action = self.ribbon.show(
                     ui,
