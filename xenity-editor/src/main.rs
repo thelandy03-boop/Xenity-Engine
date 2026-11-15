@@ -59,6 +59,7 @@ struct RobloxStudioApp {
     // Simulation Runtime
     is_playing: bool,
     is_paused: bool,
+    theme_initialized: bool,
 }
 
 impl Default for RobloxStudioApp {
@@ -91,13 +92,17 @@ impl Default for RobloxStudioApp {
 
             is_playing: false,
             is_paused: false,
+            theme_initialized: false,
         }
     }
 }
 
 impl eframe::App for RobloxStudioApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        apply_roblox_studio_theme(ctx);
+        if !self.theme_initialized {
+            apply_roblox_studio_theme(ctx);
+            self.theme_initialized = true;
+        }
 
         if self.icons.is_none() {
             egui_extras::install_image_loaders(ctx);
@@ -533,15 +538,16 @@ impl eframe::App for RobloxStudioApp {
             BuildDialogAction::None => {}
         }
 
-        // Refresco fluido con control de tasa de cuadros (60 FPS activos, 30 FPS en reposo)
+        // Refresco fluido con control de tasa de cuadros:
+        // Si hay simulación activa, corre a 60 FPS fijos.
+        // Si el usuario está interactuando (arrastrando, teclas), refresca a 60 FPS activos.
+        // Si está en reposo (idle), no gasta CPU ni batería innecesariamente (winit despierta automáticamente en eventos de entrada).
         if self.is_playing {
             ctx.request_repaint_after(std::time::Duration::from_millis(16));
         } else if self.engine.as_ref().map(|e| e.is_initialized).unwrap_or(false) {
             let active = ctx.input(|i| i.pointer.any_down() || !i.events.is_empty());
             if active {
                 ctx.request_repaint_after(std::time::Duration::from_millis(16));
-            } else {
-                ctx.request_repaint_after(std::time::Duration::from_millis(33));
             }
         }
     }

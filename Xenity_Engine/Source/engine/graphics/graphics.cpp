@@ -1189,8 +1189,9 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 
 	if (toolMode == ToolMode::Tool_Move || toolMode == ToolMode::Tool_Scale)
 	{
-		// 1. Esfera central blanca (Punto de pivote)
-		std::vector<Vector3> centerVerts;
+		// 1. Esfera central blanca (Punto de pivote) - Reutilización de buffer estático para cero asignaciones
+		static std::vector<Vector3> centerVerts;
+		centerVerts.clear();
 		AddSphereTriangles(centerVerts, pos, centerR, 8, 12);
 		RenderSolidGeometry(centerVerts, whiteColor);
 
@@ -1219,7 +1220,8 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 		}
 
 		// 2. Eje X (Rojo) - Flechas bidireccionales (+X y -X)
-		std::vector<Vector3> xVerts;
+		static std::vector<Vector3> xVerts;
+		xVerts.clear();
 		AddCylinderTriangles(xVerts, pos - right * shaftLen, pos + right * shaftLen, shaftR, 8);
 		AddConeTriangles(xVerts, pos + right * shaftLen, pos + right * len, coneR, 16);
 		AddConeTriangles(xVerts, pos - right * shaftLen, pos - right * len, coneR, 16);
@@ -1228,7 +1230,8 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 		DrawArrowLines(pos, -right, len, coneH, coneR, shaftR, redColor);
 
 		// 3. Eje Y (Verde) - Flechas bidireccionales (+Y arriba y -Y abajo)
-		std::vector<Vector3> yVerts;
+		static std::vector<Vector3> yVerts;
+		yVerts.clear();
 		AddCylinderTriangles(yVerts, pos - up * shaftLen, pos + up * shaftLen, shaftR, 8);
 		AddConeTriangles(yVerts, pos + up * shaftLen, pos + up * len, coneR, 16);
 		AddConeTriangles(yVerts, pos - up * shaftLen, pos - up * len, coneR, 16);
@@ -1237,7 +1240,8 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 		DrawArrowLines(pos, -up, len, coneH, coneR, shaftR, greenColor);
 
 		// 4. Eje Z (Azul) - Flechas bidireccionales (+Z adelante y -Z atrás)
-		std::vector<Vector3> zVerts;
+		static std::vector<Vector3> zVerts;
+		zVerts.clear();
 		AddCylinderTriangles(zVerts, pos - fwd * shaftLen, pos + fwd * shaftLen, shaftR, 8);
 		AddConeTriangles(zVerts, pos + fwd * shaftLen, pos + fwd * len, coneR, 16);
 		AddConeTriangles(zVerts, pos - fwd * shaftLen, pos - fwd * len, coneR, 16);

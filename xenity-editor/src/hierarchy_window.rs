@@ -289,7 +289,7 @@ impl RobloxIconTextures {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct ExplorerContextMenu {
     pub is_service: bool,
     pub pos: Pos2,
@@ -303,6 +303,9 @@ pub struct SceneHierarchyState {
     pub textures: Option<RobloxIconTextures>,
     pub context_menu: Option<ExplorerContextMenu>,
     pub xenity_mappings: std::collections::HashMap<usize, i32>,
+    pub last_sync_instant: std::time::Instant,
+    pub cached_gameobject_count: i32,
+    pub is_dirty: bool,
 }
 
 impl Default for SceneHierarchyState {
@@ -314,6 +317,9 @@ impl Default for SceneHierarchyState {
             textures: None,
             context_menu: None,
             xenity_mappings: std::collections::HashMap::new(),
+            last_sync_instant: std::time::Instant::now(),
+            cached_gameobject_count: -1,
+            is_dirty: true,
             items: vec![
                 // 1. Workspace (Servicio raíz de Roblox)
                 ExplorerItem {
@@ -634,6 +640,17 @@ impl SceneHierarchyState {
         if count <= 0 {
             return;
         }
+
+        // Evitar escanear el motor C++ y reservar memoria en cada frame si no hay cambios
+        let now = std::time::Instant::now();
+        let elapsed = now.duration_since(self.last_sync_instant).as_millis();
+        if count == self.cached_gameobject_count && !self.is_dirty && elapsed < 400 {
+            return;
+        }
+
+        self.last_sync_instant = now;
+        self.cached_gameobject_count = count;
+        self.is_dirty = false;
 
         let ws_pos = self.items.iter().position(|it| it.class == RobloxClass::Workspace);
         let ws_idx = match ws_pos {
@@ -1024,19 +1041,11 @@ impl SceneHierarchyState {
             );
         }
 
-        // Texto del nombre de la instancia
-        let text_color = if is_selected {
-            Color32::WHITE
-        } else {
-            STUDIO_TEXT
-        };
-
+        // Texto del nombre de la instancia (cero asignación en heap con text directo)
+        let text_color = if is_selected { Color32::WHITE } else { STUDIO_TEXT };
         let font_id = FontId::proportional(12.0);
         let text_pos = Pos2::new(indent_x + 30.0, row_rect.center().y);
-        let text_galley = ui.painter().layout_no_wrap(node.name.clone(), font_id, text_color);
-        let text_w = text_galley.rect.width();
-        let text_h = text_galley.rect.height();
-        ui.painter().galley(Pos2::new(text_pos.x, text_pos.y - text_h * 0.5), text_galley, text_color);
+        ui.painter().text(text_pos, egui::Align2::LEFT_CENTER, &node.name, font_id, text_color);
 
         // Botón circular [+] (Insert Object) oficial de Roblox Studio (Add.png)
         // Se ubica alineado a la derecha de la fila, idéntico a Roblox Studio oficial
