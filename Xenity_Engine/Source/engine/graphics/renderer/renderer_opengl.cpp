@@ -100,6 +100,11 @@ void RendererOpengl::Setup()
 	glEnable(GL_MULTISAMPLE);
 #endif
 
+	if constexpr (!s_UseOpenGLFixedFunctions)
+	{
+		glVertexAttrib4f(3, 1.0f, 1.0f, 1.0f, 1.0f);
+	}
+
 	// Disable ambient light
 	GLfloat globalAmbient[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globalAmbient);
@@ -967,6 +972,7 @@ void RendererOpengl::UploadMeshData(MeshData& meshData)
 			else
 			{
 				glDisableVertexAttribArray(3);
+				glVertexAttrib4f(3, 1.0f, 1.0f, 1.0f, 1.0f);
 			}
 		}
 

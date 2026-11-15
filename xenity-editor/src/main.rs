@@ -198,8 +198,12 @@ impl eframe::App for RobloxStudioApp {
                         }
                         if let Some(x_idx) = spawned_engine_idx {
                             self.hierarchy.xenity_mappings.insert(id, x_idx);
+                            if let Some(e) = &mut self.engine {
+                                e.select_gameobject(x_idx);
+                            }
                         }
                         self.hierarchy.selected_id = Some(id);
+                        self.ribbon.current_tool = crate::studio_ribbon::StudioTool::Move;
                         self.output.add_log(LogType::Info, "Workspace", format!("Created {} in Xenity Engine at [{:.1}, {:.1}, {:.1}]", name, initial_pos[0], initial_pos[1], initial_pos[2]));
                     }
                     RibbonAction::ToggleToolbox => {
@@ -401,6 +405,32 @@ impl eframe::App for RobloxStudioApp {
             self.right_width = panel_resp.response.rect.width();
         }
 
+        // Sincronizar selección y propiedades con el motor C++ antes de renderizar el Viewport
+        if let Some(ref mut eng) = self.engine {
+            if let Some(sel_id) = self.hierarchy.selected_id {
+                if let Some(x_idx) = self.hierarchy.get_xenity_index_for_id(sel_id) {
+                    eng.select_gameobject(x_idx);
+
+                    if let Some(item) = self.hierarchy.find_item_mut(sel_id) {
+                        eng.set_gameobject_transform(
+                            x_idx,
+                            item.properties.position,
+                            item.properties.orientation,
+                            item.properties.size,
+                        );
+                        let c = item.properties.color;
+                        eng.set_gameobject_color(
+                            x_idx,
+                            [c.r() as f32 / 255.0, c.g() as f32 / 255.0, c.b() as f32 / 255.0, c.a() as f32 / 255.0],
+                        );
+                        eng.set_gameobject_name(x_idx, &item.name);
+                    }
+                }
+            } else {
+                eng.select_gameobject(-1);
+            }
+        }
+
         // =====================================================================
         // 5. PANEL CENTRAL: 3D VIEWPORT DE ROBLOX STUDIO
         // =====================================================================
@@ -422,30 +452,6 @@ impl eframe::App for RobloxStudioApp {
                     }
                 }
             });
-
-        // Sincronizar selección y propiedades con el motor C++
-        if let Some(ref mut eng) = self.engine {
-            if let Some(sel_id) = self.hierarchy.selected_id {
-                if let Some(x_idx) = self.hierarchy.get_xenity_index_for_id(sel_id) {
-                    eng.select_gameobject(x_idx);
-
-                    if let Some(item) = self.hierarchy.find_item_mut(sel_id) {
-                        eng.set_gameobject_transform(
-                            x_idx,
-                            item.properties.position,
-                            item.properties.orientation,
-                            item.properties.size,
-                        );
-                        let c = item.properties.color;
-                        eng.set_gameobject_color(
-                            x_idx,
-                            [c.r() as f32 / 255.0, c.g() as f32 / 255.0, c.b() as f32 / 255.0, c.a() as f32 / 255.0],
-                        );
-                        eng.set_gameobject_name(x_idx, &item.name);
-                    }
-                }
-            }
-        }
 
         // 6. DIÁLOGO MODAL: BUILD & EXPORT (PS3, PSP, VITA, PC)
         let build_action = self.build_dialog.show(ctx, &mut self.engine);

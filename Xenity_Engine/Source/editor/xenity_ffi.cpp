@@ -168,6 +168,13 @@ int XenityFFI::Init(int width, int height)
 	// 5. Disable noisy debug wireframe grid (eliminates moiré/aliasing artifacts)
 	Graphics::SetIsGridRenderingEnabled(false);
 
+	// 5b. Ensure default white texture is loaded synchronously
+	auto defTex = LoadTextureDirect("public_engine_assets/textures/default_texture.png");
+	if (defTex)
+	{
+		AssetManager::defaultTexture = defTex;
+	}
+
 	// 6. Setup Authentic Roblox Skybox
 	auto texSides = LoadTextureDirect("public_engine_assets/textures/roblox/sky_sides.png");
 	auto texUp = LoadTextureDirect("public_engine_assets/textures/roblox/sky_up.png");
@@ -466,6 +473,15 @@ void XenityFFI::SpawnPrimitive(int primitive_type)
 			else if (AssetManager::standardMaterial)
 			{
 				mat->m_shader = AssetManager::standardMaterial->m_shader;
+			}
+			auto whiteTex = LoadTextureDirect("public_engine_assets/textures/default_texture.png");
+			if (whiteTex)
+			{
+				mat->SetTexture(whiteTex);
+			}
+			else if (AssetManager::defaultTexture)
+			{
+				mat->SetTexture(AssetManager::defaultTexture);
 			}
 			mat->SetColor(Color::CreateFromRGBAFloat(0.639f, 0.635f, 0.647f, 1.0f));
 			mat->SetUseLighting(true);
@@ -803,15 +819,36 @@ void XenityFFI::SetGameObjectColor(int index, float r, float g, float b, float a
 				if (!mat || mat == AssetManager::standardMaterial)
 				{
 					auto newMat = Material::MakeMaterial();
-					if (AssetManager::standardMaterial)
+					if (AssetManager::standardShader)
+					{
+						newMat->SetShader(AssetManager::standardShader);
+					}
+					else if (AssetManager::standardMaterial)
 					{
 						newMat->m_shader = AssetManager::standardMaterial->m_shader;
 					}
+					auto whiteTex = LoadTextureDirect("public_engine_assets/textures/default_texture.png");
+					if (whiteTex)
+					{
+						newMat->SetTexture(whiteTex);
+					}
+					else if (AssetManager::defaultTexture)
+					{
+						newMat->SetTexture(AssetManager::defaultTexture);
+					}
+					newMat->SetUseLighting(true);
 					newMat->SetColor(Color::CreateFromRGBAFloat(r, g, b, a));
 					mr->SetMaterial(newMat, 0);
 				}
 				else
 				{
+					if (!mat->GetTexture())
+					{
+						auto whiteTex = LoadTextureDirect("public_engine_assets/textures/default_texture.png");
+						if (whiteTex) mat->SetTexture(whiteTex);
+						else if (AssetManager::defaultTexture) mat->SetTexture(AssetManager::defaultTexture);
+					}
+					mat->SetUseLighting(true);
 					mat->SetColor(Color::CreateFromRGBAFloat(r, g, b, a));
 				}
 			}

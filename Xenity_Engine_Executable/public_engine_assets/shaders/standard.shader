@@ -149,7 +149,12 @@ void main()
 
 	float alpha = textureFrag.w * color.w;
 
-	gl_FragColor = vec4(result * color.xyz, alpha) * v_Color; //Add texture color
+	vec4 vertCol = v_Color;
+	if (vertCol.a == 0.0 || (vertCol.r == 0.0 && vertCol.g == 0.0 && vertCol.b == 0.0 && vertCol.a == 0.0))
+	{
+		vertCol = vec4(1.0, 1.0, 1.0, 1.0);
+	}
+	gl_FragColor = vec4(result * color.xyz, alpha) * vertCol;
 }
 
 //-------------- {psvita}
@@ -255,7 +260,7 @@ vec3 CalculateSpotLight(SpotLight light, vec3 norm, vec3 fragPos, vec3 textureCo
 	float diff = max(dot(norm, lightDir), 0.0); //If the light is behind the face, diff is 0
 	vec3 diffuse = (diff * textureColor) * light.color * 2; //Set the light color and intensity
 
-	float distanceSq = dot(lightVec, lightVec); // distance²
+	float distanceSq = dot(lightVec, lightVec); // distanceï¿½
 	float attenuation = 1.0f / (1 + light.light_data.x * sqrt(distanceSq) + light.light_data.y * distanceSq);
 
 	float theta = dot(lightDir, normalize(-light.direction));
@@ -276,7 +281,7 @@ float3 CalculatePointLight(PointLight light, float3 norm, float3 fragPos, float3
 	float diff = max(dot(norm, lightDir), 0.0f); //If the light is behind the face, diff is 0
 	float3 diffuse = (diff * textureColor) * light.color * 2; //Set the light color and intensity
 
-	float distanceSq = dot(lightVec, lightVec); // distance²
+	float distanceSq = dot(lightVec, lightVec); // distanceï¿½
 	float attenuation = 1.0f / (light.light_data.x + light.light_data.y * sqrt(distanceSq) + light.light_data.z * distanceSq);
 	//float distance = length(light.position - fragPos);
 	//float attenuation = 1.0 / (light.light_data.x + light.light_data.y * distance + light.light_data.z * (distance * distance));
@@ -337,7 +342,12 @@ void main()
 
 	float alpha = textureColor.w * color.w;
 
-	gl_FragColor = vec4(result * color.xyz, alpha) * v_Color; //Add texture color
+	vec4 vertCol = v_Color;
+	if (vertCol.a == 0.0 || (vertCol.r == 0.0 && vertCol.g == 0.0 && vertCol.b == 0.0 && vertCol.a == 0.0))
+	{
+		vertCol = vec4(1.0, 1.0, 1.0, 1.0);
+	}
+	gl_FragColor = vec4(result * color.xyz, alpha) * vertCol;
 }
 
 //-------------- {ps3}
@@ -425,7 +435,7 @@ float3 CalculateSpotLight(SpotLight light, float3 norm, float3 fragPos, float4 t
 	//float distance = length(light.position - fragPos);
 	//float attenuation = 1.0 / (light.constant + light.light_data * distance + light.quadratic * (distance * distance));
 
-	float distanceSq = dot(lightVec, lightVec); // distance²
+	float distanceSq = dot(lightVec, lightVec); // distanceï¿½
 	float attenuation = 1.0 / (1 + light.light_data.x * sqrt(distanceSq) + light.light_data.y * distanceSq);
 
 	float theta = dot(lightDir, normalize(-light.direction));
@@ -443,7 +453,7 @@ float3 CalculatePointLight(PointLight light, float3 norm, float3 fragPos, float4
 	float diff = max(dot(norm, lightDir), 0.0f); //If the light is behind the face, diff is 0
 	float3 diffuse = (diff * textureFrag.xyz) * light.color; //Set the light color and intensity
 
-	float distanceSq = dot(lightVec, lightVec); // distance²
+	float distanceSq = dot(lightVec, lightVec); // distanceï¿½
 	float attenuation = 1.0f / (1 + light.light_data.y * sqrt(distanceSq) + light.light_data.z * distanceSq);
 
 	return diffuse * attenuation;
