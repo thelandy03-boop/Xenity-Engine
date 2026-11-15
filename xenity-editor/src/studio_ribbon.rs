@@ -105,6 +105,7 @@ pub enum RibbonAction {
     PauseSimulation,
     StopSimulation,
     SavePlace,
+    OpenBuildDialog,
     Undo,
     Redo,
 }
@@ -345,6 +346,31 @@ impl StudioRibbonState {
         );
         dev_resp.on_hover_text("Emulación de dispositivo");
 
+        cur_x += 24.0;
+
+        // Botón "Exportar a Consola / PC" 🚀 (Acceso Rápido)
+        let exp_bar_rect = Rect::from_center_size(Pos2::new(cur_x + 8.0, bar_center_y), Vec2::new(22.0, 22.0));
+        let exp_bar_resp = ui.interact(exp_bar_rect, ui.id().with("quick_export_dialog_btn"), Sense::click());
+        if exp_bar_resp.hovered() {
+            ui.painter().rect_filled(exp_bar_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 24));
+        }
+        ui.painter().text(
+            exp_bar_rect.center(),
+            egui::Align2::CENTER_CENTER,
+            "🚀",
+            FontId::proportional(12.0),
+            Color32::WHITE,
+        );
+        if exp_bar_resp.clicked() {
+            action = RibbonAction::OpenBuildDialog;
+        }
+        exp_bar_resp.on_hover_text("Exportar y Compilar para Consola (Ctrl+B)");
+
+        // Atajo de teclado Ctrl+B para abrir Build Settings
+        if ui.input(|i| i.modifiers.command && i.key_pressed(egui::Key::B)) {
+            action = RibbonAction::OpenBuildDialog;
+        }
+
         // --- PESTAÑAS MODERNAS TIPO PÍLDORA (PERFECTAMENTE CENTRADAS Y SIN ERRORES) ---
         let all_tabs = [
             ("Inicio", RibbonTab::Home),
@@ -584,6 +610,13 @@ impl StudioRibbonState {
         }
         if draw_modern_ribbon_button(ui, "Recursos", false, &icons.rib_assetmgr, false) {
             // Asset Manager
+        }
+
+        draw_modern_divider(ui);
+
+        // 6. Exportación y Compilación para Consolas
+        if draw_modern_ribbon_button(ui, "Exportar", false, &icons.action_gamesettings, false) {
+            *action = RibbonAction::OpenBuildDialog;
         }
     }
 

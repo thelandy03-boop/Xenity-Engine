@@ -63,6 +63,9 @@ public:
 	static void SetGameObjectName(int index, const char* name);
 	static void DeleteGameObject(int index);
 
+	// Project Export & Cooking
+	static int CookProject(int platform_id, const char* export_path);
+
 private:
 	static std::shared_ptr<Camera> s_camera;
 	static int s_width;
@@ -93,4 +96,6 @@ extern "C" {
 	XENITY_API void xenity_set_gameobject_color(int index, float r, float g, float b, float a);
 	XENITY_API void xenity_set_gameobject_name(int index, const char* name);
 	XENITY_API void xenity_delete_gameobject(int index);
+
+	XENITY_API int xenity_cook_project(int platform_id, const char* export_path);
 }

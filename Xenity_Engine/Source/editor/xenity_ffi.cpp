@@ -46,6 +46,7 @@
 #include <editor/editor.h>
 #include <editor/ui/menus/basic/scene_menu.h>
 #include <editor/tool_mode.h>
+#include <editor/cooker/cooker.h>
 
 std::shared_ptr<Camera> XenityFFI::s_camera = nullptr;
 int XenityFFI::s_width = 1280;
@@ -758,6 +759,56 @@ void XenityFFI::DeleteGameObject(int index)
 	}
 }
 
+int XenityFFI::CookProject(int platform_id, const char* export_path)
+{
+	if (!export_path)
+		return -1;
+
+	std::string out_path = export_path;
+	if (!out_path.empty() && out_path.back() != '/' && out_path.back() != '\\')
+	{
+		out_path += "/";
+	}
+
+	try
+	{
+		std::filesystem::create_directories(out_path);
+	}
+	catch (...)
+	{
+	}
+
+	CookSettings settings;
+	switch (platform_id)
+	{
+	case 1:
+		settings.platform = Platform::P_PSP;
+		settings.assetPlatform = AssetPlatform::AP_PSP;
+		break;
+	case 2:
+		settings.platform = Platform::P_PsVita;
+		settings.assetPlatform = AssetPlatform::AP_PsVita;
+		break;
+	case 3:
+		settings.platform = Platform::P_PS3;
+		settings.assetPlatform = AssetPlatform::AP_PS3;
+		break;
+	case 0:
+	default:
+		settings.platform = Platform::P_Windows;
+		settings.assetPlatform = AssetPlatform::AP_Standalone;
+		break;
+	}
+	settings.exportPath = out_path;
+	settings.exportShadersOnly = false;
+
+	Cooker::PrepareCooking();
+	bool ok = Cooker::CookAssets(settings);
+	Cooker::ClearPreparedCooking();
+
+	return ok ? 0 : 1;
+}
+
 extern "C" {
 
 XENITY_API int xenity_init_editor(int width, int height)
@@ -853,6 +904,11 @@ XENITY_API void xenity_set_gameobject_name(int index, const char* name)
 XENITY_API void xenity_delete_gameobject(int index)
 {
 	XenityFFI::DeleteGameObject(index);
+}
+
+XENITY_API int xenity_cook_project(int platform_id, const char* export_path)
+{
+	return XenityFFI::CookProject(platform_id, export_path);
 }
 
 }

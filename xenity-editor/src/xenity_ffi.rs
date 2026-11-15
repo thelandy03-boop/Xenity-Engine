@@ -27,6 +27,7 @@ type FnSetGameObjectTransform = unsafe extern "C" fn(i32, f32, f32, f32, f32, f3
 type FnSetGameObjectColor = unsafe extern "C" fn(i32, f32, f32, f32, f32);
 type FnSetGameObjectName = unsafe extern "C" fn(i32, *const std::os::raw::c_char);
 type FnDeleteGameObject = unsafe extern "C" fn(i32);
+type FnCookProject = unsafe extern "C" fn(i32, *const std::os::raw::c_char) -> i32;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -90,6 +91,7 @@ pub struct XenityEngine {
     fn_set_gameobject_color: FnSetGameObjectColor,
     fn_set_gameobject_name: FnSetGameObjectName,
     fn_delete_gameobject: FnDeleteGameObject,
+    pub fn_cook_project: Option<FnCookProject>,
 
     pub is_initialized: bool,
     pub width: u32,
@@ -213,6 +215,14 @@ impl XenityEngine {
                 Err(e) => { error!("Symbol xenity_delete_gameobject: {}", e); return None; }
             };
 
+            let fn_cook_project: Option<FnCookProject> = match lib.get(b"xenity_cook_project") {
+                Ok(s) => Some(*s),
+                Err(e) => {
+                    warn!("Symbol xenity_cook_project not available: {}", e);
+                    None
+                }
+            };
+
             info!("[Xenity FFI] Successfully bound all exported engine symbols including Gizmos & Sync!");
             Some(Self {
                 fn_init: *fn_init,
@@ -236,6 +246,7 @@ impl XenityEngine {
                 fn_set_gameobject_color: *fn_set_gameobject_color,
                 fn_set_gameobject_name: *fn_set_gameobject_name,
                 fn_delete_gameobject: *fn_delete_gameobject,
+                fn_cook_project,
 
                 _lib: lib,
                 is_initialized: false,
@@ -400,6 +411,20 @@ impl XenityEngine {
     pub fn delete_gameobject(&mut self, index: i32) {
         if self.is_initialized {
             unsafe { (self.fn_delete_gameobject)(index) };
+        }
+    }
+
+    pub fn cook_project(&mut self, platform_id: i32, export_path: &str) -> Result<(), String> {
+        if let Some(f) = self.fn_cook_project {
+            let c_path = std::ffi::CString::new(export_path).map_err(|e| e.to_string())?;
+            let res = unsafe { f(platform_id, c_path.as_ptr()) };
+            if res == 0 {
+                Ok(())
+            } else {
+                Err(format!("Cooker falló con código de error {}", res))
+            }
+        } else {
+            Err("Función xenity_cook_project no disponible en la DLL actual.".to_string())
         }
     }
 

@@ -9,6 +9,7 @@ mod studio_toolbox;
 mod studio_output;
 mod hierarchy_window;
 mod properties_window;
+mod build_export_dialog;
 pub mod roblox_icon_bytes;
 pub mod xenity_ffi;
 
@@ -21,6 +22,7 @@ use studio_toolbox::*;
 use studio_output::*;
 use hierarchy_window::{ExplorerItem, RobloxClass, SceneHierarchyState};
 use properties_window::PropertiesWindowState;
+use build_export_dialog::{BuildExportState, BuildDialogAction};
 use xenity_ffi::XenityEngine;
 
 struct RobloxStudioApp {
@@ -37,6 +39,7 @@ struct RobloxStudioApp {
     output: StudioOutputState,
     hierarchy: SceneHierarchyState,
     properties: PropertiesWindowState,
+    build_dialog: BuildExportState,
 
     // Window Visibility Toggles (controlados desde la pestaña VIEW y accesos directos)
     show_toolbox: bool,
@@ -70,6 +73,7 @@ impl Default for RobloxStudioApp {
             output: StudioOutputState::default(),
             hierarchy: SceneHierarchyState::default(),
             properties: PropertiesWindowState::default(),
+            build_dialog: BuildExportState::default(),
 
             // Por defecto, Explorer, Properties, View Selector y Grid están abiertos (layout clásico de Studio)
             show_toolbox: false,
@@ -197,6 +201,9 @@ impl eframe::App for RobloxStudioApp {
                     }
                     RibbonAction::SavePlace => {
                         self.output.add_log(LogType::Info, "Studio", "Place saved to local disk cache successfully.");
+                    }
+                    RibbonAction::OpenBuildDialog => {
+                        self.build_dialog.open();
                     }
                     RibbonAction::Undo => {
                         self.output.add_log(LogType::Info, "History", "Undo action performed.");
@@ -404,6 +411,16 @@ impl eframe::App for RobloxStudioApp {
                     }
                 }
             }
+        }
+
+        // 6. DIÁLOGO MODAL: BUILD & EXPORT (PS3, PSP, VITA, PC)
+        let build_action = self.build_dialog.show(ctx, &mut self.engine);
+        match build_action {
+            BuildDialogAction::OpenOutputLog(msg) => {
+                self.output.add_log(LogType::Info, "Export", msg);
+                self.show_output = true;
+            }
+            BuildDialogAction::None => {}
         }
 
         // Solicitar refresco continuo si la simulación está activa o el motor está inicializado
