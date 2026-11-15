@@ -997,80 +997,84 @@ impl SceneHierarchyState {
         let row_h = 22.0;
 
         let (row_rect, row_resp) = ui.allocate_exact_size(Vec2::new(avail_w, row_h), Sense::click());
+        let is_visible = ui.is_rect_visible(row_rect);
 
-        // Highlight de selección oficial Roblox Studio (azul #0074D9 / #007ACC en toda la fila)
-        if is_selected {
-            ui.painter().rect_filled(row_rect, 0.0, Color32::from_rgb(0, 116, 217));
-        } else if row_resp.hovered() {
-            ui.painter().rect_filled(row_rect, 0.0, Color32::from_rgb(38, 40, 44));
-        }
-
-        let indent_x = row_rect.min.x + (depth as f32 * 14.0) + 4.0;
-
-        // Flecha Foldout ▶ / ▼
-        if has_children {
-            let arrow_pos = Pos2::new(indent_x + 3.0, row_rect.center().y);
-            let arrow_rect = Rect::from_center_size(arrow_pos, Vec2::new(14.0, 14.0));
-            let arrow_resp = ui.interact(arrow_rect, ui.id().with(node.id).with("arrow"), Sense::click());
-            if arrow_resp.clicked() {
-                node.is_expanded = !node.is_expanded;
+        // Virtualización de filas: Solo pintar elementos que estén dentro del área de scroll visible (como Roblox Studio Qt)
+        if is_visible {
+            // Highlight de selección oficial Roblox Studio (azul #0074D9 / #007ACC en toda la fila)
+            if is_selected {
+                ui.painter().rect_filled(row_rect, 0.0, Color32::from_rgb(0, 116, 217));
+            } else if row_resp.hovered() {
+                ui.painter().rect_filled(row_rect, 0.0, Color32::from_rgb(38, 40, 44));
             }
-            let arrow_col = if is_selected {
-                Color32::WHITE
-            } else if arrow_resp.hovered() {
-                Color32::WHITE
-            } else {
-                Color32::from_rgb(180, 180, 185)
-            };
-            icons::foldout_arrow(ui.painter(), arrow_pos, node.is_expanded, arrow_col);
-        }
 
-        // ICONOS CLÁSICOS OFICIALES (Pixel-art retro 100% auténticos de ClassImages.PNG de Roblox Studio)
-        let icon_rect = Rect::from_center_size(Pos2::new(indent_x + 18.0, row_rect.center().y), Vec2::new(16.0, 16.0));
-        if let Some(texs) = textures {
-            let idx = node.class.explorer_image_index();
-            let total_icons = 147.0;
-            let u_min = (idx as f32) / total_icons;
-            let u_max = (idx as f32 + 1.0) / total_icons;
-            let uv = Rect::from_min_max(Pos2::new(u_min, 0.0), Pos2::new(u_max, 1.0));
-            ui.painter().image(
-                texs.class_images.id(),
-                icon_rect,
-                uv,
-                Color32::WHITE,
-            );
-        }
+            let indent_x = row_rect.min.x + (depth as f32 * 14.0) + 4.0;
 
-        // Texto del nombre de la instancia (cero asignación en heap con text directo)
-        let text_color = if is_selected { Color32::WHITE } else { STUDIO_TEXT };
-        let font_id = FontId::proportional(12.0);
-        let text_pos = Pos2::new(indent_x + 30.0, row_rect.center().y);
-        ui.painter().text(text_pos, egui::Align2::LEFT_CENTER, &node.name, font_id, text_color);
-
-        // Botón circular [+] (Insert Object) oficial de Roblox Studio (Add.png)
-        // Se ubica alineado a la derecha de la fila, idéntico a Roblox Studio oficial
-        if row_resp.hovered() || is_selected {
-            let plus_pos = Pos2::new(row_rect.max.x - 14.0, row_rect.center().y);
-            let plus_rect = Rect::from_center_size(plus_pos, Vec2::new(14.0, 14.0));
-            let plus_resp = ui.interact(plus_rect, ui.id().with(node.id).with("plus_insert"), Sense::click());
-
-            if let Some(texs) = textures {
-                let tint = if plus_resp.hovered() {
+            // Flecha Foldout ▶ / ▼
+            if has_children {
+                let arrow_pos = Pos2::new(indent_x + 3.0, row_rect.center().y);
+                let arrow_rect = Rect::from_center_size(arrow_pos, Vec2::new(14.0, 14.0));
+                let arrow_resp = ui.interact(arrow_rect, ui.id().with(node.id).with("arrow"), Sense::click());
+                if arrow_resp.clicked() {
+                    node.is_expanded = !node.is_expanded;
+                }
+                let arrow_col = if is_selected {
                     Color32::WHITE
-                } else if is_selected {
-                    Color32::from_rgb(235, 235, 240)
+                } else if arrow_resp.hovered() {
+                    Color32::WHITE
                 } else {
-                    Color32::from_rgb(200, 200, 205)
+                    Color32::from_rgb(180, 180, 185)
                 };
+                icons::foldout_arrow(ui.painter(), arrow_pos, node.is_expanded, arrow_col);
+            }
+
+            // ICONOS CLÁSICOS OFICIALES (Pixel-art retro 100% auténticos de ClassImages.PNG de Roblox Studio)
+            let icon_rect = Rect::from_center_size(Pos2::new(indent_x + 18.0, row_rect.center().y), Vec2::new(16.0, 16.0));
+            if let Some(texs) = textures {
+                let idx = node.class.explorer_image_index();
+                let total_icons = 147.0;
+                let u_min = (idx as f32) / total_icons;
+                let u_max = (idx as f32 + 1.0) / total_icons;
+                let uv = Rect::from_min_max(Pos2::new(u_min, 0.0), Pos2::new(u_max, 1.0));
                 ui.painter().image(
-                    texs.icon_add.id(),
-                    plus_rect,
-                    Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-                    tint,
+                    texs.class_images.id(),
+                    icon_rect,
+                    uv,
+                    Color32::WHITE,
                 );
             }
 
-            plus_resp.on_hover_text("Insert Object");
+            // Texto del nombre de la instancia (cero asignación en heap con text directo)
+            let text_color = if is_selected { Color32::WHITE } else { STUDIO_TEXT };
+            let font_id = FontId::proportional(12.0);
+            let text_pos = Pos2::new(indent_x + 30.0, row_rect.center().y);
+            ui.painter().text(text_pos, egui::Align2::LEFT_CENTER, &node.name, font_id, text_color);
+
+            // Botón circular [+] (Insert Object) oficial de Roblox Studio (Add.png)
+            // Se ubica alineado a la derecha de la fila, idéntico a Roblox Studio oficial
+            if row_resp.hovered() || is_selected {
+                let plus_pos = Pos2::new(row_rect.max.x - 14.0, row_rect.center().y);
+                let plus_rect = Rect::from_center_size(plus_pos, Vec2::new(14.0, 14.0));
+                let plus_resp = ui.interact(plus_rect, ui.id().with(node.id).with("plus_insert"), Sense::click());
+
+                if let Some(texs) = textures {
+                    let tint = if plus_resp.hovered() {
+                        Color32::WHITE
+                    } else if is_selected {
+                        Color32::from_rgb(235, 235, 240)
+                    } else {
+                        Color32::from_rgb(200, 200, 205)
+                    };
+                    ui.painter().image(
+                        texs.icon_add.id(),
+                        plus_rect,
+                        Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                        tint,
+                    );
+                }
+
+                plus_resp.on_hover_text("Insert Object");
+            }
         }
 
         if row_resp.clicked() {
