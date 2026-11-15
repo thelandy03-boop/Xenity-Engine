@@ -289,12 +289,19 @@ impl RobloxIconTextures {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct ExplorerContextMenu {
+    pub is_service: bool,
+    pub pos: Pos2,
+}
+
 pub struct SceneHierarchyState {
     pub search_query: String,
     pub selected_id: Option<usize>,
     pub items: Vec<ExplorerItem>,
     pub next_id: usize,
     pub textures: Option<RobloxIconTextures>,
+    pub context_menu: Option<ExplorerContextMenu>,
 }
 
 impl Default for SceneHierarchyState {
@@ -304,6 +311,7 @@ impl Default for SceneHierarchyState {
             selected_id: Some(100), // Player seleccionado por defecto (exactamente como en la imagen 1)
             next_id: 200,
             textures: None,
+            context_menu: None,
             items: vec![
                 // 1. Workspace (Expandido por defecto con Camera, Terrain y Player)
                 ExplorerItem {
@@ -827,6 +835,7 @@ impl SceneHierarchyState {
         ui.painter().rect_filled(tree_rect, 0.0, STUDIO_TREE_BG);
 
         let textures_ref = self.textures.as_ref();
+        let mut pending_context_menu = None;
 
         egui::ScrollArea::vertical()
             .id_salt("roblox_explorer_scroll")
@@ -842,10 +851,86 @@ impl SceneHierarchyState {
                         &self.search_query,
                         &mut clicked_object_name,
                         textures_ref,
+                        &mut pending_context_menu,
                     );
                 }
                 self.items = items;
             });
+
+        if pending_context_menu.is_some() {
+            self.context_menu = pending_context_menu;
+        }
+
+        // Renderizar Menú Contextual flotante en la posición exacta del cursor (idéntico a Roblox Studio)
+        if let Some(menu) = self.context_menu.clone() {
+            let mut close_menu = false;
+            let menu_w = 175.0;
+
+            let screen_rect = ui.ctx().screen_rect();
+            let x = menu.pos.x.clamp(screen_rect.min.x + 4.0, screen_rect.max.x - menu_w - 4.0);
+            let y = menu.pos.y.clamp(screen_rect.min.y + 4.0, screen_rect.max.y - 260.0);
+            let menu_pos = Pos2::new(x, y);
+
+            let area_resp = egui::Area::new(ui.id().with("explorer_context_menu_area"))
+                .order(egui::Order::Foreground)
+                .fixed_pos(menu_pos)
+                .show(ui.ctx(), |ui| {
+                    let frame = egui::Frame::popup(ui.style())
+                        .fill(Color32::from_rgb(26, 27, 32))
+                        .stroke(Stroke::new(1.0, Color32::from_rgb(48, 50, 58)))
+                        .rounding(Rounding::same(4.0))
+                        .inner_margin(egui::Margin::symmetric(2.0, 3.0))
+                        .shadow(egui::epaint::Shadow {
+                            offset: Vec2::new(0.0, 2.0),
+                            blur: 8.0,
+                            spread: 0.0,
+                            color: Color32::from_black_alpha(150),
+                        });
+
+                    frame.show(ui, |ui| {
+                        ui.set_width(menu_w);
+
+                        if menu.is_service {
+                            if draw_context_menu_item(ui, "Copiar como", true).clicked() { close_menu = true; }
+                            draw_context_menu_divider(ui);
+                            if draw_context_menu_item(ui, "Renombrar", false).clicked() { close_menu = true; }
+                            if draw_context_menu_item(ui, "Insertar", true).clicked() { close_menu = true; }
+                            if draw_context_menu_item(ui, "Jerarquía", true).clicked() { close_menu = true; }
+                            draw_context_menu_divider(ui);
+                            if draw_context_menu_item(ui, "Guardar / Exportar", true).clicked() { close_menu = true; }
+                            draw_context_menu_divider(ui);
+                            if draw_context_menu_item(ui, "Mostrar Servicios...", false).clicked() { close_menu = true; }
+                            if draw_context_menu_item(ui, "Ocultar Service en Explorador", false).clicked() { close_menu = true; }
+                            draw_context_menu_divider(ui);
+                            if draw_context_menu_item(ui, "Ayuda", false).clicked() { close_menu = true; }
+                        } else {
+                            if draw_context_menu_item(ui, "Cortar", false).clicked() { close_menu = true; }
+                            if draw_context_menu_item(ui, "Copiar", false).clicked() { close_menu = true; }
+                            if draw_context_menu_item(ui, "Pegar en", false).clicked() { close_menu = true; }
+                            if draw_context_menu_item(ui, "Duplicar", false).clicked() { close_menu = true; }
+                            if draw_context_menu_item(ui, "Eliminar", false).clicked() { close_menu = true; }
+                            draw_context_menu_divider(ui);
+                            if draw_context_menu_item(ui, "Renombrar", false).clicked() { close_menu = true; }
+                            if draw_context_menu_item(ui, "Insertar objeto...", true).clicked() { close_menu = true; }
+                            draw_context_menu_divider(ui);
+                            if draw_context_menu_item(ui, "Zoom a selección", false).clicked() { close_menu = true; }
+                        }
+                    });
+                });
+
+            // Cerrar si se hace clic fuera del menú
+            if ui.input(|i| i.pointer.any_pressed()) {
+                if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
+                    if !area_resp.response.rect.contains(pos) && pos.distance(menu.pos) > 5.0 {
+                        close_menu = true;
+                    }
+                }
+            }
+
+            if close_menu {
+                self.context_menu = None;
+            }
+        }
 
         (clicked_object_name, close_requested)
     }
@@ -858,6 +943,7 @@ impl SceneHierarchyState {
         search_filter: &str,
         clicked_name: &mut Option<String>,
         textures: Option<&RobloxIconTextures>,
+        pending_context_menu: &mut Option<ExplorerContextMenu>,
     ) {
         let is_selected = *selected_id == Some(node.id);
         let has_children = !node.children.is_empty();
@@ -949,59 +1035,34 @@ impl SceneHierarchyState {
             plus_resp.on_hover_text("Insert Object");
         }
 
-        if row_resp.clicked() || row_resp.secondary_clicked() {
+        if row_resp.clicked() {
             *selected_id = Some(node.id);
             *clicked_name = Some(node.name.clone());
         }
 
-        // Menú contextual clic derecho (idéntico a Roblox Studio oficial)
-        row_resp.context_menu(|ui| {
-            ui.set_min_width(175.0);
-            if node.class.is_service() {
-                // Menú específico para Servicios de Roblox Studio
-                draw_context_menu_item(ui, "Copiar como", true);
-
-                draw_context_menu_divider(ui);
-
-                draw_context_menu_item(ui, "Renombrar", false);
-                draw_context_menu_item(ui, "Insertar", true);
-                draw_context_menu_item(ui, "Jerarquía", true);
-
-                draw_context_menu_divider(ui);
-
-                draw_context_menu_item(ui, "Guardar / Exportar", true);
-
-                draw_context_menu_divider(ui);
-
-                draw_context_menu_item(ui, "Mostrar Servicios...", false);
-                draw_context_menu_item(ui, "Ocultar Service en Explorador", false);
-
-                draw_context_menu_divider(ui);
-
-                draw_context_menu_item(ui, "Ayuda", false);
-            } else {
-                // Menú para instancias regulares (Part, Model, Script, etc.)
-                draw_context_menu_item(ui, "Cortar", false);
-                draw_context_menu_item(ui, "Copiar", false);
-                draw_context_menu_item(ui, "Pegar en", false);
-                draw_context_menu_item(ui, "Duplicar", false);
-                draw_context_menu_item(ui, "Eliminar", false);
-
-                draw_context_menu_divider(ui);
-
-                draw_context_menu_item(ui, "Renombrar", false);
-                draw_context_menu_item(ui, "Insertar objeto...", true);
-
-                draw_context_menu_divider(ui);
-
-                draw_context_menu_item(ui, "Zoom a selección", false);
-            }
-        });
+        if row_resp.secondary_clicked() {
+            *selected_id = Some(node.id);
+            *clicked_name = Some(node.name.clone());
+            let click_pos = ui.input(|i| i.pointer.interact_pos()).unwrap_or_else(|| Pos2::new(row_rect.min.x + 60.0, row_rect.max.y));
+            *pending_context_menu = Some(ExplorerContextMenu {
+                is_service: node.class.is_service(),
+                pos: click_pos,
+            });
+        }
 
         // Hijos
         if has_children && node.is_expanded {
             for child in &mut node.children {
-                Self::draw_explorer_node(ui, child, depth + 1, selected_id, search_filter, clicked_name, textures);
+                Self::draw_explorer_node(
+                    ui,
+                    child,
+                    depth + 1,
+                    selected_id,
+                    search_filter,
+                    clicked_name,
+                    textures,
+                    pending_context_menu,
+                );
             }
         }
     }
@@ -1035,10 +1096,6 @@ fn draw_context_menu_item(ui: &mut egui::Ui, label: &str, has_submenu: bool) -> 
         let p2 = Pos2::new(arrow_x + 1.5, rect.center().y);
         let p3 = Pos2::new(arrow_x - 3.0, rect.center().y + 3.5);
         ui.painter().add(egui::Shape::convex_polygon(vec![p1, p2, p3], text_col, Stroke::NONE));
-    }
-
-    if resp.clicked() {
-        ui.close_menu();
     }
 
     resp
