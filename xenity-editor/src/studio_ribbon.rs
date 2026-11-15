@@ -59,6 +59,9 @@ pub struct StudioRibbonState {
     pub can_undo: bool,
     pub can_redo: bool,
 
+    // Top classic menu bar: Option<0: Archivo, 1: Edicion, 2: Vista, 3: Plugins, 4: Prueba, 5: Ventana, 6: Ayuda>
+    pub active_top_menu: Option<usize>,
+
     // Plugins
     pub plugins: Vec<PluginRibbonItem>,
 }
@@ -82,6 +85,7 @@ impl Default for StudioRibbonState {
 
             can_undo: true,
             can_redo: false,
+            active_top_menu: None,
 
             plugins: Vec::new(),
         }
@@ -165,6 +169,243 @@ impl StudioRibbonState {
             [Pos2::new(title_rect.min.x, title_rect.max.y), Pos2::new(title_rect.max.x, title_rect.max.y)],
             Stroke::new(1.0, STUDIO_DARK_BORDER),
         );
+
+        // =====================================================================
+        // 1.5. BARRA DE MENÚ CLÁSICA (ARCHIVO, EDICIÓN, VISTA, PLUGINS, PRUEBA, VENTANA, AYUDA)
+        // =====================================================================
+        let menu_bar_h = 23.0;
+        let (menu_bar_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), menu_bar_h), Sense::hover());
+        ui.painter().rect_filled(menu_bar_rect, 0.0, Color32::from_rgb(25, 27, 33));
+
+        let top_menu_names = ["Archivo", "Edición", "Vista", "Plugins", "Prueba", "Ventana", "Ayuda"];
+        let mut menu_cur_x = menu_bar_rect.min.x + 6.0;
+        let font_menu = FontId::proportional(11.2);
+        let mut opened_menu_pos: Option<(usize, Pos2)> = None;
+
+        for (idx, &name) in top_menu_names.iter().enumerate() {
+            let galley = ui.painter().layout_no_wrap(name.to_string(), font_menu.clone(), Color32::WHITE);
+            let item_w = galley.size().x + 14.0;
+            let item_rect = Rect::from_min_size(
+                Pos2::new(menu_cur_x, menu_bar_rect.min.y + 1.0),
+                Vec2::new(item_w, menu_bar_h - 2.0),
+            );
+            let item_resp = ui.interact(item_rect, ui.id().with(("top_menu_btn", idx)), Sense::click());
+
+            let is_open = self.active_top_menu == Some(idx);
+
+            let bg = if is_open {
+                Color32::from_rgb(42, 47, 58)
+            } else if item_resp.hovered() {
+                Color32::from_rgb(38, 42, 52)
+            } else if idx == 0 {
+                Color32::from_rgb(34, 38, 48)
+            } else {
+                Color32::TRANSPARENT
+            };
+
+            let stroke = if is_open {
+                Stroke::new(1.0, Color32::from_rgb(0, 162, 255))
+            } else if idx == 0 {
+                Stroke::new(1.0, Color32::from_rgb(46, 52, 66))
+            } else {
+                Stroke::NONE
+            };
+
+            ui.painter().rect(item_rect, Rounding::same(3.0), bg, stroke);
+
+            let text_color = if is_open || idx == 0 {
+                Color32::from_rgb(230, 235, 245)
+            } else if item_resp.hovered() {
+                Color32::WHITE
+            } else {
+                Color32::from_rgb(170, 173, 185)
+            };
+
+            ui.painter().text(
+                item_rect.center(),
+                egui::Align2::CENTER_CENTER,
+                name,
+                font_menu.clone(),
+                text_color,
+            );
+
+            if item_resp.clicked() {
+                self.active_top_menu = if is_open { None } else { Some(idx) };
+            }
+
+            if self.active_top_menu.is_some() && item_resp.hovered() && !is_open {
+                self.active_top_menu = Some(idx);
+            }
+
+            if self.active_top_menu == Some(idx) {
+                opened_menu_pos = Some((idx, Pos2::new(item_rect.min.x, item_rect.max.y + 1.0)));
+            }
+
+            menu_cur_x += item_w + 3.0;
+        }
+
+        ui.painter().line_segment(
+            [Pos2::new(menu_bar_rect.min.x, menu_bar_rect.max.y), Pos2::new(menu_bar_rect.max.x, menu_bar_rect.max.y)],
+            Stroke::new(1.0, Color32::from_rgb(38, 40, 48)),
+        );
+
+        // Desplegables de la barra de menú clásica
+        if let Some((menu_idx, pos)) = opened_menu_pos {
+            egui::Area::new(ui.id().with("active_top_menu_popup"))
+                .fixed_pos(pos)
+                .order(egui::Order::Foreground)
+                .show(ui.ctx(), |ui| {
+                    let mut close_menu = false;
+
+                    egui::Frame::popup(ui.style())
+                        .fill(Color32::from_rgb(26, 28, 34))
+                        .stroke(Stroke::new(1.0, Color32::from_rgb(52, 56, 68)))
+                        .rounding(Rounding::same(4.0))
+                        .inner_margin(egui::Margin::symmetric(4.0, 4.0))
+                        .show(ui, |ui| {
+                            ui.set_min_width(220.0);
+
+                            match menu_idx {
+                                // 0: ARCHIVO
+                                0 => {
+                                    if draw_menu_entry(ui, "Nuevo lugar", "Ctrl+N") {
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Abrir desde archivo...", "Ctrl+O") {
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Guardar en archivo...", "Ctrl+S") {
+                                        action = RibbonAction::SavePlace;
+                                        close_menu = true;
+                                    }
+                                    ui.separator();
+                                    // OPCIÓN CLAVE DESTACADA: EXPORTAR PARA CONSOLA / PC
+                                    if draw_menu_entry(ui, "🎮 Exportar a Consola (Build Settings)...", "Ctrl+B") {
+                                        action = RibbonAction::OpenBuildDialog;
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Configuración del juego...", "") {
+                                        action = RibbonAction::OpenBuildDialog;
+                                        close_menu = true;
+                                    }
+                                    ui.separator();
+                                    if draw_menu_entry(ui, "Publicar en Roblox...", "Ctrl+P") {
+                                        close_menu = true;
+                                    }
+                                    ui.separator();
+                                    if draw_menu_entry(ui, "Cerrar", "Alt+F4") {
+                                        close_menu = true;
+                                    }
+                                }
+                                // 1: EDICIÓN
+                                1 => {
+                                    if draw_menu_entry(ui, "Deshacer", "Ctrl+Z") {
+                                        action = RibbonAction::Undo;
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Rehacer", "Ctrl+Y") {
+                                        action = RibbonAction::Redo;
+                                        close_menu = true;
+                                    }
+                                    ui.separator();
+                                    if draw_menu_entry(ui, "Seleccionar", "") {
+                                        action = RibbonAction::ChangeTool(StudioTool::Select);
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Mover", "") {
+                                        action = RibbonAction::ChangeTool(StudioTool::Move);
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Escalar", "") {
+                                        action = RibbonAction::ChangeTool(StudioTool::Scale);
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Girar", "") {
+                                        action = RibbonAction::ChangeTool(StudioTool::Rotate);
+                                        close_menu = true;
+                                    }
+                                }
+                                // 2: VISTA
+                                2 => {
+                                    let exp_txt = if explorer_visible { "✔ Explorador" } else { "   Explorador" };
+                                    if draw_menu_entry(ui, exp_txt, "") {
+                                        action = RibbonAction::ToggleExplorer;
+                                        close_menu = true;
+                                    }
+                                    let prop_txt = if properties_visible { "✔ Propiedades" } else { "   Propiedades" };
+                                    if draw_menu_entry(ui, prop_txt, "") {
+                                        action = RibbonAction::ToggleProperties;
+                                        close_menu = true;
+                                    }
+                                    let out_txt = if output_visible { "✔ Ventana de salida" } else { "   Ventana de salida" };
+                                    if draw_menu_entry(ui, out_txt, "") {
+                                        action = RibbonAction::ToggleOutput;
+                                        close_menu = true;
+                                    }
+                                    let tb_txt = if toolbox_visible { "✔ Caja de herramientas" } else { "   Caja de herramientas" };
+                                    if draw_menu_entry(ui, tb_txt, "") {
+                                        action = RibbonAction::ToggleToolbox;
+                                        close_menu = true;
+                                    }
+                                    let cmd_txt = if command_bar_visible { "✔ Barra de comandos" } else { "   Barra de comandos" };
+                                    if draw_menu_entry(ui, cmd_txt, "") {
+                                        action = RibbonAction::ToggleCommandBar;
+                                        close_menu = true;
+                                    }
+                                    let grid_txt = if grid_visible { "✔ Cuadrícula" } else { "   Cuadrícula" };
+                                    if draw_menu_entry(ui, grid_txt, "") {
+                                        action = RibbonAction::ToggleGrid;
+                                        close_menu = true;
+                                    }
+                                }
+                                // 3: PLUGINS
+                                3 => {
+                                    if draw_menu_entry(ui, "Administrar plugins...", "") {
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Buscar plugins en Marketplace...", "") {
+                                        close_menu = true;
+                                    }
+                                }
+                                // 4: PRUEBA
+                                4 => {
+                                    if draw_menu_entry(ui, "Probar", "F5") {
+                                        action = RibbonAction::PlaySimulation;
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Pausar", "") {
+                                        action = RibbonAction::PauseSimulation;
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Detener", "Shift+F5") {
+                                        action = RibbonAction::StopSimulation;
+                                        close_menu = true;
+                                    }
+                                }
+                                // 5: VENTANA
+                                5 => {
+                                    if draw_menu_entry(ui, "Restablecer diseño predeterminado", "") {
+                                        close_menu = true;
+                                    }
+                                }
+                                // 6: AYUDA
+                                6 => {
+                                    if draw_menu_entry(ui, "Documentación de Xenity Engine", "") {
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Acerca de Xenity Roblox Studio", "") {
+                                        close_menu = true;
+                                    }
+                                }
+                                _ => {}
+                            }
+                        });
+
+                    if close_menu || ui.input(|i| i.pointer.any_click() && !ui.available_rect_before_wrap().contains(i.pointer.interact_pos().unwrap_or(Pos2::ZERO))) {
+                        self.active_top_menu = None;
+                    }
+                });
+        }
 
         // =====================================================================
         // 2. BARRA SUPERIOR MODERNA (PROBAR + CONTROLES + PESTAÑAS PÍLDORA)
@@ -1360,4 +1601,37 @@ fn draw_roblox_studio_logo(painter: &egui::Painter, center: Pos2, size: f32) {
         STUDIO_TOP_BG,
         Stroke::NONE,
     ));
+}
+
+fn draw_menu_entry(ui: &mut egui::Ui, text: &str, shortcut: &str) -> bool {
+    let font = FontId::proportional(11.5);
+    let h = 24.0;
+    let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), h), Sense::click());
+
+    if resp.hovered() {
+        ui.painter().rect_filled(rect, Rounding::same(3.0), Color32::from_rgb(0, 120, 215));
+    }
+
+    let text_col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(220, 222, 228) };
+    let shortcut_col = if resp.hovered() { Color32::from_rgb(210, 235, 255) } else { Color32::from_rgb(140, 143, 155) };
+
+    ui.painter().text(
+        Pos2::new(rect.min.x + 10.0, rect.center().y),
+        egui::Align2::LEFT_CENTER,
+        text,
+        font.clone(),
+        text_col,
+    );
+
+    if !shortcut.is_empty() {
+        ui.painter().text(
+            Pos2::new(rect.max.x - 10.0, rect.center().y),
+            egui::Align2::RIGHT_CENTER,
+            shortcut,
+            FontId::proportional(10.5),
+            shortcut_col,
+        );
+    }
+
+    resp.clicked()
 }
