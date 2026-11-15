@@ -216,34 +216,117 @@ impl StudioRibbonState {
                             ui.set_min_width(220.0);
 
                             match menu_idx {
-                                // 0: ARCHIVO
+                                // 0: ARCHIVO (Estructura oficial de Roblox Studio)
                                 0 => {
-                                    if draw_menu_entry(ui, "Nuevo lugar", "Ctrl+N") {
+                                    ui.set_min_width(290.0);
+
+                                    // Grupo 1: Archivo y aperturas
+                                    if draw_menu_entry(ui, "Nuevo", "Control+N") {
                                         close_menu = true;
                                     }
-                                    if draw_menu_entry(ui, "Abrir desde archivo...", "Ctrl+O") {
+                                    if draw_menu_entry(ui, "Abrir de un archivo", "Control+O") {
                                         close_menu = true;
                                     }
-                                    if draw_menu_entry(ui, "Guardar en archivo...", "Ctrl+S") {
+                                    if draw_menu_entry(ui, "Abrir de Roblox", "Control+Mayúsculas+O") {
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry_ext(ui, "Reciente", "", false, true) {
+                                        close_menu = true;
+                                    }
+                                    draw_menu_sep(ui);
+
+                                    // Grupo 2: Cerrar
+                                    if draw_menu_entry(ui, "Cerrar lugar", "Control+F4") {
+                                        close_menu = true;
+                                    }
+                                    draw_menu_sep(ui);
+
+                                    // Grupo 3: Importar y Exportar
+                                    if draw_menu_entry(ui, "Importar", "Control+M") {
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Importar modelo Roblox", "") {
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Exportar como .obj", "") {
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Exportar como glTF", "") {
+                                        close_menu = true;
+                                    }
+                                    // OPCIÓN CLAVE DESTACADA: EXPORTAR PARA CONSOLA / PC
+                                    if draw_menu_entry(ui, "🎮 Exportar a Consola (Build Settings)...", "Control+B") {
+                                        action = RibbonAction::OpenBuildDialog;
+                                        close_menu = true;
+                                    }
+                                    draw_menu_sep(ui);
+
+                                    // Grupo 4: Guardar
+                                    if draw_menu_entry(ui, "Guardar en un archivo", "") {
                                         action = RibbonAction::SavePlace;
                                         close_menu = true;
                                     }
-                                    ui.separator();
-                                    // OPCIÓN CLAVE DESTACADA: EXPORTAR PARA CONSOLA / PC
-                                    if draw_menu_entry(ui, "🎮 Exportar a Consola (Build Settings)...", "Ctrl+B") {
+                                    if draw_menu_entry(ui, "Guardar en un archivo como", "Control+Mayúsculas+S") {
+                                        action = RibbonAction::SavePlace;
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Guardar en Roblox", "") {
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Guardar en Roblox como", "") {
+                                        close_menu = true;
+                                    }
+                                    draw_menu_sep(ui);
+
+                                    // Grupo 5: Publicar
+                                    if draw_menu_entry(ui, "Publicar", "Alt+P") {
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Publicar como", "") {
+                                        close_menu = true;
+                                    }
+                                    draw_menu_entry_ext(ui, "Administrar audiencia", "", true, false);
+                                    draw_menu_sep(ui);
+
+                                    // Grupo 6: Configuración de experiencia
+                                    if draw_menu_entry(ui, "Configuración de experiencia", "") {
                                         action = RibbonAction::OpenBuildDialog;
                                         close_menu = true;
                                     }
-                                    if draw_menu_entry(ui, "Configuración del juego...", "") {
-                                        action = RibbonAction::OpenBuildDialog;
+                                    if draw_menu_entry(ui, "Configuración del avatar", "") {
                                         close_menu = true;
                                     }
-                                    ui.separator();
-                                    if draw_menu_entry(ui, "Publicar en Roblox...", "Ctrl+P") {
+                                    if draw_menu_entry(ui, "Abrir configuraciones", "") {
                                         close_menu = true;
                                     }
-                                    ui.separator();
-                                    if draw_menu_entry(ui, "Cerrar", "Alt+F4") {
+                                    draw_menu_sep(ui);
+
+                                    // Grupo 7: Configuración de Studio
+                                    if draw_menu_entry(ui, "Configuración de Studio", "Alt+S") {
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Funciones beta", "") {
+                                        close_menu = true;
+                                    }
+                                    if draw_menu_entry(ui, "Personalizar atajos", "") {
+                                        close_menu = true;
+                                    }
+                                    draw_menu_sep(ui);
+
+                                    // Grupo 8: Guardados automáticos
+                                    if draw_menu_entry(ui, "Abrir guardados automáticos", "") {
+                                        close_menu = true;
+                                    }
+                                    draw_menu_sep(ui);
+
+                                    // Grupo 9: Sobre Roblox Studio
+                                    if draw_menu_entry(ui, "Sobre Roblox Studio", "") {
+                                        close_menu = true;
+                                    }
+                                    draw_menu_sep(ui);
+
+                                    // Grupo 10: Salir
+                                    if draw_menu_entry(ui, "Salir", "") {
                                         close_menu = true;
                                     }
                                 }
@@ -1543,29 +1626,60 @@ fn draw_roblox_studio_logo(painter: &egui::Painter, center: Pos2, size: f32) {
     ));
 }
 
-fn draw_menu_entry(ui: &mut egui::Ui, text: &str, shortcut: &str) -> bool {
+fn draw_menu_sep(ui: &mut egui::Ui) {
+    ui.add_space(2.0);
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0), Sense::hover());
+    ui.painter().line_segment(
+        [Pos2::new(rect.min.x + 6.0, rect.center().y), Pos2::new(rect.max.x - 6.0, rect.center().y)],
+        Stroke::new(1.0, Color32::from_rgb(44, 46, 54)),
+    );
+    ui.add_space(2.0);
+}
+
+fn draw_menu_entry_ext(ui: &mut egui::Ui, text: &str, shortcut: &str, disabled: bool, has_submenu: bool) -> bool {
     let font = FontId::proportional(11.5);
-    let h = 24.0;
+    let h = 23.0;
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), h), Sense::click());
 
-    if resp.hovered() {
-        ui.painter().rect_filled(rect, Rounding::same(3.0), Color32::from_rgb(38, 38, 44));
+    if !disabled && resp.hovered() {
+        ui.painter().rect_filled(rect, Rounding::same(3.0), Color32::from_rgb(38, 40, 48));
     }
 
-    let text_col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(215, 215, 215) };
-    let shortcut_col = if resp.hovered() { Color32::from_rgb(180, 180, 180) } else { Color32::from_rgb(130, 130, 130) };
+    let text_col = if disabled {
+        Color32::from_rgb(105, 108, 120)
+    } else if resp.hovered() {
+        Color32::WHITE
+    } else {
+        Color32::from_rgb(220, 222, 230)
+    };
+
+    let shortcut_col = if disabled {
+        Color32::from_rgb(85, 88, 100)
+    } else if resp.hovered() {
+        Color32::from_rgb(180, 185, 195)
+    } else {
+        Color32::from_rgb(135, 138, 150)
+    };
 
     ui.painter().text(
-        Pos2::new(rect.min.x + 10.0, rect.center().y),
+        Pos2::new(rect.min.x + 12.0, rect.center().y),
         egui::Align2::LEFT_CENTER,
         text,
         font.clone(),
         text_col,
     );
 
-    if !shortcut.is_empty() {
+    if has_submenu {
         ui.painter().text(
-            Pos2::new(rect.max.x - 10.0, rect.center().y),
+            Pos2::new(rect.max.x - 12.0, rect.center().y),
+            egui::Align2::RIGHT_CENTER,
+            "▶",
+            FontId::proportional(8.5),
+            shortcut_col,
+        );
+    } else if !shortcut.is_empty() {
+        ui.painter().text(
+            Pos2::new(rect.max.x - 12.0, rect.center().y),
             egui::Align2::RIGHT_CENTER,
             shortcut,
             FontId::proportional(10.5),
@@ -1573,5 +1687,13 @@ fn draw_menu_entry(ui: &mut egui::Ui, text: &str, shortcut: &str) -> bool {
         );
     }
 
-    resp.clicked()
+    if disabled {
+        false
+    } else {
+        resp.clicked()
+    }
+}
+
+fn draw_menu_entry(ui: &mut egui::Ui, text: &str, shortcut: &str) -> bool {
+    draw_menu_entry_ext(ui, text, shortcut, false, false)
 }
