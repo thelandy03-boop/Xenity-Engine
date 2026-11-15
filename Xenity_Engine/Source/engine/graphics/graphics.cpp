@@ -1042,9 +1042,8 @@ namespace
 	{
 		if (vertices.empty()) return;
 
-		Engine::GetRenderer().UseShaderProgram(0);
-		Graphics::s_currentShader = nullptr;
-
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glDepthMask(GL_TRUE);
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
 		glDisable(GL_CULL_FACE);
@@ -1055,7 +1054,12 @@ namespace
 		glDisable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, 0);
 
+		Engine::GetRenderer().UseShaderProgram(0);
+		Graphics::s_currentShader = nullptr;
+
 		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 		glEnableClientState(GL_VERTEX_ARRAY);
 		glDisableClientState(GL_COLOR_ARRAY);
@@ -1102,8 +1106,10 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 		return;
 	}
 
-	// Limpiar búfer de profundidad para que los gizmos se dibujen en primer plano
+	// Asegurar que depth write está activo para que el Clear del Depth buffer funcione siempre
+	glDepthMask(GL_TRUE);
 	Engine::GetRenderer().Clear(ClearMode::Depth);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// Calcular el centro geométrico exacto de la pieza en el espacio de renderizado de OpenGL de Xenity
 	const std::shared_ptr<MeshRenderer> mr = selectedGo->GetComponent<MeshRenderer>();
@@ -1219,5 +1225,8 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 			}
 		}
 	}
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDepthMask(GL_TRUE);
 }
 #endif // #if defined(EDITOR)

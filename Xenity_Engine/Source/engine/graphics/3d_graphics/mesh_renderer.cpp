@@ -47,58 +47,9 @@ bool IsSphereInFrustum(const Frustum& frustum, const Sphere& sphere)
 
 void MeshRenderer::OnDrawGizmosSelected()
 {
-	if (!m_meshData)
-	{
-		return;
-	}
-
-	const std::shared_ptr<Texture> lastUnlitTexture = AssetManager::unlitMaterial->GetTexture();
-	AssetManager::unlitMaterial->SetTexture(AssetManager::defaultTexture);
-	AssetManager::unlitMaterial->SetColor(Color::CreateFromRGBA(93, 126, 179, 255));
-
-	RenderingSettings renderSettings = RenderingSettings();
-	renderSettings.invertFaces = false;
-	renderSettings.useDepth = true;
-	renderSettings.useTexture = false;
-	renderSettings.useLighting = false;
-	renderSettings.renderingMode = MaterialRenderingMode::Transparent;
-	renderSettings.wireframe = true;
-
-	const uint32_t subMeshCount = m_meshData->m_subMeshCount;
-	for (uint32_t i = 0; i < subMeshCount; i++)
-	{
-		if (m_materials[i])
-		{
-			MeshManager::DrawMesh(*GetTransformRaw(), *m_meshData->m_subMeshes[i], *AssetManager::unlitMaterial, renderSettings);
-		}
-	}
-
-	AssetManager::unlitMaterial->SetColor(Color::CreateFromRGBA(255, 255, 255, 255));
-	AssetManager::unlitMaterial->SetTexture(lastUnlitTexture);
+	// En Roblox Studio no se dibuja la malla en wireframe sobre los objetos seleccionados.
+	// La caja delimitadora (bounding box) azul/cyan ya se dibuja en DrawSelectedItemBoundingBox.
 	return;
-
-#if defined(EDITOR)
-	Gizmo::DrawSphere(Vector3(m_boundingSphere.position), Quaternion::Identity(), m_boundingSphere.radius);
-
-	const Color meshLineColor = Color::CreateFromRGBAFloat(0, 0, 1, 1);
-
-	Gizmo::SetColor(meshLineColor);
-
-	const Vector3& tPos = GetTransformRaw()->GetPosition();
-	/*for (const auto& chunk : m_worldChunkPositions)
-	{
-		Gizmo::DrawLine(tPos, chunk + Vector3(WORLD_CHUNK_HALF_SIZE));
-	}*/
-
-	const Color lightLineColor = Color::CreateFromRGBAFloat(1, 0, 0, 1);
-
-	Gizmo::SetColor(lightLineColor);
-
-	for (auto& light : m_affectedByLights)
-	{
-		Gizmo::DrawLine(tPos, light->GetTransformRaw()->GetPosition());
-	}
-#endif
 }
 
 void MeshRenderer::SetUseAdvancedLighting(bool value)

@@ -772,6 +772,7 @@ void RendererOpengl::Clear(ClearMode mode)
 
 	if (mode == ClearMode::Color_Depth)
 	{
+		glDepthMask(GL_TRUE);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 	else if (mode == ClearMode::Color)
@@ -780,6 +781,7 @@ void RendererOpengl::Clear(ClearMode mode)
 	}
 	else if (mode == ClearMode::Depth)
 	{
+		glDepthMask(GL_TRUE);
 		glClear(GL_DEPTH_BUFFER_BIT/*| GL_STENCIL_BUFFER_BIT*/);
 	}
 }
