@@ -31,6 +31,14 @@ pub enum PartShape {
     Cylinder,
 }
 
+#[derive(Clone, Debug)]
+pub struct PluginRibbonItem {
+    pub name: String,
+    pub section: usize,
+    pub icon_color: Color32,
+    pub icon_text: String,
+}
+
 pub struct StudioRibbonState {
     pub current_tab: RibbonTab,
     pub current_tool: StudioTool,
@@ -50,6 +58,9 @@ pub struct StudioRibbonState {
     // Fast quick-access
     pub can_undo: bool,
     pub can_redo: bool,
+
+    // Plugins
+    pub plugins: Vec<PluginRibbonItem>,
 }
 
 impl Default for StudioRibbonState {
@@ -71,6 +82,8 @@ impl Default for StudioRibbonState {
 
             can_undo: true,
             can_redo: false,
+
+            plugins: Vec::new(),
         }
     }
 }
@@ -385,21 +398,18 @@ impl StudioRibbonState {
             ("Sin título", RibbonTab::Untitled),
         ];
 
-        let tab_gap = 18.0;
-        let font_id = FontId::proportional(12.0);
+        let tab_gap = 14.0;
+        let font_id = FontId::proportional(11.8);
 
-        // Precalcular anchos dinámicos para centrado horizontal perfecto
+        // Precalcular anchos uniformes (cada pestaña tiene su ancho de píldora completo y constante)
         let mut tab_widths: Vec<f32> = Vec::with_capacity(all_tabs.len());
         let mut total_tabs_w = 0.0;
 
-        for (label, tab) in &all_tabs {
+        for (label, _) in &all_tabs {
             let galley = ui.painter().layout_no_wrap(label.to_string(), font_id.clone(), Color32::WHITE);
             let text_w = galley.size().x;
-            let w = if self.current_tab == *tab {
-                text_w + 22.0
-            } else {
-                text_w + 6.0
-            };
+            // Ancho constante idéntico activa o inactiva: evita compactación de texto y saltos al hacer clic
+            let w = text_w + 18.0;
             tab_widths.push(w);
             total_tabs_w += w + tab_gap;
         }
@@ -418,12 +428,12 @@ impl StudioRibbonState {
             if is_active {
                 // Píldora redondeada activa oficial
                 ui.painter().rect_filled(rect, Rounding::same(4.0), Color32::from_rgb(52, 54, 60));
-                ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, *label, FontId::proportional(11.5), Color32::WHITE);
+                ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, *label, font_id.clone(), Color32::WHITE);
             } else {
                 if resp.hovered() {
                     ui.painter().rect_filled(rect, Rounding::same(4.0), Color32::from_rgba_unmultiplied(255, 255, 255, 12));
                 }
-                let col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(150, 153, 162) };
+                let col = if resp.hovered() { Color32::WHITE } else { Color32::from_rgb(160, 163, 172) };
                 ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, *label, font_id.clone(), col);
             }
 
@@ -982,16 +992,74 @@ impl StudioRibbonState {
         });
     }
 
-    // --- PLUGINS RIBBON CON ICONOS REALES ---
-    fn draw_plugins_ribbon(&mut self, ui: &mut egui::Ui, icons: &StudioIcons) {
-        ui.add_space(8.0);
-        ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                draw_real_icon_button(ui, "Manage Plugins", false, &icons.win_plugins);
-            });
-            draw_group_footer(ui, "Plugin Tools");
-        });
+    // --- PLUGINS RIBBON (Vacía por defecto idéntico a Imagen 2) ---
+    fn draw_plugins_ribbon(&mut self, ui: &mut egui::Ui, _icons: &StudioIcons) {
+        if self.plugins.is_empty() {
+            // Vacía por defecto cuando no hay plugins añadidos (Imagen 2 de referencia)
+            return;
+        }
+
+        ui.add_space(4.0);
+        let mut last_sec = 0;
+        for (idx, p) in self.plugins.iter().enumerate() {
+            if idx > 0 && p.section != last_sec {
+                draw_modern_divider(ui);
+            }
+            last_sec = p.section;
+            draw_modern_plugin_button(ui, &p.name, p.icon_color, &p.icon_text);
+        }
     }
+}
+
+// =========================================================================
+// RENDERIZADO DE BOTONES DE PLUGINS MODERNOS DE ROBLOX STUDIO
+// =========================================================================
+
+fn draw_modern_plugin_button(
+    ui: &mut egui::Ui,
+    label: &str,
+    icon_bg: Color32,
+    icon_text: &str,
+) -> bool {
+    let font_id = FontId::proportional(10.5);
+    let galley = ui.painter().layout_no_wrap(label.to_string(), font_id.clone(), Color32::WHITE);
+    let text_w = galley.size().x;
+
+    let btn_w = (text_w + 14.0).max(42.0);
+    let btn_h = 52.0;
+    let (rect, resp) = ui.allocate_exact_size(Vec2::new(btn_w, btn_h), Sense::click());
+
+    let bg = if resp.is_pointer_button_down_on() {
+        Color32::from_rgba_unmultiplied(255, 255, 255, 25)
+    } else if resp.hovered() {
+        Color32::from_rgba_unmultiplied(255, 255, 255, 12)
+    } else {
+        Color32::TRANSPARENT
+    };
+    ui.painter().rect_filled(rect, Rounding::same(4.0), bg);
+
+    // Icono centrado (22x22 px) con fondo distintivo del plugin
+    let icon_center = Pos2::new(rect.center().x, rect.min.y + 16.0);
+    let icon_rect = Rect::from_center_size(icon_center, Vec2::new(22.0, 22.0));
+    ui.painter().rect_filled(icon_rect, Rounding::same(4.0), icon_bg);
+    ui.painter().text(
+        icon_center,
+        egui::Align2::CENTER_CENTER,
+        icon_text,
+        FontId::proportional(12.0),
+        Color32::WHITE,
+    );
+
+    // Texto de la herramienta debajo
+    let text_pos = Pos2::new(rect.center().x, rect.min.y + 36.0);
+    let text_col = if resp.hovered() {
+        Color32::WHITE
+    } else {
+        Color32::from_rgb(204, 207, 216)
+    };
+    ui.painter().text(text_pos, egui::Align2::CENTER_CENTER, label, font_id, text_col);
+
+    resp.clicked()
 }
 
 // =========================================================================
