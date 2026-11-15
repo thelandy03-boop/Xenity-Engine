@@ -10,6 +10,7 @@ mod studio_output;
 mod hierarchy_window;
 mod properties_window;
 pub mod roblox_icon_bytes;
+pub mod xenity_ffi;
 
 use eframe::egui::{self, Color32, CursorIcon, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
 use studio_style::*;
@@ -20,10 +21,14 @@ use studio_toolbox::*;
 use studio_output::*;
 use hierarchy_window::{ExplorerItem, RobloxClass, SceneHierarchyState};
 use properties_window::PropertiesWindowState;
+use xenity_ffi::XenityEngine;
 
 struct RobloxStudioApp {
     // Studio Icons & Assets
     icons: Option<StudioIcons>,
+
+    // Embedded C++ Engine (Xenity_Editor.dll)
+    engine: Option<XenityEngine>,
 
     // Studio Windows & Components
     ribbon: StudioRibbonState,
@@ -55,8 +60,10 @@ struct RobloxStudioApp {
 
 impl Default for RobloxStudioApp {
     fn default() -> Self {
+        let engine = XenityEngine::try_load();
         Self {
             icons: None,
+            engine,
             ribbon: StudioRibbonState::default(),
             viewport: StudioViewportState::default(),
             toolbox: StudioToolboxState::default(),
@@ -117,27 +124,40 @@ impl eframe::App for RobloxStudioApp {
                     RibbonAction::PlaySimulation => {
                         self.is_playing = true;
                         self.is_paused = false;
-                        self.output.add_log(LogType::Info, "Server", "Simulation started (Player joined).");
+                        if let Some(e) = &mut self.engine {
+                            e.set_sim_state(1);
+                        }
+                        self.output.add_log(LogType::Info, "Server", "Simulation started (Player joined, Xenity physics active).");
                     }
                     RibbonAction::PauseSimulation => {
                         self.is_paused = !self.is_paused;
+                        let sim_state = if self.is_paused { 2 } else { 1 };
+                        if let Some(e) = &mut self.engine {
+                            e.set_sim_state(sim_state);
+                        }
                         let msg = if self.is_paused { "Simulation paused." } else { "Simulation resumed." };
                         self.output.add_log(LogType::Info, "Server", msg);
                     }
                     RibbonAction::StopSimulation => {
                         self.is_playing = false;
                         self.is_paused = false;
+                        if let Some(e) = &mut self.engine {
+                            e.set_sim_state(0);
+                        }
                         self.output.add_log(LogType::Info, "Server", "Simulation stopped.");
                     }
                     RibbonAction::InsertPart(shape) => {
-                        let name = match shape {
-                            PartShape::Block => "Part",
-                            PartShape::Sphere => "SpherePart",
-                            PartShape::Wedge => "WedgePart",
-                            PartShape::Cylinder => "CylinderPart",
+                        let (name, prim_id) = match shape {
+                            PartShape::Block => ("Part", 0),
+                            PartShape::Sphere => ("SpherePart", 1),
+                            PartShape::Cylinder => ("CylinderPart", 2),
+                            PartShape::Wedge => ("WedgePart", 4),
                         };
+                        if let Some(e) = &mut self.engine {
+                            e.spawn_primitive(prim_id);
+                        }
                         let id = self.hierarchy.insert_child_into_selected_or_workspace(RobloxClass::Part, name.to_string());
-                        self.output.add_log(LogType::Info, "Workspace", format!("Created {} (id: {})", name, id));
+                        self.output.add_log(LogType::Info, "Workspace", format!("Created {} in Xenity Engine (id: {})", name, id));
                     }
                     RibbonAction::ToggleToolbox => {
                         self.show_toolbox = !self.show_toolbox;
@@ -347,8 +367,14 @@ impl eframe::App for RobloxStudioApp {
                     self.is_playing,
                     self.show_grid,
                     self.show_view_selector,
+                    &mut self.engine,
                 );
             });
+
+        // Solicitar refresco continuo si la simulación está activa o el motor está inicializado
+        if self.is_playing || self.engine.as_ref().map(|e| e.is_initialized).unwrap_or(false) {
+            ctx.request_repaint();
+        }
     }
 }
 

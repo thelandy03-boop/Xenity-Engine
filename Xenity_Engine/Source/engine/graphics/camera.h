@@ -252,6 +252,7 @@ public:
 
 protected:
 	friend class SceneMenu;
+	friend class XenityFFI;
 	friend class GameMenu;
 	friend class Shader;
 	friend class ShaderOpenGL;

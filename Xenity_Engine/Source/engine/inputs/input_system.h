@@ -420,6 +420,7 @@ private:
 	static Vector2 rightJoystick[MAX_CONTROLLER];
 	static Vector2 triggers[MAX_CONTROLLER];
 	friend class Engine;
+	friend class XenityFFI;
 
 	struct TouchScreen
 	{

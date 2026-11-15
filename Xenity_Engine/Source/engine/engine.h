@@ -90,6 +90,7 @@ public:
 	}
 
 private:
+	friend class XenityFFI;
 	static Event<>* s_onWindowFocusEvent;
 #if defined(_WIN32) || defined(_WIN64) || defined(__LINUX__)
 	static std::thread::id threadId;

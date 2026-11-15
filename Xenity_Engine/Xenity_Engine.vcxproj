@@ -1083,6 +1083,12 @@ copy   "$(SolutionDir)XenityBuild\$(Platform)\$(Configuration)\Xenity_Engine.lib
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Engine|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug Engine|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Source\editor\xenity_ffi.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug Engine|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Engine|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Engine|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug Engine|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Source\editor\ui\editor_ui.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug Engine|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Engine|x64'">true</ExcludedFromBuild>
@@ -1811,6 +1817,12 @@ copy   "$(SolutionDir)XenityBuild\$(Platform)\$(Configuration)\Xenity_Engine.lib
     <ClInclude Include="Source\engine\class_registry\class_registry.h" />
     <ClInclude Include="include\json.hpp" />
     <ClInclude Include="Source\editor\editor.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug Engine|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Engine|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Engine|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug Engine|Win32'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="Source\editor\xenity_ffi.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug Engine|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Engine|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Engine|Win32'">true</ExcludedFromBuild>

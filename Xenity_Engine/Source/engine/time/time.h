@@ -64,6 +64,7 @@ public:
 
 private:
 	friend class Engine;
+	friend class XenityFFI;
 	friend class GameplayManager;
 
 	/**

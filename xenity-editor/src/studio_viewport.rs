@@ -2,6 +2,7 @@ use eframe::egui::{self, Color32, CursorIcon, FontId, Pos2, Rect, Rounding, Sens
 use crate::studio_style::*;
 use crate::studio_textures::StudioIcons;
 use crate::icons;
+use crate::xenity_ffi::XenityEngine;
 
 pub struct StudioViewportState {
     pub camera_pitch: f32,
@@ -9,6 +10,9 @@ pub struct StudioViewportState {
     pub camera_distance: f32,
     pub camera_target: [f32; 3],
     pub is_dragging: bool,
+    pub viewport_texture: Option<egui::TextureHandle>,
+    pub pixel_buffer: Vec<u8>,
+    pub engine_rendered: bool,
 }
 
 impl Default for StudioViewportState {
@@ -19,6 +23,9 @@ impl Default for StudioViewportState {
             camera_distance: 30.0,
             camera_target: [0.0, 1.0, 0.0],
             is_dragging: false,
+            viewport_texture: None,
+            pixel_buffer: Vec::new(),
+            engine_rendered: false,
         }
     }
 }
@@ -31,6 +38,7 @@ impl StudioViewportState {
         is_playing: bool,
         show_grid: bool,
         show_view_selector: bool,
+        engine: &mut Option<XenityEngine>,
     ) {
         // 1. PESTAÑA SUPERIOR DE DOCUMENTO VIEWPORT [ Experiencia sin título ✕ ]
         let doc_bar_h = 28.0;
@@ -60,7 +68,7 @@ impl StudioViewportState {
         let text_pos = Pos2::new(active_tab_rect.min.x + 30.0, active_tab_rect.center().y);
         ui.painter().galley(Pos2::new(text_pos.x, text_pos.y - title_galley.rect.height() * 0.5), title_galley, Color32::WHITE);
 
-        // Botón cerrar ✕ interactivo y dibujado con líneas nítidas (evita caracteres faltantes □)
+        // Botón cerrar ✕ interactivo y dibujado con líneas nítidas
         let close_center = Pos2::new(active_tab_rect.max.x - 14.0, active_tab_rect.center().y);
         let close_rect = Rect::from_center_size(close_center, Vec2::new(16.0, 16.0));
         let close_resp = ui.interact(close_rect, ui.id().with("vp_doc_close"), Sense::click());
@@ -72,7 +80,7 @@ impl StudioViewportState {
         ui.painter().line_segment([Pos2::new(close_center.x - cs, close_center.y - cs), Pos2::new(close_center.x + cs, close_center.y + cs)], Stroke::new(1.2, close_col));
         ui.painter().line_segment([Pos2::new(close_center.x - cs, close_center.y + cs), Pos2::new(close_center.x + cs, close_center.y - cs)], Stroke::new(1.2, close_col));
 
-        // Franja inferior azul de la pestaña / barra de documento (idéntico a la referencia #0067FF)
+        // Franja inferior azul de la pestaña / barra de documento (referencia #0067FF)
         ui.painter().line_segment(
             [Pos2::new(doc_rect.min.x, doc_rect.max.y), Pos2::new(doc_rect.max.x, doc_rect.max.y)],
             Stroke::new(2.0, Color32::from_rgb(0, 103, 255)),
@@ -80,29 +88,92 @@ impl StudioViewportState {
 
         // 2. VIEWPORT 3D ÁREA CENTRAL
         let (vp_rect, vp_resp) = ui.allocate_exact_size(ui.available_size(), Sense::click_and_drag());
+        let vp_w = (vp_rect.width().round() as u32).max(64);
+        let vp_h = (vp_rect.height().round() as u32).max(64);
 
-        if vp_resp.dragged() {
-            let delta = vp_resp.drag_delta();
-            self.camera_yaw += delta.x * 0.4;
-            self.camera_pitch = (self.camera_pitch + delta.y * 0.4).clamp(-85.0, 85.0);
+        self.engine_rendered = false;
+
+        // Renderizado con el motor C++ Xenity
+        if let Some(eng) = engine {
+            if !eng.is_initialized {
+                eng.init(vp_w, vp_h);
+            } else {
+                eng.resize(vp_w, vp_h);
+            }
+
+            // Controles de cámara de Studio
+            if vp_resp.dragged_by(egui::PointerButton::Secondary) || (vp_resp.dragged_by(egui::PointerButton::Primary) && ui.input(|i| i.modifiers.alt)) {
+                let delta = vp_resp.drag_delta();
+                eng.camera_orbit(delta.x * 0.35, delta.y * 0.35, 0.0, 0.0, 0.0);
+            }
+
+            // Movimiento WASD si el ratón está sobre el viewport
+            if vp_resp.hovered() {
+                let mut fwd = 0.0f32;
+                let mut right = 0.0f32;
+                let mut up = 0.0f32;
+                let speed = if ui.input(|i| i.modifiers.shift) { 0.7 } else { 0.25 };
+
+                if ui.input(|i| i.key_down(egui::Key::W)) { fwd += speed; }
+                if ui.input(|i| i.key_down(egui::Key::S)) { fwd -= speed; }
+                if ui.input(|i| i.key_down(egui::Key::D)) { right += speed; }
+                if ui.input(|i| i.key_down(egui::Key::A)) { right -= speed; }
+                if ui.input(|i| i.key_down(egui::Key::E)) { up += speed; }
+                if ui.input(|i| i.key_down(egui::Key::Q)) { up -= speed; }
+
+                if fwd != 0.0 || right != 0.0 || up != 0.0 {
+                    eng.camera_orbit(0.0, 0.0, fwd, right, up);
+                }
+            }
+
+            // Frame Tick en el motor C++
+            eng.tick();
+
+            // Leer framebuffer RGBA del motor
+            if eng.read_frame(vp_w, vp_h, &mut self.pixel_buffer) {
+                let color_image = egui::ColorImage::from_rgba_unmultiplied(
+                    [vp_w as usize, vp_h as usize],
+                    &self.pixel_buffer,
+                );
+                match &mut self.viewport_texture {
+                    Some(tex) => tex.set(color_image, egui::TextureOptions::LINEAR),
+                    None => {
+                        self.viewport_texture = Some(ui.ctx().load_texture(
+                            "xenity_scene_viewport",
+                            color_image,
+                            egui::TextureOptions::LINEAR,
+                        ));
+                    }
+                }
+                self.engine_rendered = true;
+            }
         }
 
-        let vp_bg = if is_playing {
-            Color32::from_rgb(20, 20, 24)
+        // Si el motor renderizó el frame, dibujamos la textura OpenGL
+        if self.engine_rendered && self.viewport_texture.is_some() {
+            let tex = self.viewport_texture.as_ref().unwrap();
+            ui.painter().image(
+                tex.id(),
+                vp_rect,
+                Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                Color32::WHITE,
+            );
         } else {
-            STUDIO_VIEWPORT_BG
-        };
-        ui.painter().rect_filled(vp_rect, 0.0, vp_bg);
+            // Fondo de reserva y cuadrícula procedimental si el motor no está activo
+            let vp_bg = if is_playing {
+                Color32::from_rgb(20, 20, 24)
+            } else {
+                STUDIO_VIEWPORT_BG
+            };
+            ui.painter().rect_filled(vp_rect, 0.0, vp_bg);
 
-        // 3. SUELO BASEPLATE Y CUADRÍCULA DE STUDS (Roblox Studio Studs Grid)
-        if show_grid {
-            draw_roblox_studs_grid(ui.painter(), vp_rect, self.camera_yaw, self.camera_pitch);
+            if show_grid {
+                draw_roblox_studs_grid(ui.painter(), vp_rect, self.camera_yaw, self.camera_pitch);
+            }
+            draw_viewport_scene_objects(ui.painter(), vp_rect, is_playing);
         }
 
-        // 4. MODELO DE JUGADOR / ENTIDADES 3D EN EL VIEWPORT
-        draw_viewport_scene_objects(ui.painter(), vp_rect, is_playing);
-
-        // 5. VIEW SELECTOR (3D Orientation Cube con texturas PNG oficiales de Studio)
+        // 3. VIEW SELECTOR (3D Orientation Cube con texturas PNG oficiales de Studio)
         if show_view_selector {
             let cube_size = 64.0;
             let cube_rect = Rect::from_min_size(
@@ -112,29 +183,35 @@ impl StudioViewportState {
             draw_view_selector_cube(ui, cube_rect, icons, &mut self.camera_pitch, &mut self.camera_yaw);
         }
 
-        // 6. OVERLAYS DE ESTADO Y ESTADÍSTICAS EN EL VIEWPORT (FPS, Modo)
-        let stats_rect = Rect::from_min_size(Pos2::new(vp_rect.min.x + 12.0, vp_rect.min.y + 12.0), Vec2::new(180.0, 22.0));
-        ui.painter().rect_filled(stats_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(20, 20, 24, 180));
+        // 4. OVERLAYS DE ESTADO Y ESTADÍSTICAS EN EL VIEWPORT (FPS, Motor, Objetos)
+        let stats_rect = Rect::from_min_size(Pos2::new(vp_rect.min.x + 12.0, vp_rect.min.y + 12.0), Vec2::new(260.0, 24.0));
+        ui.painter().rect_filled(stats_rect, Rounding::same(4.0), Color32::from_rgba_unmultiplied(20, 20, 24, 210));
+        ui.painter().rect_stroke(stats_rect, Rounding::same(4.0), Stroke::new(1.0, Color32::from_rgba_unmultiplied(255, 255, 255, 20)));
+
+        let obj_count = engine.as_mut().map(|e| e.get_gameobject_count()).unwrap_or(0);
         let stats_text = if is_playing {
-            "🔴 Running (60.0 FPS | Luau)"
+            format!("🔴 Running | Xenity C++ | {} GameObjects", obj_count)
+        } else if self.engine_rendered {
+            format!("Edit Mode | Xenity OpenGL 3D | {} Objects", obj_count)
         } else {
-            "Edit Mode | 60.0 FPS | Baseplate"
+            "Edit Mode | 60.0 FPS | Baseplate".to_string()
         };
+
         ui.painter().text(
-            Pos2::new(stats_rect.min.x + 8.0, stats_rect.center().y),
+            Pos2::new(stats_rect.min.x + 10.0, stats_rect.center().y),
             egui::Align2::LEFT_CENTER,
             stats_text,
-            FontId::proportional(11.0),
-            if is_playing { Color32::from_rgb(255, 120, 120) } else { Color32::from_rgb(180, 220, 255) },
+            FontId::proportional(11.5),
+            if is_playing { Color32::from_rgb(255, 120, 120) } else { Color32::from_rgb(180, 225, 255) },
         );
     }
 }
 
 // =========================================================================
-// RENDERIZADO DE LA CUADRÍCULA DE STUDS DE ROBLOX STUDIO
+// RENDERIZADO DE LA CUADRÍCULA DE STUDS DE ROBLOX STUDIO (FALLBACK)
 // =========================================================================
 
-fn draw_roblox_studs_grid(painter: &egui::Painter, vp: Rect, yaw: f32, pitch: f32) {
+fn draw_roblox_studs_grid(painter: &egui::Painter, vp: Rect, _yaw: f32, _pitch: f32) {
     let center_y = vp.center().y + 50.0;
     let horizon_y = center_y - 120.0;
 
@@ -166,7 +243,7 @@ fn draw_roblox_studs_grid(painter: &egui::Painter, vp: Rect, yaw: f32, pitch: f3
 }
 
 // =========================================================================
-// OBJETOS DEL MUNDO 3D (AVATAR R15 / BLOQUES)
+// OBJETOS DEL MUNDO 3D (FALLBACK)
 // =========================================================================
 
 fn draw_viewport_scene_objects(painter: &egui::Painter, vp: Rect, is_playing: bool) {
@@ -229,7 +306,6 @@ fn draw_view_selector_cube(
     ui.painter().circle_filled(center, r * 1.15, Color32::from_rgba_unmultiplied(35, 35, 40, 210));
     ui.painter().circle_stroke(center, r * 1.15, Stroke::new(1.0, Color32::from_rgb(60, 60, 65)));
 
-    // Usar la textura real de ViewSelector (front.png)
     let cube_inner_rect = Rect::from_center_size(center, Vec2::new(r * 1.8, r * 1.8));
     ui.painter().image(
         icons.view_front.id(),

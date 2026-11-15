@@ -12,17 +12,81 @@
 *.vscode
 *.Identifier
 
-Xenity_Engine/build/CMakeFiles/
-Xenity_Engine/build/cmake_install.cmake
-Xenity_Engine/build/CMakeCache.txt
-Xenity_Engine/build/Makefile
-Xenity_Engine/build/PARAM.SFO
-Xenity_Engine/build/EBOOT.PBP
-Xenity_Engine/build/hello
+Xenity_Engine/build/
+XenityBuild/
+xenity-editor/*.dll
+xenity-editor/engine_assets/
+xenity-editor/public_engine_assets/
+xenity-editor/Roboto Regular.ttf
+engine_assets/
+public_engine_assets/
+Roboto Regular.ttfCMakeFiles/
+Xenity_Engine/build/
+XenityBuild/
+xenity-editor/*.dll
+xenity-editor/engine_assets/
+xenity-editor/public_engine_assets/
+xenity-editor/Roboto Regular.ttf
+engine_assets/
+public_engine_assets/
+Roboto Regular.ttfcmake_install.cmake
+Xenity_Engine/build/
+XenityBuild/
+xenity-editor/*.dll
+xenity-editor/engine_assets/
+xenity-editor/public_engine_assets/
+xenity-editor/Roboto Regular.ttf
+engine_assets/
+public_engine_assets/
+Roboto Regular.ttfCMakeCache.txt
+Xenity_Engine/build/
+XenityBuild/
+xenity-editor/*.dll
+xenity-editor/engine_assets/
+xenity-editor/public_engine_assets/
+xenity-editor/Roboto Regular.ttf
+engine_assets/
+public_engine_assets/
+Roboto Regular.ttfMakefile
+Xenity_Engine/build/
+XenityBuild/
+xenity-editor/*.dll
+xenity-editor/engine_assets/
+xenity-editor/public_engine_assets/
+xenity-editor/Roboto Regular.ttf
+engine_assets/
+public_engine_assets/
+Roboto Regular.ttfPARAM.SFO
+Xenity_Engine/build/
+XenityBuild/
+xenity-editor/*.dll
+xenity-editor/engine_assets/
+xenity-editor/public_engine_assets/
+xenity-editor/Roboto Regular.ttf
+engine_assets/
+public_engine_assets/
+Roboto Regular.ttfEBOOT.PBP
+Xenity_Engine/build/
+XenityBuild/
+xenity-editor/*.dll
+xenity-editor/engine_assets/
+xenity-editor/public_engine_assets/
+xenity-editor/Roboto Regular.ttf
+engine_assets/
+public_engine_assets/
+Roboto Regular.ttfhello
 Xenity_Engine/buildvita/
 Xenity_Engine/Xenity Editor/
 Xenity_Engine/plugins/*.dll
 Xenity_Engine/build/
+XenityBuild/
+xenity-editor/*.dll
+xenity-editor/engine_assets/
+xenity-editor/public_engine_assets/
+xenity-editor/Roboto Regular.ttf
+engine_assets/
+public_engine_assets/
+Roboto Regular.ttf
 
 Xenity_Engine_Executable/build/CMakeFiles/
 Xenity_Engine_Executable/build/cmake_install.cmake
@@ -158,7 +222,15 @@ StyleCopReport.xml
 # Files built by other compilers
 *.o
 
-!Xenity_Engine/build/models/*.obj
+!Xenity_Engine/build/
+XenityBuild/
+xenity-editor/*.dll
+xenity-editor/engine_assets/
+xenity-editor/public_engine_assets/
+xenity-editor/Roboto Regular.ttf
+engine_assets/
+public_engine_assets/
+Roboto Regular.ttfmodels/*.obj
 !Xenity_Engine/engine_assets/*.obj
 !Xenity_Engine/engine_assets/models/*.obj
 

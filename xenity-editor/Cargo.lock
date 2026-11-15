@@ -3206,6 +3206,7 @@ dependencies = [
  "eframe",
  "env_logger",
  "image",
+ "libloading",
  "log",
 ]
 
