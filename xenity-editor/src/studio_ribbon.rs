@@ -156,7 +156,7 @@ impl StudioRibbonState {
             let is_open = self.active_top_menu == Some(idx);
 
             let bg = if is_open {
-                Color32::from_rgb(36, 36, 40)
+                Color32::from_rgb(34, 37, 44)
             } else if item_resp.hovered() {
                 Color32::from_rgba_unmultiplied(255, 255, 255, 14)
             } else {
@@ -164,7 +164,7 @@ impl StudioRibbonState {
             };
 
             let stroke = if is_open {
-                Stroke::new(1.0, Color32::from_rgb(58, 58, 64))
+                Stroke::new(1.0, Color32::from_rgb(48, 52, 63))
             } else {
                 Stroke::NONE
             };
@@ -195,7 +195,7 @@ impl StudioRibbonState {
             }
 
             if self.active_top_menu == Some(idx) {
-                opened_menu_pos = Some((idx, Pos2::new(item_rect.min.x, item_rect.max.y + 1.0)));
+                opened_menu_pos = Some((idx, Pos2::new(item_rect.min.x, item_rect.max.y)));
             }
 
             menu_cur_x += item_w + 2.0;
@@ -210,18 +210,17 @@ impl StudioRibbonState {
                     let mut close_menu = false;
 
                     let frame_res = egui::Frame::popup(ui.style())
-                        .fill(Color32::from_rgb(22, 22, 25))
-                        .stroke(Stroke::new(1.0, Color32::from_rgb(46, 46, 52)))
-                        .rounding(Rounding::same(4.0))
-                        .inner_margin(egui::Margin::symmetric(4.0, 4.0))
+                        .fill(Color32::from_rgb(34, 37, 44))
+                        .stroke(Stroke::new(1.0, Color32::from_rgb(48, 52, 63)))
+                        .rounding(Rounding::same(2.0))
+                        .inner_margin(egui::Margin::symmetric(2.0, 3.0))
                         .show(ui, |ui| {
-                            ui.set_min_width(220.0);
+                            ui.set_width(260.0);
+                            ui.set_max_width(260.0);
 
                             match menu_idx {
                                 // 0: ARCHIVO (Estructura oficial de Roblox Studio)
                                 0 => {
-                                    ui.set_min_width(290.0);
-
                                     // Grupo 1: Archivo y aperturas
                                     if draw_menu_entry(ui, "Nuevo", "Control+N") {
                                         close_menu = true;
@@ -1638,39 +1637,39 @@ fn draw_menu_sep(ui: &mut egui::Ui) {
     ui.add_space(2.0);
     let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0), Sense::hover());
     ui.painter().line_segment(
-        [Pos2::new(rect.min.x + 6.0, rect.center().y), Pos2::new(rect.max.x - 6.0, rect.center().y)],
-        Stroke::new(1.0, Color32::from_rgb(44, 46, 54)),
+        [Pos2::new(rect.min.x, rect.center().y), Pos2::new(rect.max.x, rect.center().y)],
+        Stroke::new(1.0, Color32::from_rgb(46, 50, 60)),
     );
     ui.add_space(2.0);
 }
 
 fn draw_menu_entry_ext(ui: &mut egui::Ui, text: &str, shortcut: &str, disabled: bool, has_submenu: bool) -> bool {
-    let font = FontId::proportional(11.5);
-    let h = 23.0;
+    let font = FontId::proportional(11.0);
+    let h = 20.0;
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), h), Sense::click());
 
     if !disabled && resp.hovered() {
-        ui.painter().rect_filled(rect, Rounding::same(3.0), Color32::from_rgb(38, 40, 48));
+        ui.painter().rect_filled(rect, Rounding::same(2.0), Color32::from_rgb(48, 53, 64));
     }
 
     let text_col = if disabled {
-        Color32::from_rgb(105, 108, 120)
+        Color32::from_rgb(95, 100, 112)
     } else if resp.hovered() {
         Color32::WHITE
     } else {
-        Color32::from_rgb(220, 222, 230)
+        Color32::from_rgb(222, 226, 234)
     };
 
     let shortcut_col = if disabled {
-        Color32::from_rgb(85, 88, 100)
+        Color32::from_rgb(80, 84, 96)
     } else if resp.hovered() {
-        Color32::from_rgb(180, 185, 195)
+        Color32::from_rgb(215, 220, 230)
     } else {
-        Color32::from_rgb(135, 138, 150)
+        Color32::from_rgb(180, 185, 198)
     };
 
     ui.painter().text(
-        Pos2::new(rect.min.x + 12.0, rect.center().y),
+        Pos2::new(rect.min.x + 10.0, rect.center().y),
         egui::Align2::LEFT_CENTER,
         text,
         font.clone(),
@@ -1679,7 +1678,7 @@ fn draw_menu_entry_ext(ui: &mut egui::Ui, text: &str, shortcut: &str, disabled: 
 
     if has_submenu {
         ui.painter().text(
-            Pos2::new(rect.max.x - 12.0, rect.center().y),
+            Pos2::new(rect.max.x - 10.0, rect.center().y),
             egui::Align2::RIGHT_CENTER,
             "▶",
             FontId::proportional(8.5),
@@ -1687,7 +1686,7 @@ fn draw_menu_entry_ext(ui: &mut egui::Ui, text: &str, shortcut: &str, disabled: 
         );
     } else if !shortcut.is_empty() {
         ui.painter().text(
-            Pos2::new(rect.max.x - 12.0, rect.center().y),
+            Pos2::new(rect.max.x - 10.0, rect.center().y),
             egui::Align2::RIGHT_CENTER,
             shortcut,
             FontId::proportional(10.5),
