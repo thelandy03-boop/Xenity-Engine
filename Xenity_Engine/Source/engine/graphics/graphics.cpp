@@ -1143,7 +1143,15 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 	// Limpiar búfer de profundidad para que los gizmos se dibujen en primer plano
 	Engine::GetRenderer().Clear(ClearMode::Depth);
 
-	const Vector3& pos = selectedGo->GetTransform()->GetPosition();
+	// Calcular el centro geométrico exacto de la pieza en el espacio de renderizado de OpenGL de Xenity
+	const std::shared_ptr<MeshRenderer> mr = selectedGo->GetComponent<MeshRenderer>();
+	Vector3 centerLocal(0.0f);
+	if (mr && mr->GetMeshData())
+	{
+		centerLocal = (mr->GetMeshData()->GetMinBoundingBox() + mr->GetMeshData()->GetMaxBoundingBox()) * 0.5f;
+	}
+	const glm::mat4x4& matrix = selectedGo->GetTransform()->GetTransformationMatrix();
+	const Vector3 pos = Vector3(matrix * glm::vec4(centerLocal.x, centerLocal.y, centerLocal.z, 1.0f));
 
 	float dist = 1.0f;
 	if (usedCamera->GetProjectionType() == ProjectionType::Perspective)
@@ -1168,15 +1176,15 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 	const Color blueColor = Color::CreateFromRGBAFloat(0.08f, 0.40f, 1.0f, 1.0f);
 	const Color whiteColor = Color::CreateFromRGBAFloat(1.0f, 1.0f, 1.0f, 1.0f);
 
-	Vector3 right = Vector3(1, 0, 0);
-	Vector3 up = Vector3(0, 1, 0);
-	Vector3 fwd = Vector3(0, 0, 1);
+	// Ejes en el espacio de renderizado OpenGL (X invertido en la matriz de vista/mundo de Xenity)
+	Vector3 right = Vector3(-1.0f, 0.0f, 0.0f);
+	Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
+	Vector3 fwd = Vector3(0.0f, 0.0f, 1.0f);
 	if (Editor::s_isToolLocalMode)
 	{
-		Quaternion rot = selectedGo->GetTransform()->GetRotation();
-		right = rot.GetRight();
-		up = rot.GetUp();
-		fwd = rot.GetForward();
+		right = Vector3(matrix[0][0], matrix[0][1], matrix[0][2]).Normalized();
+		up = Vector3(matrix[1][0], matrix[1][1], matrix[1][2]).Normalized();
+		fwd = Vector3(matrix[2][0], matrix[2][1], matrix[2][2]).Normalized();
 	}
 
 	if (toolMode == ToolMode::Tool_Move || toolMode == ToolMode::Tool_Scale)
