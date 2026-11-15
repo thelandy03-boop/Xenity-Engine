@@ -163,11 +163,44 @@ impl eframe::App for RobloxStudioApp {
                             PartShape::Cylinder => ("CylinderPart", 2),
                             PartShape::Wedge => ("WedgePart", 4),
                         };
+                        let mut initial_pos = [0.0, 0.6, 0.0];
+                        let mut initial_rot = [0.0, 0.0, 0.0];
+                        let mut initial_scale = [4.0, 1.2, 2.0];
+                        let mut initial_color = egui::Color32::from_rgb(163, 162, 165);
+
+                        let mut spawned_engine_idx = None;
                         if let Some(e) = &mut self.engine {
                             e.spawn_primitive(prim_id);
+                            let count = e.get_gameobject_count();
+                            if count > 0 {
+                                let new_idx = count - 1;
+                                spawned_engine_idx = Some(new_idx);
+                                if let Some(info) = e.get_gameobject_info(new_idx) {
+                                    initial_pos = info.pos;
+                                    initial_rot = info.rot;
+                                    initial_scale = info.scale;
+                                    initial_color = egui::Color32::from_rgba_unmultiplied(
+                                        (info.color[0] * 255.0).clamp(0.0, 255.0) as u8,
+                                        (info.color[1] * 255.0).clamp(0.0, 255.0) as u8,
+                                        (info.color[2] * 255.0).clamp(0.0, 255.0) as u8,
+                                        (info.color[3] * 255.0).clamp(0.0, 255.0) as u8,
+                                    );
+                                }
+                            }
                         }
+
                         let id = self.hierarchy.insert_child_into_selected_or_workspace(RobloxClass::Part, name.to_string());
-                        self.output.add_log(LogType::Info, "Workspace", format!("Created {} in Xenity Engine (id: {})", name, id));
+                        if let Some(item) = self.hierarchy.find_item_mut(id) {
+                            item.properties.position = initial_pos;
+                            item.properties.orientation = initial_rot;
+                            item.properties.size = initial_scale;
+                            item.properties.color = initial_color;
+                        }
+                        if let Some(x_idx) = spawned_engine_idx {
+                            self.hierarchy.xenity_mappings.insert(id, x_idx);
+                        }
+                        self.hierarchy.selected_id = Some(id);
+                        self.output.add_log(LogType::Info, "Workspace", format!("Created {} in Xenity Engine at [{:.1}, {:.1}, {:.1}]", name, initial_pos[0], initial_pos[1], initial_pos[2]));
                     }
                     RibbonAction::ToggleToolbox => {
                         self.show_toolbox = !self.show_toolbox;

@@ -402,24 +402,108 @@ void XenityFFI::CameraOrbit(float delta_yaw, float delta_pitch, float move_fwd, 
 void XenityFFI::SpawnPrimitive(int primitive_type)
 {
 	std::shared_ptr<GameObject> spawned = nullptr;
+	Vector3 defaultScale(4.0f, 1.2f, 2.0f);
+	float halfHeight = 0.6f;
+
 	switch (primitive_type)
 	{
-	case 0: spawned = ShapeSpawner::SpawnCube(); break;
-	case 1: spawned = ShapeSpawner::SpawnSphere(); break;
-	case 2: spawned = ShapeSpawner::SpawnCylinder(); break;
-	case 3: spawned = ShapeSpawner::SpawnPlane(); break;
-	case 4: spawned = ShapeSpawner::SpawnCone(); break;
-	case 5: spawned = ShapeSpawner::SpawnDonut(); break;
-	default: spawned = ShapeSpawner::SpawnCube(); break;
+	case 0:
+		spawned = ShapeSpawner::SpawnCube();
+		if (spawned) spawned->SetName("Part");
+		defaultScale = Vector3(4.0f, 1.2f, 2.0f);
+		halfHeight = 0.6f;
+		break;
+	case 1:
+		spawned = ShapeSpawner::SpawnSphere();
+		if (spawned) spawned->SetName("SpherePart");
+		defaultScale = Vector3(2.0f, 2.0f, 2.0f);
+		halfHeight = 1.0f;
+		break;
+	case 2:
+		spawned = ShapeSpawner::SpawnCylinder();
+		if (spawned) spawned->SetName("CylinderPart");
+		defaultScale = Vector3(2.0f, 2.0f, 2.0f);
+		halfHeight = 1.0f;
+		break;
+	case 3:
+		spawned = ShapeSpawner::SpawnPlane();
+		if (spawned) spawned->SetName("PlanePart");
+		defaultScale = Vector3(4.0f, 1.0f, 4.0f);
+		halfHeight = 0.5f;
+		break;
+	case 4:
+		spawned = ShapeSpawner::SpawnCone();
+		if (spawned) spawned->SetName("WedgePart");
+		defaultScale = Vector3(4.0f, 1.2f, 2.0f);
+		halfHeight = 0.6f;
+		break;
+	case 5:
+		spawned = ShapeSpawner::SpawnDonut();
+		if (spawned) spawned->SetName("DonutPart");
+		defaultScale = Vector3(2.0f, 2.0f, 2.0f);
+		halfHeight = 1.0f;
+		break;
+	default:
+		spawned = ShapeSpawner::SpawnCube();
+		if (spawned) spawned->SetName("Part");
+		defaultScale = Vector3(4.0f, 1.2f, 2.0f);
+		halfHeight = 0.6f;
+		break;
 	}
 
-	if (spawned && s_camera)
+	if (spawned)
 	{
-		Vector3 camPos = s_camera->GetTransform()->GetPosition();
-		Vector3 camFwd = -s_camera->GetTransform()->GetForward();
-		Vector3 spawnPos = camPos + camFwd * 6.0f;
-		if (spawnPos.y < 0.5f) spawnPos.y = 0.5f;
-		spawned->GetTransform()->SetPosition(spawnPos);
+		spawned->GetTransform()->SetLocalScale(defaultScale);
+
+		// Material Roblox clásico (Medium Stone Grey) con iluminación estándar
+		if (auto mr = spawned->GetComponent<MeshRenderer>())
+		{
+			auto mat = Material::MakeMaterial();
+			if (AssetManager::standardShader)
+			{
+				mat->SetShader(AssetManager::standardShader);
+			}
+			else if (AssetManager::standardMaterial)
+			{
+				mat->m_shader = AssetManager::standardMaterial->m_shader;
+			}
+			mat->SetColor(Color::CreateFromRGBAFloat(0.639f, 0.635f, 0.647f, 1.0f));
+			mat->SetUseLighting(true);
+			mr->SetMaterial(mat, 0);
+		}
+
+		if (s_camera)
+		{
+			Vector3 camPos = s_camera->GetTransform()->GetPosition();
+			Vector3 camFwd = s_camera->GetTransform()->GetForward(); // Positivo hacia adelante
+
+			Vector3 spawnPos;
+			// Si la cámara mira hacia abajo hacia la Baseplate, calcular la intersección sobre la superficie
+			if (camFwd.y < -0.05f)
+			{
+				float t = (halfHeight - camPos.y) / camFwd.y;
+				if (t > 1.0f && t < 120.0f)
+				{
+					spawnPos = camPos + camFwd * t;
+				}
+				else
+				{
+					spawnPos = camPos + camFwd * 12.0f;
+				}
+			}
+			else
+			{
+				spawnPos = camPos + camFwd * 12.0f;
+			}
+
+			if (spawnPos.y < halfHeight)
+			{
+				spawnPos.y = halfHeight;
+			}
+
+			spawned->GetTransform()->SetPosition(spawnPos);
+		}
+
 		Editor::SetSelectedGameObject(spawned);
 	}
 }
