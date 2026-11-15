@@ -1045,7 +1045,8 @@ namespace
 		Engine::GetRenderer().UseShaderProgram(0);
 		Graphics::s_currentShader = nullptr;
 
-		glDisable(GL_DEPTH_TEST);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
 		glDisable(GL_CULL_FACE);
 		glEnable(GL_BLEND);
 		glDisable(GL_ALPHA_TEST);
@@ -1073,45 +1074,6 @@ namespace
 
 		glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()));
 		glColor4f(1, 1, 1, 1);
-	}
-
-	void DrawArrowLines(const Vector3& pos, const Vector3& dir, float len, float coneH, float coneR, float shaftR, const Color& color)
-	{
-		RenderingSettings lineSettings;
-		lineSettings.renderingMode = MaterialRenderingMode::Transparent;
-		lineSettings.useDepth = false;
-
-		const Vector3 shaftEnd = pos + dir * (len - coneH);
-		const Vector3 tip = pos + dir * len;
-
-		// Eje principal
-		Engine::GetRenderer().DrawLine(pos, shaftEnd, color, lineSettings);
-
-		// Vectores perpendiculares
-		Vector3 u;
-		if (std::abs(dir.x) < 0.9f)
-			u = Vector3::Cross(dir, Vector3(1, 0, 0)).Normalized();
-		else
-			u = Vector3::Cross(dir, Vector3(0, 1, 0)).Normalized();
-		const Vector3 v = Vector3::Cross(dir, u).Normalized();
-
-		// Líneas de grosor del vástago
-		Engine::GetRenderer().DrawLine(pos + u * shaftR, shaftEnd + u * shaftR, color, lineSettings);
-		Engine::GetRenderer().DrawLine(pos - u * shaftR, shaftEnd - u * shaftR, color, lineSettings);
-		Engine::GetRenderer().DrawLine(pos + v * shaftR, shaftEnd + v * shaftR, color, lineSettings);
-		Engine::GetRenderer().DrawLine(pos - v * shaftR, shaftEnd - v * shaftR, color, lineSettings);
-
-		// Líneas de contorno y base del cono
-		const int segs = 12;
-		Vector3 prevP = shaftEnd + u * coneR;
-		for (int i = 1; i <= segs; ++i)
-		{
-			const float a = 2.0f * GIZMO_PI * static_cast<float>(i) / static_cast<float>(segs);
-			const Vector3 curP = shaftEnd + (u * std::cos(a) + v * std::sin(a)) * coneR;
-			Engine::GetRenderer().DrawLine(prevP, curP, color, lineSettings);
-			Engine::GetRenderer().DrawLine(curP, tip, color, lineSettings);
-			prevP = curP;
-		}
 	}
 }
 
@@ -1189,65 +1151,35 @@ void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 
 	if (toolMode == ToolMode::Tool_Move || toolMode == ToolMode::Tool_Scale)
 	{
-		// 1. Esfera central blanca (Punto de pivote) - Reutilización de buffer estático para cero asignaciones
+		// 1. Esfera central blanca sólida pura (Punto de pivote, sin aristas visibles)
 		static std::vector<Vector3> centerVerts;
 		centerVerts.clear();
-		AddSphereTriangles(centerVerts, pos, centerR, 8, 12);
+		AddSphereTriangles(centerVerts, pos, centerR, 16, 24);
 		RenderSolidGeometry(centerVerts, whiteColor);
 
-		RenderingSettings lineSettings;
-		lineSettings.renderingMode = MaterialRenderingMode::Transparent;
-		lineSettings.useDepth = false;
-
-		// Anillos blancos del centro
-		const int circleSteps = 16;
-		for (int i = 0; i < circleSteps; ++i)
-		{
-			const float a1 = 2.0f * GIZMO_PI * static_cast<float>(i) / static_cast<float>(circleSteps);
-			const float a2 = 2.0f * GIZMO_PI * static_cast<float>(i + 1) / static_cast<float>(circleSteps);
-
-			const Vector3 c1 = pos + (right * std::cos(a1) + up * std::sin(a1)) * centerR;
-			const Vector3 c2 = pos + (right * std::cos(a2) + up * std::sin(a2)) * centerR;
-			Engine::GetRenderer().DrawLine(c1, c2, whiteColor, lineSettings);
-
-			const Vector3 c3 = pos + (right * std::cos(a1) + fwd * std::sin(a1)) * centerR;
-			const Vector3 c4 = pos + (right * std::cos(a2) + fwd * std::sin(a2)) * centerR;
-			Engine::GetRenderer().DrawLine(c3, c4, whiteColor, lineSettings);
-
-			const Vector3 c5 = pos + (up * std::cos(a1) + fwd * std::sin(a1)) * centerR;
-			const Vector3 c6 = pos + (up * std::cos(a2) + fwd * std::sin(a2)) * centerR;
-			Engine::GetRenderer().DrawLine(c5, c6, whiteColor, lineSettings);
-		}
-
-		// 2. Eje X (Rojo) - Flechas bidireccionales (+X y -X)
+		// 2. Eje X (Rojo sólido puro) - Flechas bidireccionales (+X y -X)
 		static std::vector<Vector3> xVerts;
 		xVerts.clear();
-		AddCylinderTriangles(xVerts, pos - right * shaftLen, pos + right * shaftLen, shaftR, 8);
-		AddConeTriangles(xVerts, pos + right * shaftLen, pos + right * len, coneR, 16);
-		AddConeTriangles(xVerts, pos - right * shaftLen, pos - right * len, coneR, 16);
+		AddCylinderTriangles(xVerts, pos - right * shaftLen, pos + right * shaftLen, shaftR, 20);
+		AddConeTriangles(xVerts, pos + right * shaftLen, pos + right * len, coneR, 24);
+		AddConeTriangles(xVerts, pos - right * shaftLen, pos - right * len, coneR, 24);
 		RenderSolidGeometry(xVerts, redColor);
-		DrawArrowLines(pos, right, len, coneH, coneR, shaftR, redColor);
-		DrawArrowLines(pos, -right, len, coneH, coneR, shaftR, redColor);
 
-		// 3. Eje Y (Verde) - Flechas bidireccionales (+Y arriba y -Y abajo)
+		// 3. Eje Y (Verde sólido puro) - Flechas bidireccionales (+Y arriba y -Y abajo)
 		static std::vector<Vector3> yVerts;
 		yVerts.clear();
-		AddCylinderTriangles(yVerts, pos - up * shaftLen, pos + up * shaftLen, shaftR, 8);
-		AddConeTriangles(yVerts, pos + up * shaftLen, pos + up * len, coneR, 16);
-		AddConeTriangles(yVerts, pos - up * shaftLen, pos - up * len, coneR, 16);
+		AddCylinderTriangles(yVerts, pos - up * shaftLen, pos + up * shaftLen, shaftR, 20);
+		AddConeTriangles(yVerts, pos + up * shaftLen, pos + up * len, coneR, 24);
+		AddConeTriangles(yVerts, pos - up * shaftLen, pos - up * len, coneR, 24);
 		RenderSolidGeometry(yVerts, greenColor);
-		DrawArrowLines(pos, up, len, coneH, coneR, shaftR, greenColor);
-		DrawArrowLines(pos, -up, len, coneH, coneR, shaftR, greenColor);
 
-		// 4. Eje Z (Azul) - Flechas bidireccionales (+Z adelante y -Z atrás)
+		// 4. Eje Z (Azul sólido puro) - Flechas bidireccionales (+Z adelante y -Z atrás)
 		static std::vector<Vector3> zVerts;
 		zVerts.clear();
-		AddCylinderTriangles(zVerts, pos - fwd * shaftLen, pos + fwd * shaftLen, shaftR, 8);
-		AddConeTriangles(zVerts, pos + fwd * shaftLen, pos + fwd * len, coneR, 16);
-		AddConeTriangles(zVerts, pos - fwd * shaftLen, pos - fwd * len, coneR, 16);
+		AddCylinderTriangles(zVerts, pos - fwd * shaftLen, pos + fwd * shaftLen, shaftR, 20);
+		AddConeTriangles(zVerts, pos + fwd * shaftLen, pos + fwd * len, coneR, 24);
+		AddConeTriangles(zVerts, pos - fwd * shaftLen, pos - fwd * len, coneR, 24);
 		RenderSolidGeometry(zVerts, blueColor);
-		DrawArrowLines(pos, fwd, len, coneH, coneR, shaftR, blueColor);
-		DrawArrowLines(pos, -fwd, len, coneH, coneR, shaftR, blueColor);
 	}
 	else if (toolMode == ToolMode::Tool_Rotate)
 	{
