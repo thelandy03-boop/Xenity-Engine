@@ -1,83 +1,79 @@
 // SPDX-License-Identifier: MIT
 //
-// Build & Export Dialog for Roblox Studio Editor
-// Allows 1-click cooking & packaging for PS3, PSP, PS Vita, and PC.
+// Build Settings Dialog for Roblox Studio / Xenity Engine
+// Recreates the authentic Unity-style Build Settings layout:
+// - "Scenes In Build" list with "Add Open Scenes" button
+// - Two-column platform selection with blue highlight and target settings
+// - Asset Import Overrides, Switch Platform, Build, and Build And Run buttons
 
 use eframe::egui::{self, Color32, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
-use crate::studio_style::*;
 use crate::xenity_ffi::XenityEngine;
 use std::path::{Path, PathBuf};
 use std::fs;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ExportPlatform {
+    Windows,
     PlayStation3,
     PSP,
     PSVita,
-    Windows,
+    DedicatedServer,
+    Android,
 }
 
 impl ExportPlatform {
     pub fn name(&self) -> &'static str {
         match self {
+            ExportPlatform::Windows => "Windows, Mac, Linux",
             ExportPlatform::PlayStation3 => "PlayStation 3 (PS3)",
             ExportPlatform::PSP => "PlayStation Portable (PSP)",
             ExportPlatform::PSVita => "PlayStation Vita",
-            ExportPlatform::Windows => "Windows Standalone (PC)",
+            ExportPlatform::DedicatedServer => "Dedicated Server",
+            ExportPlatform::Android => "Android",
+        }
+    }
+
+    pub fn icon(&self) -> &'static str {
+        match self {
+            ExportPlatform::Windows => "💻",
+            ExportPlatform::PlayStation3 => "🎮",
+            ExportPlatform::PSP => "🕹️",
+            ExportPlatform::PSVita => "📱",
+            ExportPlatform::DedicatedServer => "🖧",
+            ExportPlatform::Android => "🤖",
         }
     }
 
     pub fn badge(&self) -> &'static str {
         match self {
+            ExportPlatform::Windows => "PC",
             ExportPlatform::PlayStation3 => "PS3",
             ExportPlatform::PSP => "PSP",
             ExportPlatform::PSVita => "VITA",
-            ExportPlatform::Windows => "PC",
-        }
-    }
-
-    pub fn file_format(&self) -> &'static str {
-        match self {
-            ExportPlatform::PlayStation3 => "Carpeta PS3_GAME / .pkg (RPCS3 & HEN/CFW)",
-            ExportPlatform::PSP => "EBOOT.PBP (PPSSPP & PSP Real)",
-            ExportPlatform::PSVita => "Paquete .vpk (Vita3K & HENkaku)",
-            ExportPlatform::Windows => "Ejecutable nativo .exe",
-        }
-    }
-
-    pub fn hardware_desc(&self) -> &'static str {
-        match self {
-            ExportPlatform::PlayStation3 => "Cell Broadband Engine @ 3.2GHz | RSX Reality Synthesizer\nRAM: 256MB XDR + 256MB GDDR3 VRAM",
-            ExportPlatform::PSP => "MIPS R4000 @ 333MHz | Graphics Core GU\nRAM: 32MB (1000) / 64MB (Slim)",
-            ExportPlatform::PSVita => "Quad-core ARM Cortex-A9 | SGX543MP4+\nRAM: 512MB RAM + 128MB VRAM",
-            ExportPlatform::Windows => "x86_64 | OpenGL 3.3 Core Renderer\nRAM: Sin límite estricto de consola",
-        }
-    }
-
-    pub fn ram_budget_warning(&self) -> &'static str {
-        match self {
-            ExportPlatform::PlayStation3 => "💡 Presupuesto RAM: 256MB RSX. Las texturas se optimizan automáticamente a 512x512.",
-            ExportPlatform::PSP => "⚠️ Presupuesto estricto: 32MB. Texturas recomendadas máx 256x256, modelos bajo poligonaje.",
-            ExportPlatform::PSVita => "💡 Presupuesto amplio: 512MB. Rendimiento nativo fluido.",
-            ExportPlatform::Windows => "✔️ Sin restricciones de memoria de consola.",
+            ExportPlatform::DedicatedServer => "SRV",
+            ExportPlatform::Android => "APK",
         }
     }
 
     pub fn default_title_id(&self) -> &'static str {
         match self {
+            ExportPlatform::Windows => "XENITY_GAME",
             ExportPlatform::PlayStation3 => "NPEB00123",
             ExportPlatform::PSP => "ULES00123",
             ExportPlatform::PSVita => "PCSB00123",
-            ExportPlatform::Windows => "XENITY_GAME",
+            ExportPlatform::DedicatedServer => "SERVER_01",
+            ExportPlatform::Android => "com.xenity.game",
         }
     }
 
     pub fn default_output_folder(&self) -> &'static str {
         match self {
+            ExportPlatform::Windows => "build/windows",
             ExportPlatform::PlayStation3 => "build/ps3",
             ExportPlatform::PSP => "build/psp",
             ExportPlatform::PSVita => "build/psvita",
-            ExportPlatform::Windows => "build/windows",
+            ExportPlatform::DedicatedServer => "build/server",
+            ExportPlatform::Android => "build/android",
         }
     }
 
@@ -87,6 +83,30 @@ impl ExportPlatform {
             ExportPlatform::PSP => 1,
             ExportPlatform::PSVita => 2,
             ExportPlatform::PlayStation3 => 3,
+            ExportPlatform::DedicatedServer => 0,
+            ExportPlatform::Android => 0,
+        }
+    }
+
+    pub fn supported_targets(&self) -> &'static [&'static str] {
+        match self {
+            ExportPlatform::Windows => &["Windows (64-bit)", "Windows (32-bit)", "Universal Windows Platform"],
+            ExportPlatform::PlayStation3 => &["PS3_GAME Folder (RPCS3 / HEN)", "PKG Package (Installable)", "ISO Disc Image"],
+            ExportPlatform::PSP => &["EBOOT.PBP (PPSSPP & Hardware)", "ISO Disc Image"],
+            ExportPlatform::PSVita => &["VPK Package (Vita3K / HENkaku)", "Folder App (ux0:app)"],
+            ExportPlatform::DedicatedServer => &["Linux Headless", "Windows Server (x64)"],
+            ExportPlatform::Android => &["APK Package", "AAB (Google Play)"],
+        }
+    }
+
+    pub fn supported_architectures(&self) -> &'static [&'static str] {
+        match self {
+            ExportPlatform::Windows => &["Intel 64-bit (x86_64)", "ARM64", "x86 (32-bit)"],
+            ExportPlatform::PlayStation3 => &["Cell Broadband Engine @ 3.2GHz + RSX"],
+            ExportPlatform::PSP => &["MIPS R4000 @ 333MHz + GU"],
+            ExportPlatform::PSVita => &["Quad-core ARM Cortex-A9 + SGX543MP4+"],
+            ExportPlatform::DedicatedServer => &["x86_64", "ARM64"],
+            ExportPlatform::Android => &["ARM64-v8a", "armeabi-v7a", "x86_64"],
         }
     }
 }
@@ -94,19 +114,39 @@ impl ExportPlatform {
 pub struct BuildExportState {
     pub is_open: bool,
     pub selected_platform: ExportPlatform,
+    pub active_build_platform: ExportPlatform,
 
-    // Form fields
+    // Scenes In Build
+    pub scenes: Vec<(bool, String)>,
+
+    // Right-column platform settings
+    pub target_format_idx: usize,
+    pub arch_idx: usize,
     pub game_title: String,
     pub title_id: String,
     pub version: String,
     pub export_path: String,
 
-    // Options
+    // Checkboxes
+    pub copy_pdb: bool,
+    pub create_vs_solution: bool,
+    pub development_build: bool,
+    pub autoconnect_profiler: bool,
+    pub deep_profiling: bool,
+    pub script_debugging: bool,
+    pub compression_method_idx: usize,
+
+    // Xenity optimization
     pub auto_downscale_textures: bool,
     pub compile_native_shaders: bool,
     pub clean_destination: bool,
 
-    // Progress & Status
+    // Bottom Asset Import Overrides
+    pub asset_overrides_open: bool,
+    pub max_texture_size_idx: usize,
+    pub texture_compression_idx: usize,
+
+    // Status
     pub is_exporting: bool,
     pub status_message: String,
     pub is_success: bool,
@@ -117,18 +157,39 @@ impl Default for BuildExportState {
     fn default() -> Self {
         Self {
             is_open: false,
-            selected_platform: ExportPlatform::PlayStation3,
+            selected_platform: ExportPlatform::Windows,
+            active_build_platform: ExportPlatform::Windows,
+
+            scenes: vec![
+                (true, "Scenes/MainScene.xencene".to_string()),
+                (true, "Place1 (Current Scene)".to_string()),
+            ],
+
+            target_format_idx: 0,
+            arch_idx: 0,
             game_title: "My Roblox Place".to_string(),
-            title_id: "NPEB00123".to_string(),
+            title_id: "XENITY_GAME".to_string(),
             version: "1.00".to_string(),
-            export_path: "build/ps3".to_string(),
+            export_path: "build/windows".to_string(),
+
+            copy_pdb: false,
+            create_vs_solution: false,
+            development_build: false,
+            autoconnect_profiler: false,
+            deep_profiling: false,
+            script_debugging: false,
+            compression_method_idx: 0,
 
             auto_downscale_textures: true,
             compile_native_shaders: true,
             clean_destination: false,
 
+            asset_overrides_open: false,
+            max_texture_size_idx: 0,
+            texture_compression_idx: 0,
+
             is_exporting: false,
-            status_message: "Listo para exportar.".to_string(),
+            status_message: "Listo para compilar.".to_string(),
             is_success: false,
             last_exported_folder: None,
         }
@@ -143,16 +204,18 @@ pub enum BuildDialogAction {
 impl BuildExportState {
     pub fn open(&mut self) {
         self.is_open = true;
-        self.status_message = "Listo para exportar.".to_string();
+        self.status_message = "Listo para compilar.".to_string();
         self.is_success = false;
     }
 
     pub fn select_platform(&mut self, platform: ExportPlatform) {
         if self.selected_platform != platform {
             self.selected_platform = platform;
+            self.target_format_idx = 0;
+            self.arch_idx = 0;
             self.title_id = platform.default_title_id().to_string();
             self.export_path = platform.default_output_folder().to_string();
-            self.status_message = format!("Plataforma cambiada a {}", platform.name());
+            self.status_message = format!("Plataforma seleccionada: {}", platform.name());
             self.is_success = false;
         }
     }
@@ -164,277 +227,483 @@ impl BuildExportState {
 
         let mut action = BuildDialogAction::None;
 
-        // Overlay oscuro semitransparente que bloquea el fondo
+        // Modal overlay
         let screen_rect = ctx.screen_rect();
-        let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Middle, egui::Id::new("modal_backdrop")));
-        painter.rect_filled(screen_rect, 0.0, Color32::from_rgba_unmultiplied(0, 0, 0, 150));
+        let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Middle, egui::Id::new("build_modal_backdrop")));
+        painter.rect_filled(screen_rect, 0.0, Color32::from_rgba_unmultiplied(0, 0, 0, 140));
 
         let mut is_still_open = true;
 
-        egui::Window::new("Exportar y Compilar Proyecto (Build Settings)")
-            .open(&mut is_still_open)
+        // Ventana con estilo Unity exacto
+        egui::Window::new("BuildSettingsWindow")
+            .title_bar(false)
             .collapsible(false)
             .resizable(false)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-            .fixed_size([680.0, 520.0])
+            .fixed_size([690.0, 620.0])
             .frame(
                 egui::Frame::window(&ctx.style())
-                    .fill(Color32::from_rgb(26, 27, 32))
-                    .stroke(Stroke::new(1.0, Color32::from_rgb(60, 63, 72)))
-                    .rounding(Rounding::same(8.0))
-                    .inner_margin(egui::Margin::same(16.0)),
+                    .fill(Color32::from_rgb(34, 34, 38))
+                    .stroke(Stroke::new(1.0, Color32::from_rgb(52, 54, 62)))
+                    .rounding(Rounding::same(4.0))
+                    .inner_margin(egui::Margin::symmetric(14.0, 10.0)),
             )
             .show(ctx, |ui| {
+                // =============================================================
+                // 0. CABECERA DE PESTAÑA ESTILO UNITY ("Build Settings" Tab)
+                // =============================================================
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("🎮").size(22.0));
-                    ui.vertical(|ui| {
-                        ui.label(
-                            egui::RichText::new("Exportar Experiencia para Consolas y PC")
-                                .font(FontId::proportional(15.0))
-                                .strong()
-                                .color(Color32::WHITE),
-                        );
-                        ui.label(
-                            egui::RichText::new("Cocina y empaqueta recursos con el motor nativo Xenity hacia PS3, PSP, Vita y Windows.")
-                                .font(FontId::proportional(11.0))
-                                .color(Color32::from_rgb(160, 163, 172)),
-                        );
+                    // Pestaña Unity "Build Settings"
+                    let tab_rect = ui.allocate_space(Vec2::new(105.0, 24.0)).1;
+                    ui.painter().rect_filled(
+                        tab_rect,
+                        Rounding { nw: 3.0, ne: 3.0, sw: 0.0, se: 0.0 },
+                        Color32::from_rgb(46, 47, 52),
+                    );
+                    ui.painter().text(
+                        tab_rect.center(),
+                        egui::Align2::CENTER_CENTER,
+                        "Build Settings",
+                        FontId::proportional(11.5),
+                        Color32::from_rgb(230, 230, 230),
+                    );
+
+                    // Botones de la esquina superior derecha (⋮ y ✕)
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.add_sized(Vec2::new(22.0, 20.0), egui::Button::new(egui::RichText::new("✕").font(FontId::proportional(11.0)))).clicked() {
+                            self.is_open = false;
+                        }
+                        ui.label(egui::RichText::new("⋮").font(FontId::proportional(14.0)).color(Color32::from_rgb(160, 160, 160)));
                     });
                 });
 
-                ui.add_space(10.0);
-                ui.separator();
+                // Línea inferior de la pestaña
+                let (line_rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0), Sense::hover());
+                ui.painter().line_segment(
+                    [Pos2::new(line_rect.min.x, line_rect.min.y), Pos2::new(line_rect.max.x, line_rect.min.y)],
+                    Stroke::new(1.0, Color32::from_rgb(46, 47, 52)),
+                );
                 ui.add_space(8.0);
 
-                // CONTENIDO PRINCIPAL: Split de dos columnas (Izquierda: Plataformas, Derecha: Detalles)
-                let full_w = ui.available_width();
-                let left_w = 210.0;
-                let right_w = full_w - left_w - 16.0;
+                // =============================================================
+                // 1. SECCIÓN SUPERIOR: "Scenes In Build"
+                // =============================================================
+                ui.label(
+                    egui::RichText::new("Scenes In Build")
+                        .font(FontId::proportional(12.5))
+                        .strong()
+                        .color(Color32::from_rgb(220, 220, 220)),
+                );
+                ui.add_space(3.0);
+
+                let scenes_box_h = 100.0;
+                let scenes_box_rect = ui.allocate_space(Vec2::new(ui.available_width(), scenes_box_h)).1;
+                
+                // Fondo oscuro del recuadro de escenas
+                ui.painter().rect_filled(scenes_box_rect, Rounding::same(2.0), Color32::from_rgb(22, 22, 25));
+                ui.painter().rect_stroke(scenes_box_rect, Rounding::same(2.0), Stroke::new(1.0, Color32::from_rgb(46, 48, 56)));
+
+                // Render de las escenas dentro del recuadro
+                let mut scene_y = scenes_box_rect.min.y + 4.0;
+                for (idx, (enabled, path)) in self.scenes.iter_mut().enumerate() {
+                    if scene_y + 20.0 > scenes_box_rect.max.y {
+                        break;
+                    }
+                    let item_rect = Rect::from_min_size(
+                        Pos2::new(scenes_box_rect.min.x + 6.0, scene_y),
+                        Vec2::new(scenes_box_rect.width() - 12.0, 20.0),
+                    );
+
+                    let chk_rect = Rect::from_min_size(Pos2::new(item_rect.min.x + 4.0, item_rect.min.y + 3.0), Vec2::new(14.0, 14.0));
+                    let chk_resp = ui.interact(chk_rect, ui.id().with(("scene_chk", idx)), Sense::click());
+                    if chk_resp.clicked() {
+                        *enabled = !*enabled;
+                    }
+
+                    // Dibuja checkbox
+                    ui.painter().rect_filled(chk_rect, Rounding::same(2.0), Color32::from_rgb(32, 34, 40));
+                    ui.painter().rect_stroke(chk_rect, Rounding::same(2.0), Stroke::new(1.0, Color32::from_rgb(70, 74, 86)));
+                    if *enabled {
+                        ui.painter().text(chk_rect.center(), egui::Align2::CENTER_CENTER, "✔", FontId::proportional(11.0), Color32::WHITE);
+                    }
+
+                    // Nombre de la escena
+                    ui.painter().text(
+                        Pos2::new(item_rect.min.x + 26.0, item_rect.center().y),
+                        egui::Align2::LEFT_CENTER,
+                        path,
+                        FontId::proportional(11.0),
+                        Color32::from_rgb(210, 212, 220),
+                    );
+
+                    // Índice numérico a la derecha (estilo Unity: 0, 1...)
+                    ui.painter().text(
+                        Pos2::new(item_rect.max.x - 12.0, item_rect.center().y),
+                        egui::Align2::RIGHT_CENTER,
+                        idx.to_string(),
+                        FontId::proportional(11.0),
+                        Color32::from_rgb(130, 134, 145),
+                    );
+
+                    scene_y += 22.0;
+                }
+
+                // Botón "Add Open Scenes" alineado a la derecha debajo de la caja
+                ui.add_space(4.0);
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.add_sized(Vec2::new(135.0, 22.0), egui::Button::new("Add Open Scenes")).clicked() {
+                        let active_scene_name = "Place1 (Current Scene)".to_string();
+                        if !self.scenes.iter().any(|(_, s)| s == &active_scene_name) {
+                            self.scenes.push((true, active_scene_name));
+                        }
+                    }
+                });
+
+                ui.add_space(6.0);
+                ui.separator();
+                ui.add_space(6.0);
+
+                // =============================================================
+                // 2. SECCIÓN MEDIA: DOS COLUMNAS (Platform a la izquierda, Parámetros a la derecha)
+                // =============================================================
+                let avail_w = ui.available_width();
+                let left_col_w = 230.0;
+                let right_col_w = avail_w - left_col_w - 14.0;
+                let middle_h = 280.0;
 
                 ui.horizontal(|ui| {
                     // --- COLUMNA IZQUIERDA: LISTA DE PLATAFORMAS ---
                     ui.vertical(|ui| {
-                        ui.set_width(left_w);
+                        ui.set_width(left_col_w);
                         ui.label(
-                            egui::RichText::new("PLATAFORMAS DESTINO")
-                                .font(FontId::proportional(10.5))
-                                .color(Color32::from_rgb(140, 143, 155))
-                                .strong(),
+                            egui::RichText::new("Platform")
+                                .font(FontId::proportional(12.5))
+                                .strong()
+                                .color(Color32::from_rgb(220, 220, 220)),
                         );
-                        ui.add_space(6.0);
+                        ui.add_space(3.0);
+
+                        let list_rect = ui.allocate_space(Vec2::new(left_col_w, middle_h)).1;
+                        ui.painter().rect_filled(list_rect, Rounding::same(2.0), Color32::from_rgb(22, 22, 25));
+                        ui.painter().rect_stroke(list_rect, Rounding::same(2.0), Stroke::new(1.0, Color32::from_rgb(46, 48, 56)));
 
                         let platforms = [
-                            (ExportPlatform::PlayStation3, "PlayStation 3", "PS3"),
-                            (ExportPlatform::PSP, "PlayStation Portable", "PSP"),
-                            (ExportPlatform::PSVita, "PlayStation Vita", "VITA"),
-                            (ExportPlatform::Windows, "Windows PC", "PC"),
+                            ExportPlatform::Windows,
+                            ExportPlatform::PlayStation3,
+                            ExportPlatform::PSP,
+                            ExportPlatform::PSVita,
+                            ExportPlatform::DedicatedServer,
+                            ExportPlatform::Android,
                         ];
 
-                        for (plat, title, badge) in platforms {
-                            let is_sel = self.selected_platform == plat;
-                            let btn_rect = ui.allocate_space(Vec2::new(left_w - 8.0, 46.0)).1;
-                            let resp = ui.interact(btn_rect, ui.id().with(("plat_btn", badge)), Sense::click());
-
-                            let bg_color = if is_sel {
-                                Color32::from_rgb(0, 102, 204)
-                            } else if resp.hovered() {
-                                Color32::from_rgb(42, 45, 52)
-                            } else {
-                                Color32::from_rgb(33, 35, 41)
-                            };
-
-                            let border_stroke = if is_sel {
-                                Stroke::new(1.5, Color32::from_rgb(0, 162, 255))
-                            } else {
-                                Stroke::new(1.0, Color32::from_rgb(48, 51, 60))
-                            };
-
-                            ui.painter().rect(btn_rect, Rounding::same(6.0), bg_color, border_stroke);
-
-                            // Badge pequeño (ej: "PS3" o "PSP")
-                            let badge_rect = Rect::from_min_size(
-                                Pos2::new(btn_rect.min.x + 8.0, btn_rect.center().y - 10.0),
-                                Vec2::new(42.0, 20.0),
+                        let mut plat_y = list_rect.min.y + 2.0;
+                        for plat in platforms {
+                            let item_rect = Rect::from_min_size(
+                                Pos2::new(list_rect.min.x + 2.0, plat_y),
+                                Vec2::new(list_rect.width() - 4.0, 36.0),
                             );
-                            let badge_bg = if is_sel {
-                                Color32::from_rgb(0, 70, 150)
+
+                            let is_selected = self.selected_platform == plat;
+                            let is_active = self.active_build_platform == plat;
+
+                            let resp = ui.interact(item_rect, ui.id().with(("plat_item", plat.badge())), Sense::click());
+
+                            // Fondo: Azul sólido estilo Unity si está seleccionado (#2c5d88)
+                            let bg_color = if is_selected {
+                                Color32::from_rgb(44, 93, 136)
+                            } else if resp.hovered() {
+                                Color32::from_rgb(38, 40, 48)
                             } else {
-                                Color32::from_rgb(22, 24, 28)
+                                Color32::TRANSPARENT
                             };
-                            ui.painter().rect_filled(badge_rect, Rounding::same(4.0), badge_bg);
+
+                            if bg_color != Color32::TRANSPARENT {
+                                ui.painter().rect_filled(item_rect, Rounding::same(2.0), bg_color);
+                            }
+
+                            // Icono de la plataforma
                             ui.painter().text(
-                                badge_rect.center(),
-                                egui::Align2::CENTER_CENTER,
-                                badge,
-                                FontId::proportional(11.0),
+                                Pos2::new(item_rect.min.x + 12.0, item_rect.center().y),
+                                egui::Align2::LEFT_CENTER,
+                                plat.icon(),
+                                FontId::proportional(14.0),
                                 Color32::WHITE,
                             );
 
                             // Nombre de la plataforma
+                            let text_color = if is_selected { Color32::WHITE } else { Color32::from_rgb(210, 212, 218) };
                             ui.painter().text(
-                                Pos2::new(btn_rect.min.x + 58.0, btn_rect.center().y),
+                                Pos2::new(item_rect.min.x + 36.0, item_rect.center().y),
                                 egui::Align2::LEFT_CENTER,
-                                title,
-                                FontId::proportional(12.0),
-                                Color32::WHITE,
+                                plat.name(),
+                                FontId::proportional(11.5),
+                                text_color,
                             );
+
+                            // Indicador de plataforma activa (icono de Unity o marca si es la activa)
+                            if is_active {
+                                ui.painter().text(
+                                    Pos2::new(item_rect.max.x - 10.0, item_rect.center().y),
+                                    egui::Align2::RIGHT_CENTER,
+                                    "❖",
+                                    FontId::proportional(12.0),
+                                    if is_selected { Color32::WHITE } else { Color32::from_rgb(0, 162, 255) },
+                                );
+                            }
 
                             if resp.clicked() {
                                 self.select_platform(plat);
                             }
+
+                            plat_y += 38.0;
                         }
                     });
 
-                    ui.separator();
-
-                    // --- COLUMNA DERECHA: CONFIGURACIÓN DE LA PLATAFORMA ---
+                    // --- COLUMNA DERECHA: CONFIGURACIÓN DETALLADA (ESTILO INSPECTOR UNITY) ---
                     ui.vertical(|ui| {
-                        ui.set_width(right_w);
+                        ui.set_width(right_col_w);
 
-                        // Cabecera de la plataforma seleccionada
-                        ui.label(
-                            egui::RichText::new(self.selected_platform.name())
-                                .font(FontId::proportional(14.0))
-                                .strong()
-                                .color(Color32::from_rgb(0, 162, 255)),
-                        );
+                        // Cabecera: Icono + Nombre de la plataforma
+                        ui.horizontal(|ui| {
+                            ui.label(egui::RichText::new(self.selected_platform.icon()).font(FontId::proportional(15.0)));
+                            ui.label(
+                                egui::RichText::new(self.selected_platform.name())
+                                    .font(FontId::proportional(13.0))
+                                    .strong()
+                                    .color(Color32::WHITE),
+                            );
+                        });
+                        ui.add_space(4.0);
 
-                        ui.label(
-                            egui::RichText::new(format!("Formato: {}", self.selected_platform.file_format()))
-                                .font(FontId::proportional(11.0))
-                                .color(Color32::from_rgb(200, 202, 210)),
-                        );
-
-                        ui.add_space(8.0);
-
-                        // Tarjeta de Hardware & Presupuesto
-                        let budget_rect = ui.allocate_space(Vec2::new(right_w - 8.0, 52.0)).1;
-                        ui.painter().rect_filled(budget_rect, Rounding::same(6.0), Color32::from_rgb(22, 23, 27));
-                        ui.painter().rect_stroke(budget_rect, Rounding::same(6.0), Stroke::new(1.0, Color32::from_rgb(44, 46, 54)));
-
-                        ui.painter().text(
-                            Pos2::new(budget_rect.min.x + 10.0, budget_rect.min.y + 14.0),
-                            egui::Align2::LEFT_CENTER,
-                            self.selected_platform.hardware_desc(),
-                            FontId::proportional(10.0),
-                            Color32::from_rgb(160, 165, 175),
-                        );
-
-                        ui.painter().text(
-                            Pos2::new(budget_rect.min.x + 10.0, budget_rect.min.y + 38.0),
-                            egui::Align2::LEFT_CENTER,
-                            self.selected_platform.ram_budget_warning(),
-                            FontId::proportional(10.5),
-                            Color32::from_rgb(255, 200, 80),
-                        );
-
-                        ui.add_space(8.0);
-
-                        // Formulario de parámetros
-                        egui::Grid::new("export_form_grid")
-                            .num_columns(2)
-                            .spacing([12.0, 8.0])
+                        egui::ScrollArea::vertical()
+                            .max_height(middle_h - 26.0)
                             .show(ui, |ui| {
-                                ui.label(egui::RichText::new("Nombre del Juego:").font(FontId::proportional(11.5)));
-                                ui.text_edit_singleline(&mut self.game_title);
-                                ui.end_row();
+                                egui::Grid::new("unity_build_settings_grid")
+                                    .num_columns(2)
+                                    .spacing([12.0, 7.0])
+                                    .show(ui, |ui| {
+                                        // Target Platform
+                                        ui.label(egui::RichText::new("Target Platform").font(FontId::proportional(11.0)));
+                                        let targets = self.selected_platform.supported_targets();
+                                        egui::ComboBox::from_id_source("cb_target_platform")
+                                            .width(220.0)
+                                            .selected_text(*targets.get(self.target_format_idx).unwrap_or(&targets[0]))
+                                            .show_ui(ui, |ui| {
+                                                for (idx, target) in targets.iter().enumerate() {
+                                                    ui.selectable_value(&mut self.target_format_idx, idx, *target);
+                                                }
+                                            });
+                                        ui.end_row();
 
-                                ui.label(egui::RichText::new("Title ID / Game ID:").font(FontId::proportional(11.5)));
-                                ui.text_edit_singleline(&mut self.title_id);
-                                ui.end_row();
+                                        // Architecture
+                                        ui.label(egui::RichText::new("Architecture").font(FontId::proportional(11.0)));
+                                        let archs = self.selected_platform.supported_architectures();
+                                        egui::ComboBox::from_id_source("cb_architecture")
+                                            .width(220.0)
+                                            .selected_text(*archs.get(self.arch_idx).unwrap_or(&archs[0]))
+                                            .show_ui(ui, |ui| {
+                                                for (idx, arch) in archs.iter().enumerate() {
+                                                    ui.selectable_value(&mut self.arch_idx, idx, *arch);
+                                                }
+                                            });
+                                        ui.end_row();
 
-                                ui.label(egui::RichText::new("Versión:").font(FontId::proportional(11.5)));
-                                ui.text_edit_singleline(&mut self.version);
-                                ui.end_row();
+                                        // Title ID / Game ID
+                                        ui.label(egui::RichText::new("Game Title").font(FontId::proportional(11.0)));
+                                        ui.add_sized(Vec2::new(220.0, 20.0), egui::TextEdit::singleline(&mut self.game_title));
+                                        ui.end_row();
 
-                                ui.label(egui::RichText::new("Carpeta de Salida:").font(FontId::proportional(11.5)));
-                                ui.horizontal(|ui| {
-                                    ui.text_edit_singleline(&mut self.export_path);
-                                    if ui.button("Por defecto").clicked() {
-                                        self.export_path = self.selected_platform.default_output_folder().to_string();
-                                    }
-                                });
-                                ui.end_row();
+                                        ui.label(egui::RichText::new("Title ID / App ID").font(FontId::proportional(11.0)));
+                                        ui.add_sized(Vec2::new(220.0, 20.0), egui::TextEdit::singleline(&mut self.title_id));
+                                        ui.end_row();
+
+                                        // Export Folder
+                                        ui.label(egui::RichText::new("Destination Path").font(FontId::proportional(11.0)));
+                                        ui.horizontal(|ui| {
+                                            ui.add_sized(Vec2::new(160.0, 20.0), egui::TextEdit::singleline(&mut self.export_path));
+                                            if ui.add_sized(Vec2::new(55.0, 20.0), egui::Button::new("Default")).clicked() {
+                                                self.export_path = self.selected_platform.default_output_folder().to_string();
+                                            }
+                                        });
+                                        ui.end_row();
+
+                                        // Checkboxes estilo Unity
+                                        ui.label("");
+                                        ui.checkbox(&mut self.copy_pdb, "Copy PDB files");
+                                        ui.end_row();
+
+                                        ui.label("");
+                                        ui.checkbox(&mut self.create_vs_solution, "Create Visual Studio Solution");
+                                        ui.end_row();
+
+                                        ui.label("");
+                                        ui.checkbox(&mut self.development_build, "Development Build");
+                                        ui.end_row();
+
+                                        ui.label("");
+                                        ui.checkbox(&mut self.autoconnect_profiler, "Autoconnect Profiler");
+                                        ui.end_row();
+
+                                        ui.label("");
+                                        ui.checkbox(&mut self.script_debugging, "Script Debugging");
+                                        ui.end_row();
+
+                                        ui.label("");
+                                        ui.checkbox(&mut self.auto_downscale_textures, "Optimize & Downscale Textures");
+                                        ui.end_row();
+
+                                        ui.label("");
+                                        ui.checkbox(&mut self.compile_native_shaders, "Compile Native Shaders");
+                                        ui.end_row();
+
+                                        ui.label("");
+                                        ui.checkbox(&mut self.clean_destination, "Clean Destination Folder");
+                                        ui.end_row();
+
+                                        // Compression Method
+                                        ui.label(egui::RichText::new("Compression Method").font(FontId::proportional(11.0)));
+                                        let compressions = ["Default", "LZ4", "LZ4HC", "Fast (Uncompressed)"];
+                                        egui::ComboBox::from_id_source("cb_compression_method")
+                                            .width(220.0)
+                                            .selected_text(compressions[self.compression_method_idx.min(compressions.len() - 1)])
+                                            .show_ui(ui, |ui| {
+                                                for (idx, comp) in compressions.iter().enumerate() {
+                                                    ui.selectable_value(&mut self.compression_method_idx, idx, *comp);
+                                                }
+                                            });
+                                        ui.end_row();
+                                    });
                             });
-
-                        ui.add_space(8.0);
-                        ui.label(egui::RichText::new("Optimización y Cocinado (Cooker):").font(FontId::proportional(11.0)).strong());
-                        ui.checkbox(&mut self.auto_downscale_textures, "Optimizar y redimensionar texturas para la VRAM de la consola");
-                        ui.checkbox(&mut self.compile_native_shaders, "Compilar shaders nativos (RSX Cg / GL / GU)");
-                        ui.checkbox(&mut self.clean_destination, "Limpiar carpeta destino antes de exportar");
                     });
                 });
 
-                ui.add_space(12.0);
-                ui.separator();
                 ui.add_space(8.0);
+                ui.separator();
+                ui.add_space(4.0);
 
-                // --- BARRA INFERIOR DE ACCIONES Y ESTADO ---
+                // =============================================================
+                // 3. SECCIÓN INFERIOR: Asset Import Overrides, Player Settings y Botones
+                // =============================================================
                 ui.horizontal(|ui| {
-                    // Mensaje de estado con icono
-                    let status_color = if self.is_success {
-                        Color32::from_rgb(80, 220, 100)
-                    } else if self.is_exporting {
-                        Color32::from_rgb(0, 162, 255)
-                    } else {
-                        Color32::from_rgb(180, 183, 192)
-                    };
+                    // Lado izquierdo: Asset Import Overrides colapsable
+                    ui.vertical(|ui| {
+                        let header_txt = if self.asset_overrides_open { "▼ Asset Import Overrides" } else { "▶ Asset Import Overrides" };
+                        if ui.selectable_label(self.asset_overrides_open, egui::RichText::new(header_txt).font(FontId::proportional(11.0))).clicked() {
+                            self.asset_overrides_open = !self.asset_overrides_open;
+                        }
 
-                    ui.label(
-                        egui::RichText::new(&self.status_message)
-                            .font(FontId::proportional(11.5))
-                            .color(status_color),
-                    );
+                        if self.asset_overrides_open {
+                            ui.horizontal(|ui| {
+                                ui.label(egui::RichText::new("Max Texture Size:").font(FontId::proportional(10.5)));
+                                let tex_sizes = ["No Override", "256", "512", "1024", "2048"];
+                                egui::ComboBox::from_id_source("cb_max_tex_size")
+                                    .width(95.0)
+                                    .selected_text(tex_sizes[self.max_texture_size_idx.min(tex_sizes.len() - 1)])
+                                    .show_ui(ui, |ui| {
+                                        for (idx, size) in tex_sizes.iter().enumerate() {
+                                            ui.selectable_value(&mut self.max_texture_size_idx, idx, *size);
+                                        }
+                                    });
 
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        // Botón principal: Exportar y Empaquetar
-                        let export_btn = ui.add_sized(
-                            Vec2::new(160.0, 28.0),
+                                ui.add_space(6.0);
+                                ui.label(egui::RichText::new("Texture Compression:").font(FontId::proportional(10.5)));
+                                let tex_comps = ["No Override", "DXT1 / RSX", "DXT5 / RGBA", "Fast"];
+                                egui::ComboBox::from_id_source("cb_tex_compression")
+                                    .width(95.0)
+                                    .selected_text(tex_comps[self.texture_compression_idx.min(tex_comps.len() - 1)])
+                                    .show_ui(ui, |ui| {
+                                        for (idx, comp) in tex_comps.iter().enumerate() {
+                                            ui.selectable_value(&mut self.texture_compression_idx, idx, *comp);
+                                        }
+                                    });
+                            });
+                        }
+
+                        ui.add_space(3.0);
+                        if ui.add_sized(Vec2::new(120.0, 24.0), egui::Button::new("Player Settings...")).clicked() {
+                            self.status_message = "Player Settings: Configuración del juego abierta.".to_string();
+                        }
+                    });
+
+                    // Lado derecho: Botones de acción principales (Switch Platform, Build, Build And Run)
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Max), |ui| {
+                        // Botón "Build And Run"
+                        let build_run_btn = ui.add_sized(
+                            Vec2::new(105.0, 24.0),
                             egui::Button::new(
-                                egui::RichText::new("🚀 Exportar a Consola")
-                                    .font(FontId::proportional(12.0))
-                                    .color(Color32::WHITE)
-                                    .strong(),
-                            )
-                            .fill(Color32::from_rgb(0, 120, 215)),
-                        );
-
-                        // Botón secundario: Solo cocinar recursos
-                        let cook_btn = ui.add_sized(
-                            Vec2::new(150.0, 28.0),
-                            egui::Button::new(
-                                egui::RichText::new("Cocinar Recursos")
+                                egui::RichText::new("Build And Run")
                                     .font(FontId::proportional(11.5))
                                     .color(Color32::WHITE),
                             )
                             .fill(Color32::from_rgb(44, 46, 54)),
                         );
 
-                        // Botón Cerrar / Cancelar
-                        if ui.add_sized(Vec2::new(80.0, 28.0), egui::Button::new("Cancelar")).clicked() {
-                            self.is_open = false;
+                        // Botón "Build"
+                        let build_btn = ui.add_sized(
+                            Vec2::new(85.0, 24.0),
+                            egui::Button::new(
+                                egui::RichText::new("Build")
+                                    .font(FontId::proportional(11.5))
+                                    .color(Color32::WHITE),
+                            )
+                            .fill(Color32::from_rgb(44, 46, 54)),
+                        );
+
+                        // Botón "Switch Platform"
+                        let is_already_active = self.active_build_platform == self.selected_platform;
+                        let switch_btn = ui.add_enabled_ui(!is_already_active, |ui| {
+                            ui.add_sized(
+                                Vec2::new(115.0, 24.0),
+                                egui::Button::new(
+                                    egui::RichText::new("Switch Platform")
+                                        .font(FontId::proportional(11.5))
+                                        .color(if is_already_active { Color32::from_rgb(120, 120, 120) } else { Color32::WHITE }),
+                                )
+                                .fill(Color32::from_rgb(44, 46, 54)),
+                            )
+                        }).inner;
+
+                        if switch_btn.clicked() {
+                            self.active_build_platform = self.selected_platform;
+                            self.status_message = format!("Plataforma activa cambiada a: {}", self.selected_platform.name());
                         }
 
-                        if cook_btn.clicked() {
-                            self.perform_cooking(engine, false, &mut action);
+                        if build_btn.clicked() {
+                            self.perform_cooking(engine, true, false, &mut action);
                         }
 
-                        if export_btn.clicked() {
-                            self.perform_cooking(engine, true, &mut action);
+                        if build_run_btn.clicked() {
+                            self.perform_cooking(engine, true, true, &mut action);
                         }
                     });
                 });
+
+                // Barra de estado muy sutil al pie
+                ui.add_space(4.0);
+                let status_color = if self.is_success {
+                    Color32::from_rgb(80, 220, 100)
+                } else if self.is_exporting {
+                    Color32::from_rgb(0, 162, 255)
+                } else {
+                    Color32::from_rgb(150, 153, 162)
+                };
+
+                ui.label(
+                    egui::RichText::new(&self.status_message)
+                        .font(FontId::proportional(10.5))
+                        .color(status_color),
+                );
             });
 
-        if !is_still_open {
+        if !is_still_open || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.is_open = false;
         }
 
         action
     }
 
-    /// Ejecuta el proceso de cocinado y empaquetado para la consola destino
-    fn perform_cooking(&mut self, engine: &mut Option<XenityEngine>, full_export: bool, action: &mut BuildDialogAction) {
+    /// Ejecuta el proceso de cocinado y empaquetado para la plataforma destino
+    fn perform_cooking(&mut self, engine: &mut Option<XenityEngine>, full_export: bool, run_after: bool, action: &mut BuildDialogAction) {
         self.is_exporting = true;
         self.is_success = false;
 
@@ -460,7 +729,7 @@ impl BuildExportState {
                 }
                 Err(err_msg) => {
                     self.status_message = format!("Aviso de Cocinado: {}. Generando empaquetado...", err_msg);
-                    cook_success = true; // Continuamos generando los archivos de la plataforma
+                    cook_success = true;
                 }
             }
         } else {
@@ -470,15 +739,19 @@ impl BuildExportState {
 
         if cook_success {
             if full_export {
-                // Generar estructura completa de la consola
                 self.generate_platform_structure(&out_dir);
-                self.status_message = format!("¡Exportación a {} completada con éxito en {:?}!", self.selected_platform.badge(), out_dir);
+                self.status_message = format!("¡Compilación exitosa para {} en {:?}!", self.selected_platform.badge(), out_dir);
                 self.is_success = true;
                 self.last_exported_folder = Some(out_dir.clone());
                 *action = BuildDialogAction::OpenOutputLog(format!(
-                    "Juego '{}' ({}) exportado correctamente a {:?}. Estructura lista para consola y emuladores.",
+                    "Build completado exitosamente para '{}' ({}) en {:?}",
                     self.game_title, self.title_id, out_dir
                 ));
+
+                // Si seleccionó "Build And Run", abrimos la carpeta en el explorador
+                if run_after {
+                    let _ = std::process::Command::new("explorer").arg(&out_dir).spawn();
+                }
             } else {
                 self.status_message = format!("¡Recursos cocinados con éxito en {:?}!", out_dir);
                 self.is_success = true;
@@ -496,26 +769,16 @@ impl BuildExportState {
     fn generate_platform_structure(&self, out_dir: &Path) {
         match self.selected_platform {
             ExportPlatform::PlayStation3 => {
-                // Estructura oficial de PlayStation 3 para RPCS3 o instalación en PS3 HEN/CFW:
-                // PS3_GAME/
-                //   PARAM.SFO
-                //   ICON0.PNG
-                //   USRDIR/
-                //     EBOOT.BIN
-                //     data.xenb
-                //     db.xenb
                 let ps3_game = out_dir.join("PS3_GAME");
                 let usrdir = ps3_game.join("USRDIR");
                 let _ = fs::create_dir_all(&usrdir);
 
-                // Crear archivo de metadatos PARAM.SFO descriptivo
                 let sfo_info = format!(
                     "TITLE={}\nTITLE_ID={}\nVERSION={}\nAPP_VER={}\nCATEGORY=DG\nBOOTABLE=1\nRESOLUTION=1080,720,576,480\nSOUND_FORMAT=2,6\n",
                     self.game_title, self.title_id, self.version, self.version
                 );
                 let _ = fs::write(ps3_game.join("PARAM.SFO.txt"), sfo_info);
 
-                // Mover o copiar data.xenb y db.xenb dentro de USRDIR si se cocinaron en la raíz
                 let root_data = out_dir.join("data.xenb");
                 if root_data.exists() {
                     let _ = fs::copy(&root_data, usrdir.join("data.xenb"));
@@ -525,7 +788,6 @@ impl BuildExportState {
                     let _ = fs::copy(&root_db, usrdir.join("db.xenb"));
                 }
 
-                // Instrucciones de ejecución para el usuario
                 let readme = format!(
                     "=== XENITY ENGINE - PLAYSTATION 3 EXPORT ===\n\n\
                     Juego: {}\n\
@@ -535,18 +797,13 @@ impl BuildExportState {
                     1. En Emulador RPCS3: Arrastra la carpeta 'PS3_GAME' o la carpeta principal al emulador.\n\
                     2. En Consola PS3 Real (HEN / CFW):\n\
                        Copia la carpeta 'PS3_GAME' a /dev_hdd0/GAMES/{}/\n\
-                       O usa el creador de .pkg de Xenity (make_package_npdrm) incluido en Docker.\n\n\
-                    ¡Disfruta tu juego de Roblox portado a PlayStation 3!\n",
+                       O usa el empaquetador .pkg de Xenity (make_package_npdrm).\n\n\
+                    ¡Disfruta tu juego exportado a PlayStation 3!\n",
                     self.game_title, self.title_id, self.version, self.title_id
                 );
                 let _ = fs::write(out_dir.join("COMO_JUGAR_PS3.txt"), readme);
             }
             ExportPlatform::PSP => {
-                // Estructura oficial de PSP:
-                // PSP/GAME/<TITLE_ID>/
-                //   EBOOT.PBP
-                //   data.xenb
-                //   db.xenb
                 let psp_game = out_dir.join(format!("PSP/GAME/{}", self.title_id));
                 let _ = fs::create_dir_all(&psp_game);
 
@@ -571,7 +828,6 @@ impl BuildExportState {
                 let _ = fs::write(out_dir.join("COMO_JUGAR_PSP.txt"), readme);
             }
             ExportPlatform::PSVita => {
-                // Estructura de PS Vita
                 let vpk_dir = out_dir.join("vpk_contents");
                 let _ = fs::create_dir_all(&vpk_dir);
 
@@ -595,12 +851,12 @@ impl BuildExportState {
                 );
                 let _ = fs::write(out_dir.join("COMO_JUGAR_VITA.txt"), readme);
             }
-            ExportPlatform::Windows => {
+            ExportPlatform::Windows | ExportPlatform::DedicatedServer | ExportPlatform::Android => {
                 let readme = format!(
-                    "=== XENITY ENGINE - WINDOWS STANDALONE EXPORT ===\n\n\
+                    "=== XENITY ENGINE - {} EXPORT ===\n\n\
                     Juego: {}\n\
-                    Ejecuta el archivo ejecutable del juego directamente.\n",
-                    self.game_title
+                    Ejecutable generado y recursos listos.\n",
+                    self.selected_platform.name(), self.game_title
                 );
                 let _ = fs::write(out_dir.join("LEEME.txt"), readme);
             }
