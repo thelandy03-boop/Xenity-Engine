@@ -449,41 +449,6 @@ impl StudioRibbonState {
         );
         add_tab_resp.on_hover_text("Nueva pestaña");
 
-        // --- LADO DERECHO: Iconos oficiales de Roblox Studio (Avatar con aro naranja, Colaborar, Chat) ---
-        let mut right_icon_x = tabs_rect.max.x - 16.0;
-
-        // 1. Icono Chat / Panel derecho
-        let chat_rect = Rect::from_center_size(Pos2::new(right_icon_x - 8.0, bar_center_y), Vec2::new(20.0, 20.0));
-        let chat_resp = ui.interact(chat_rect, ui.id().with("top_bar_chat"), Sense::click());
-        if chat_resp.hovered() {
-            ui.painter().rect_filled(chat_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
-        }
-        let chat_icon_rect = Rect::from_center_size(chat_rect.center(), Vec2::new(14.0, 14.0));
-        ui.painter().image(icons.top_chat.id(), chat_icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        chat_resp.on_hover_text("Chat del equipo");
-        right_icon_x -= 26.0;
-
-        // 2. Icono Colaborar / Compartir
-        let collab_rect = Rect::from_center_size(Pos2::new(right_icon_x - 8.0, bar_center_y), Vec2::new(20.0, 20.0));
-        let collab_resp = ui.interact(collab_rect, ui.id().with("top_bar_collab"), Sense::click());
-        if collab_resp.hovered() {
-            ui.painter().rect_filled(collab_rect, Rounding::same(3.0), Color32::from_rgba_unmultiplied(255, 255, 255, 18));
-        }
-        let collab_icon_rect = Rect::from_center_size(collab_rect.center(), Vec2::new(14.0, 14.0));
-        ui.painter().image(icons.top_collab.id(), collab_icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        collab_resp.on_hover_text("Colaborar");
-        right_icon_x -= 28.0;
-
-        // 3. Avatar de usuario circular con aro naranja oficial (Roblox Studio)
-        let avatar_center = Pos2::new(right_icon_x - 10.0, bar_center_y);
-        let avatar_rect = Rect::from_center_size(avatar_center, Vec2::new(22.0, 22.0));
-        let avatar_resp = ui.interact(avatar_rect, ui.id().with("top_bar_avatar"), Sense::click());
-        let av_ring_col = if avatar_resp.hovered() { Color32::from_rgb(255, 160, 50) } else { Color32::from_rgb(220, 110, 40) };
-        ui.painter().circle_stroke(avatar_center, 10.5, Stroke::new(1.5, av_ring_col));
-        let avatar_icon_rect = Rect::from_center_size(avatar_center, Vec2::new(16.0, 16.0));
-        ui.painter().image(icons.top_avatar.id(), avatar_icon_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
-        avatar_resp.on_hover_text("Perfil de usuario");
-
         ui.painter().line_segment(
             [Pos2::new(tabs_rect.min.x, tabs_rect.max.y), Pos2::new(tabs_rect.max.x, tabs_rect.max.y)],
             Stroke::new(1.0, Color32::from_rgb(38, 40, 45)),
