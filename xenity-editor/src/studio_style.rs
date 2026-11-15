@@ -70,6 +70,7 @@ pub fn apply_roblox_studio_theme(ctx: &egui::Context) {
     ctx.set_visuals(visuals);
 
     ctx.style_mut(|s| {
+        s.animation_time = 0.0; // Desactivar completamente todas las animaciones (transiciones 100% instantáneas)
         s.interaction.resize_grab_radius_side = 6.0;
     });
 }
