@@ -4,119 +4,108 @@
 // Integrates the 2-column + Scenes in Build architecture of Unity
 // styled seamlessly with Roblox Studio's authentic dark UI theme (#252526 / #1E1E1E / #007ACC).
 
-use eframe::egui::{self, Color32, FontId, Pos2, Rect, Rounding, Sense, Stroke, TextureHandle, Vec2};
+use eframe::egui::{self, Color32, FontId, Pos2, Rect, Rounding, Sense, Stroke, Vec2};
 use crate::studio_style::*;
-use crate::studio_textures::StudioIcons;
 use crate::xenity_ffi::XenityEngine;
 use std::path::{Path, PathBuf};
 use std::fs;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ExportPlatform {
-    Windows,
     PlayStation3,
     PSP,
     PSVita,
-    DedicatedServer,
+    Windows,
     Android,
 }
 
 impl ExportPlatform {
     pub fn name(&self) -> &'static str {
         match self {
-            ExportPlatform::Windows => "Windows Standalone (PC)",
             ExportPlatform::PlayStation3 => "PlayStation 3 (PS3)",
             ExportPlatform::PSP => "PlayStation Portable (PSP)",
             ExportPlatform::PSVita => "PlayStation Vita",
-            ExportPlatform::DedicatedServer => "Servidor Dedicado",
+            ExportPlatform::Windows => "Windows Standalone (PC)",
             ExportPlatform::Android => "Android Mobile",
         }
     }
 
-    pub fn texture<'a>(&self, icons: &'a StudioIcons) -> &'a TextureHandle {
+    pub fn svg_source(&self) -> egui::ImageSource<'static> {
         match self {
-            ExportPlatform::Windows => &icons.plat_pc,
-            ExportPlatform::PlayStation3 => &icons.plat_ps3,
-            ExportPlatform::PSP => &icons.plat_psp,
-            ExportPlatform::PSVita => &icons.plat_psvita,
-            ExportPlatform::DedicatedServer => &icons.plat_server,
-            ExportPlatform::Android => &icons.plat_android,
+            ExportPlatform::PlayStation3 => egui::include_image!("../assets/icons/platforms/ps3.svg"),
+            ExportPlatform::PSP => egui::include_image!("../assets/icons/platforms/psp.svg"),
+            ExportPlatform::PSVita => egui::include_image!("../assets/icons/platforms/psvita.svg"),
+            ExportPlatform::Windows => egui::include_image!("../assets/icons/platforms/windows.svg"),
+            ExportPlatform::Android => egui::include_image!("../assets/icons/platforms/android.svg"),
         }
     }
 
     pub fn badge(&self) -> &'static str {
         match self {
-            ExportPlatform::Windows => "PC",
             ExportPlatform::PlayStation3 => "PS3",
             ExportPlatform::PSP => "PSP",
             ExportPlatform::PSVita => "VITA",
-            ExportPlatform::DedicatedServer => "SRV",
+            ExportPlatform::Windows => "PC",
             ExportPlatform::Android => "APK",
         }
     }
 
     pub fn hardware_desc(&self) -> &'static str {
         match self {
-            ExportPlatform::Windows => "x86_64 | OpenGL 3.3 Core Renderer (Sin límite estricto de consola)",
             ExportPlatform::PlayStation3 => "Cell Broadband Engine @ 3.2GHz | RSX Reality Synthesizer (256MB XDR + 256MB VRAM)",
             ExportPlatform::PSP => "MIPS R4000 @ 333MHz | Graphics Core GU (32MB / 64MB RAM)",
             ExportPlatform::PSVita => "Quad-core ARM Cortex-A9 | SGX543MP4+ (512MB RAM + 128MB VRAM)",
-            ExportPlatform::DedicatedServer => "Modo consola sin renderizado gráfico (Headless Server)",
+            ExportPlatform::Windows => "x86_64 | OpenGL 3.3 Core Renderer (Sin límite estricto de consola)",
             ExportPlatform::Android => "GLES 3.0 / Vulkan | Arquitecturas ARM64",
         }
     }
 
     pub fn default_title_id(&self) -> &'static str {
         match self {
-            ExportPlatform::Windows => "XENITY_GAME",
             ExportPlatform::PlayStation3 => "NPEB00123",
             ExportPlatform::PSP => "ULES00123",
             ExportPlatform::PSVita => "PCSB00123",
-            ExportPlatform::DedicatedServer => "SERVER_01",
+            ExportPlatform::Windows => "XENITY_GAME",
             ExportPlatform::Android => "com.xenity.game",
         }
     }
 
     pub fn default_output_folder(&self) -> &'static str {
         match self {
-            ExportPlatform::Windows => "build/windows",
             ExportPlatform::PlayStation3 => "build/ps3",
             ExportPlatform::PSP => "build/psp",
             ExportPlatform::PSVita => "build/psvita",
-            ExportPlatform::DedicatedServer => "build/server",
+            ExportPlatform::Windows => "build/windows",
             ExportPlatform::Android => "build/android",
         }
     }
 
     pub fn ffi_platform_id(&self) -> i32 {
         match self {
-            ExportPlatform::Windows => 0,
+            ExportPlatform::PlayStation3 => 3,
             ExportPlatform::PSP => 1,
             ExportPlatform::PSVita => 2,
-            ExportPlatform::PlayStation3 => 3,
-            ExportPlatform::DedicatedServer => 0,
+            ExportPlatform::Windows => 0,
             ExportPlatform::Android => 0,
         }
     }
 
     pub fn supported_targets(&self) -> &'static [&'static str] {
         match self {
-            ExportPlatform::Windows => &["Windows (64-bit)", "Windows (32-bit)", "Universal Windows Platform"],
             ExportPlatform::PlayStation3 => &["PS3_GAME Folder (RPCS3 / HEN)", "PKG Package (Installable)", "ISO Disc Image"],
             ExportPlatform::PSP => &["EBOOT.PBP (PPSSPP & Consola Real)", "ISO Disc Image"],
             ExportPlatform::PSVita => &["VPK Package (Vita3K / HENkaku)", "Folder App (ux0:app)"],
-            ExportPlatform::DedicatedServer => &["Linux Headless", "Windows Server (x64)"],
+            ExportPlatform::Windows => &["Windows (64-bit)", "Windows (32-bit)", "Universal Windows Platform"],
             ExportPlatform::Android => &["APK Package", "AAB (Google Play)"],
         }
     }
 
     pub fn supported_architectures(&self) -> &'static [&'static str] {
         match self {
-            ExportPlatform::Windows => &["Intel 64-bit (x86_64)", "ARM64", "x86 (32-bit)"],
             ExportPlatform::PlayStation3 => &["Cell Broadband Engine @ 3.2GHz + RSX"],
             ExportPlatform::PSP => &["MIPS R4000 @ 333MHz + GU"],
             ExportPlatform::PSVita => &["Quad-core ARM Cortex-A9 + SGX543MP4+"],
-            ExportPlatform::DedicatedServer => &["x86_64", "ARM64"],
+            ExportPlatform::Windows => &["Intel 64-bit (x86_64)", "ARM64", "x86 (32-bit)"],
             ExportPlatform::Android => &["ARM64-v8a", "armeabi-v7a", "x86_64"],
         }
     }
@@ -231,7 +220,7 @@ impl BuildExportState {
         }
     }
 
-    pub fn show(&mut self, ctx: &egui::Context, engine: &mut Option<XenityEngine>, icons: &StudioIcons) -> BuildDialogAction {
+    pub fn show(&mut self, ctx: &egui::Context, engine: &mut Option<XenityEngine>) -> BuildDialogAction {
         if !self.is_open {
             return BuildDialogAction::None;
         }
@@ -419,7 +408,6 @@ impl BuildExportState {
                             ExportPlatform::PSP,
                             ExportPlatform::PSVita,
                             ExportPlatform::Windows,
-                            ExportPlatform::DedicatedServer,
                             ExportPlatform::Android,
                         ];
 
@@ -454,23 +442,20 @@ impl BuildExportState {
                                 ui.painter().rect(item_rect, Rounding::same(4.0), bg_color, border_stroke);
                             }
 
-                            // Icono real oficial de la consola (Textura de alta resolución)
-                            let icon_tex = plat.texture(icons);
-                            let icon_rect = Rect::from_center_size(
-                                Pos2::new(item_rect.min.x + 20.0, item_rect.center().y),
-                                Vec2::new(24.0, 24.0),
+                            // Logo SVG oficial proporcionado por el usuario
+                            let img_rect = Rect::from_center_size(
+                                Pos2::new(item_rect.min.x + 22.0, item_rect.center().y),
+                                Vec2::new(28.0, 20.0),
                             );
-                            ui.painter().image(
-                                icon_tex.id(),
-                                icon_rect,
-                                Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
-                                Color32::WHITE,
-                            );
+                            let img_widget = egui::Image::new(plat.svg_source())
+                                .max_size(Vec2::new(28.0, 20.0))
+                                .tint(if is_selected { Color32::WHITE } else { Color32::from_rgb(220, 222, 230) });
+                            ui.put(img_rect, img_widget);
 
                             // Nombre
                             let text_color = if is_selected { Color32::WHITE } else { Color32::from_rgb(215, 218, 225) };
                             ui.painter().text(
-                                Pos2::new(item_rect.min.x + 38.0, item_rect.center().y - 6.0),
+                                Pos2::new(item_rect.min.x + 42.0, item_rect.center().y - 6.0),
                                 egui::Align2::LEFT_CENTER,
                                 plat.name(),
                                 FontId::proportional(11.5),
@@ -479,7 +464,7 @@ impl BuildExportState {
 
                             // Badge pequeño (ej: PS3, PSP)
                             ui.painter().text(
-                                Pos2::new(item_rect.min.x + 38.0, item_rect.center().y + 8.0),
+                                Pos2::new(item_rect.min.x + 42.0, item_rect.center().y + 8.0),
                                 egui::Align2::LEFT_CENTER,
                                 plat.badge(),
                                 FontId::proportional(9.5),
@@ -509,16 +494,11 @@ impl BuildExportState {
                     ui.vertical(|ui| {
                         ui.set_width(right_col_w);
 
-                        // Cabecera de plataforma con logo real
+                        // Cabecera de plataforma con SVG oficial del usuario
                         ui.horizontal(|ui| {
-                            let head_tex = self.selected_platform.texture(icons);
-                            let (icon_rect, _) = ui.allocate_exact_size(Vec2::new(24.0, 24.0), Sense::hover());
-                            ui.painter().image(
-                                head_tex.id(),
-                                icon_rect,
-                                Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
-                                Color32::WHITE,
-                            );
+                            let head_img = egui::Image::new(self.selected_platform.svg_source())
+                                .max_size(Vec2::new(36.0, 24.0));
+                            ui.add(head_img);
                             ui.label(
                                 egui::RichText::new(self.selected_platform.name())
                                     .font(FontId::proportional(14.0))
@@ -904,7 +884,7 @@ impl BuildExportState {
                 );
                 let _ = fs::write(out_dir.join("COMO_JUGAR_VITA.txt"), readme);
             }
-            ExportPlatform::Windows | ExportPlatform::DedicatedServer | ExportPlatform::Android => {
+            ExportPlatform::Windows | ExportPlatform::Android => {
                 let readme = format!(
                     "=== XENITY ENGINE - {} EXPORT ===\n\n\
                     Juego: {}\n\

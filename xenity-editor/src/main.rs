@@ -100,6 +100,7 @@ impl eframe::App for RobloxStudioApp {
         apply_roblox_studio_theme(ctx);
 
         if self.icons.is_none() {
+            egui_extras::install_image_loaders(ctx);
             self.icons = Some(StudioIcons::new(ctx));
         }
         let icons = self.icons.as_ref().unwrap();
@@ -414,7 +415,7 @@ impl eframe::App for RobloxStudioApp {
         }
 
         // 6. DIÁLOGO MODAL: BUILD & EXPORT (PS3, PSP, VITA, PC)
-        let build_action = self.build_dialog.show(ctx, &mut self.engine, icons);
+        let build_action = self.build_dialog.show(ctx, &mut self.engine);
         match build_action {
             BuildDialogAction::OpenOutputLog(msg) => {
                 self.output.add_log(LogType::Info, "Export", msg);

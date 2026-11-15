@@ -135,12 +135,11 @@ pub struct StudioIcons {
     pub view_top: TextureHandle,
     pub view_right: TextureHandle,
 
-    // Official Platform Logos (Consoles & PC)
+    // Official Platform Logos (Consoles & PC from user SVGs)
     pub plat_ps3: TextureHandle,
     pub plat_psp: TextureHandle,
     pub plat_psvita: TextureHandle,
-    pub plat_pc: TextureHandle,
-    pub plat_server: TextureHandle,
+    pub plat_windows: TextureHandle,
     pub plat_android: TextureHandle,
 }
 
@@ -281,12 +280,11 @@ impl StudioIcons {
             view_top: load_png(ctx, "rbx_view_top", include_bytes!("../assets/icons/view_top.png")),
             view_right: load_png(ctx, "rbx_view_right", include_bytes!("../assets/icons/view_right.png")),
 
-            // Official Platform Logos
+            // Official Platform Logos from user SVGs
             plat_ps3: load_png(ctx, "plat_ps3", include_bytes!("../assets/icons/platforms/ps3.png")),
             plat_psp: load_png(ctx, "plat_psp", include_bytes!("../assets/icons/platforms/psp.png")),
             plat_psvita: load_png(ctx, "plat_psvita", include_bytes!("../assets/icons/platforms/psvita.png")),
-            plat_pc: load_png(ctx, "plat_pc", include_bytes!("../assets/icons/platforms/pc.png")),
-            plat_server: load_png(ctx, "plat_server", include_bytes!("../assets/icons/platforms/server.png")),
+            plat_windows: load_png(ctx, "plat_windows", include_bytes!("../assets/icons/platforms/windows.png")),
             plat_android: load_png(ctx, "plat_android", include_bytes!("../assets/icons/platforms/android.png")),
         }
     }
