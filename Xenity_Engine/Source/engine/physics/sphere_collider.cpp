@@ -69,17 +69,8 @@ void SphereCollider::Start()
 void SphereCollider::OnDrawGizmosSelected()
 {
 #if defined(EDITOR)
-	Color lineColor = Color::CreateFromRGBAFloat(0, 1, 0, 1);
-	if (m_isTrigger)
-		lineColor = Color::CreateFromRGBAFloat(0, 1, 0, 0.5f);
-
-	Gizmo::SetColor(lineColor);
-
-	const float maxScale = GetTransform()->GetScale().Max();
-	const glm::mat4x4& matrix = GetTransform()->GetTransformationMatrix();
-	const Vector3 newPos = Vector3(matrix * glm::vec4(-m_offset.x, m_offset.y, m_offset.z, 1));
-
-	Gizmo::DrawSphere(Vector3(-newPos.x, newPos.y, newPos.z), GetTransformRaw()->GetRotation(), m_size / 2 * maxScale);
+	// Comportamiento auténtico de Roblox Studio: no mostrar líneas verdes de colisión en selección
+	return;
 #endif
 }
 

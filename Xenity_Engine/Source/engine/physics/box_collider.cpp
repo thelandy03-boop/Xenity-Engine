@@ -167,50 +167,8 @@ void BoxCollider::CreateCollision(bool forceCreation)
 void BoxCollider::OnDrawGizmosSelected()
 {
 #if defined(EDITOR)
-	Color lineColor = Color::CreateFromRGBAFloat(0, 1, 0, 1);
-	if (m_isTrigger)
-		lineColor = Color::CreateFromRGBAFloat(0, 1, 0, 0.5f);
-
-	Gizmo::SetColor(lineColor);
-
-	const glm::mat4x4& matrix = GetTransform()->GetTransformationMatrix();
-	Vector3 bottom0 = Vector3(matrix * glm::vec4(-m_min.x, m_min.y, m_min.z, 1));
-	Vector3 bottom1 = Vector3(matrix * glm::vec4(-m_min.x, m_min.y, m_max.z, 1));
-	Vector3 bottom2 = Vector3(matrix * glm::vec4(-m_max.x, m_min.y, m_min.z, 1));
-	Vector3 bottom3 = Vector3(matrix * glm::vec4(-m_max.x, m_min.y, m_max.z, 1));
-
-	Vector3 top0 = Vector3(matrix * glm::vec4(-m_min.x, m_max.y, m_min.z, 1));
-	Vector3 top1 = Vector3(matrix * glm::vec4(-m_min.x, m_max.y, m_max.z, 1));
-	Vector3 top2 = Vector3(matrix * glm::vec4(-m_max.x, m_max.y, m_min.z, 1));
-	Vector3 top3 = Vector3(matrix * glm::vec4(-m_max.x, m_max.y, m_max.z, 1));
-
-	bottom0.x = -bottom0.x;
-	bottom1.x = -bottom1.x;
-	bottom2.x = -bottom2.x;
-	bottom3.x = -bottom3.x;
-
-	top0.x = -top0.x;
-	top1.x = -top1.x;
-	top2.x = -top2.x;
-	top3.x = -top3.x;
-
-	// Bottom
-	Gizmo::DrawLine(bottom0, bottom1);
-	Gizmo::DrawLine(bottom0, bottom2);
-	Gizmo::DrawLine(bottom3, bottom2);
-	Gizmo::DrawLine(bottom3, bottom1);
-
-	// Top
-	Gizmo::DrawLine(top0, top1);
-	Gizmo::DrawLine(top0, top2);
-	Gizmo::DrawLine(top3, top2);
-	Gizmo::DrawLine(top3, top1);
-
-	// Bottom to top
-	Gizmo::DrawLine(bottom0, top0);
-	Gizmo::DrawLine(bottom1, top1);
-	Gizmo::DrawLine(bottom2, top2);
-	Gizmo::DrawLine(bottom3, top3);
+	// Comportamiento auténtico de Roblox Studio: no mostrar líneas verdes de colisión en selección
+	return;
 #endif
 }
 

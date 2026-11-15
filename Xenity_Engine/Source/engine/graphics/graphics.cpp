@@ -787,7 +787,8 @@ void Graphics::DrawSelectedItemBoundingBox()
 		const std::shared_ptr<MeshRenderer> meshRenderer = selectedGO->GetComponent<MeshRenderer>();
 		if (meshRenderer && meshRenderer->GetMeshData() && selectedGO->IsLocalActive() && meshRenderer->IsEnabled())
 		{
-			const Color color = Color::CreateFromRGBAFloat(0.0f, 1.0f, 1.0f, 1.0f);
+			// Color de selección auténtico de Roblox Studio: Cyan / Azul brillante #00A2FF
+			const Color color = Color::CreateFromRGBAFloat(0.0f, 0.635f, 1.0f, 1.0f);
 
 			RenderingSettings renderSettings = RenderingSettings();
 			renderSettings.renderingMode = MaterialRenderingMode::Transparent;
@@ -929,58 +930,267 @@ void Graphics::DrawEditorGrid(const Vector3& cameraPosition, int gridAxis)
 	}
 }
 
+namespace
+{
+	constexpr float GIZMO_PI = 3.14159265359f;
+
+	void AddConeTriangles(std::vector<Vector3>& outVerts, const Vector3& baseCenter, const Vector3& tip, float radius, int segments = 16)
+	{
+		Vector3 dir = tip - baseCenter;
+		const float len = dir.Magnitude();
+		if (len < 0.0001f) return;
+		dir = dir / len;
+
+		Vector3 u;
+		if (std::abs(dir.x) < 0.9f)
+			u = Vector3::Cross(dir, Vector3(1, 0, 0)).Normalized();
+		else
+			u = Vector3::Cross(dir, Vector3(0, 1, 0)).Normalized();
+		const Vector3 v = Vector3::Cross(dir, u).Normalized();
+
+		for (int i = 0; i < segments; ++i)
+		{
+			const float a1 = 2.0f * GIZMO_PI * static_cast<float>(i) / static_cast<float>(segments);
+			const float a2 = 2.0f * GIZMO_PI * static_cast<float>(i + 1) / static_cast<float>(segments);
+
+			const Vector3 p1 = baseCenter + (u * std::cos(a1) + v * std::sin(a1)) * radius;
+			const Vector3 p2 = baseCenter + (u * std::cos(a2) + v * std::sin(a2)) * radius;
+
+			// Triángulo lateral (invertir X para la matriz fija de OpenGL de Xenity)
+			outVerts.push_back(Vector3(-tip.x, tip.y, tip.z));
+			outVerts.push_back(Vector3(-p1.x, p1.y, p1.z));
+			outVerts.push_back(Vector3(-p2.x, p2.y, p2.z));
+
+			// Tapa de la base
+			outVerts.push_back(Vector3(-baseCenter.x, baseCenter.y, baseCenter.z));
+			outVerts.push_back(Vector3(-p2.x, p2.y, p2.z));
+			outVerts.push_back(Vector3(-p1.x, p1.y, p1.z));
+		}
+	}
+
+	void AddCylinderTriangles(std::vector<Vector3>& outVerts, const Vector3& start, const Vector3& end, float radius, int segments = 10)
+	{
+		Vector3 dir = end - start;
+		const float len = dir.Magnitude();
+		if (len < 0.0001f) return;
+		dir = dir / len;
+
+		Vector3 u;
+		if (std::abs(dir.x) < 0.9f)
+			u = Vector3::Cross(dir, Vector3(1, 0, 0)).Normalized();
+		else
+			u = Vector3::Cross(dir, Vector3(0, 1, 0)).Normalized();
+		const Vector3 v = Vector3::Cross(dir, u).Normalized();
+
+		for (int i = 0; i < segments; ++i)
+		{
+			const float a1 = 2.0f * GIZMO_PI * static_cast<float>(i) / static_cast<float>(segments);
+			const float a2 = 2.0f * GIZMO_PI * static_cast<float>(i + 1) / static_cast<float>(segments);
+
+			const Vector3 offset1 = (u * std::cos(a1) + v * std::sin(a1)) * radius;
+			const Vector3 offset2 = (u * std::cos(a2) + v * std::sin(a2)) * radius;
+
+			const Vector3 p1 = start + offset1;
+			const Vector3 p2 = start + offset2;
+			const Vector3 p3 = end + offset1;
+			const Vector3 p4 = end + offset2;
+
+			outVerts.push_back(Vector3(-p1.x, p1.y, p1.z));
+			outVerts.push_back(Vector3(-p3.x, p3.y, p3.z));
+			outVerts.push_back(Vector3(-p2.x, p2.y, p2.z));
+
+			outVerts.push_back(Vector3(-p2.x, p2.y, p2.z));
+			outVerts.push_back(Vector3(-p3.x, p3.y, p3.z));
+			outVerts.push_back(Vector3(-p4.x, p4.y, p4.z));
+		}
+	}
+
+	void AddSphereTriangles(std::vector<Vector3>& outVerts, const Vector3& center, float radius, int rings = 8, int sectors = 12)
+	{
+		for (int r = 0; r < rings; ++r)
+		{
+			const float lat1 = GIZMO_PI * static_cast<float>(r) / static_cast<float>(rings) - GIZMO_PI * 0.5f;
+			const float lat2 = GIZMO_PI * static_cast<float>(r + 1) / static_cast<float>(rings) - GIZMO_PI * 0.5f;
+
+			const float sin1 = std::sin(lat1);
+			const float cos1 = std::cos(lat1);
+			const float sin2 = std::sin(lat2);
+			const float cos2 = std::cos(lat2);
+
+			for (int s = 0; s < sectors; ++s)
+			{
+				const float lon1 = 2.0f * GIZMO_PI * static_cast<float>(s) / static_cast<float>(sectors);
+				const float lon2 = 2.0f * GIZMO_PI * static_cast<float>(s + 1) / static_cast<float>(sectors);
+
+				const Vector3 p1 = center + Vector3(cos1 * std::cos(lon1), sin1, cos1 * std::sin(lon1)) * radius;
+				const Vector3 p2 = center + Vector3(cos1 * std::cos(lon2), sin1, cos1 * std::sin(lon2)) * radius;
+				const Vector3 p3 = center + Vector3(cos2 * std::cos(lon1), sin2, cos2 * std::sin(lon1)) * radius;
+				const Vector3 p4 = center + Vector3(cos2 * std::cos(lon2), sin2, cos2 * std::sin(lon2)) * radius;
+
+				outVerts.push_back(Vector3(-p1.x, p1.y, p1.z));
+				outVerts.push_back(Vector3(-p3.x, p3.y, p3.z));
+				outVerts.push_back(Vector3(-p2.x, p2.y, p2.z));
+
+				outVerts.push_back(Vector3(-p2.x, p2.y, p2.z));
+				outVerts.push_back(Vector3(-p3.x, p3.y, p3.z));
+				outVerts.push_back(Vector3(-p4.x, p4.y, p4.z));
+			}
+		}
+	}
+
+	void RenderSolidGeometry(const std::vector<Vector3>& vertices, const Color& color)
+	{
+		if (vertices.empty()) return;
+
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+		glDepthRange(0, 1);
+		glEnable(GL_BLEND);
+		glDisable(GL_ALPHA_TEST);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glDisable(GL_LIGHTING);
+		glDisable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glBindVertexArray(0);
+
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glDisableClientState(GL_NORMAL_ARRAY);
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
+		glDisableVertexAttribArray(3);
+
+		glVertexPointer(3, GL_FLOAT, sizeof(Vector3), vertices.data());
+
+		const RGBA& c = color.GetRGBA();
+		glColor4f(c.r, c.g, c.b, c.a);
+
+		glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()));
+		glColor4f(1, 1, 1, 1);
+	}
+}
+
 void Graphics::DrawEditorTool(const Vector3& cameraPosition)
 {
 	STACK_DEBUG_OBJECT(STACK_HIGH_PRIORITY);
 
 	SCOPED_PROFILER("Graphics::DrawEditorTool", scopeBenchmark);
 
-	const std::shared_ptr< SceneMenu> sceneMenu = Editor::GetMenu<SceneMenu>();
-	// Draw tool
+	const std::shared_ptr<SceneMenu> sceneMenu = Editor::GetMenu<SceneMenu>();
 	if (Editor::GetSelectedGameObjects().size() == 1 && sceneMenu)
 	{
-		Engine::GetRenderer().Clear(ClearMode::Depth);
-
 		const std::shared_ptr<GameObject> selectedGo = Editor::GetSelectedGameObjects()[0].lock();
 		if (!selectedGo)
 			return;
 
-		const Vector3& selectedGoPos = selectedGo->GetTransform()->GetPosition();
+		// Limpiar el búfer de profundidad para que los manipuladores del gizmo se dibujen siempre en primer plano
+		Engine::GetRenderer().Clear(ClearMode::Depth);
 
-		Quaternion selectedGoRot = selectedGo->GetTransform()->GetRotation();
-		if (Editor::s_isToolLocalMode)
-			selectedGoRot = Quaternion::Identity();
+		const Vector3& pos = selectedGo->GetTransform()->GetPosition();
 
-		float dist = 1;
+		float dist = 1.0f;
 		if (usedCamera->GetProjectionType() == ProjectionType::Perspective)
-			dist = Vector3::Distance(selectedGoPos, cameraPosition);
+			dist = Vector3::Distance(pos, cameraPosition);
 		else
 			dist = usedCamera->GetProjectionSize() * 1.5f;
 
-		dist /= 40;
-		const Vector3 scale = Vector3(dist);
+		dist = std::max(0.5f, dist);
 
-		RenderingSettings renderSettings = RenderingSettings();
-		renderSettings.invertFaces = false;
-		renderSettings.renderingMode = MaterialRenderingMode::Opaque;
-		renderSettings.useDepth = true;
-		renderSettings.useTexture = true;
-		renderSettings.useLighting = false;
+		// Proporciones fieles a Roblox Studio
+		const float s = dist * 0.040f;
+		const float len = s * 3.8f;
+		const float coneH = s * 1.25f;
+		const float coneR = s * 0.32f;
+		const float shaftR = s * 0.065f;
+		const float centerR = s * 0.28f;
+		const float shaftLen = len - coneH;
 
-		AssetManager::unlitMaterial->m_texture = Editor::s_toolArrowsTexture;
+		// Colores vivos y puros de Roblox Studio
+		const Color redColor = Color::CreateFromRGBAFloat(0.96f, 0.16f, 0.16f, 1.0f);
+		const Color greenColor = Color::CreateFromRGBAFloat(0.16f, 0.90f, 0.16f, 1.0f);
+		const Color blueColor = Color::CreateFromRGBAFloat(0.12f, 0.45f, 1.0f, 1.0f);
+		const Color whiteColor = Color::CreateFromRGBAFloat(1.0f, 1.0f, 1.0f, 1.0f);
+
+		// Orientación según modo local o global
+		Quaternion rot = selectedGo->GetTransform()->GetRotation();
+		if (!Editor::s_isToolLocalMode)
+		{
+			rot = Quaternion::Identity();
+		}
+		const Vector3 right = rot.GetRight();
+		const Vector3 up = rot.GetUp();
+		const Vector3 fwd = rot.GetForward();
+
 		if (sceneMenu->toolMode == ToolMode::Tool_Move || sceneMenu->toolMode == ToolMode::Tool_Scale)
 		{
-			Graphics::DrawSubMesh(selectedGoPos, selectedGoRot, scale, *Editor::s_rightArrow->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
-			Graphics::DrawSubMesh(selectedGoPos, selectedGoRot, scale, *Editor::s_upArrow->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
-			Graphics::DrawSubMesh(selectedGoPos, selectedGoRot, scale, *Editor::s_forwardArrow->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
+			// 1. Esfera central blanca (Punto de pivote)
+			std::vector<Vector3> centerVerts;
+			AddSphereTriangles(centerVerts, pos, centerR, 8, 12);
+			RenderSolidGeometry(centerVerts, whiteColor);
+
+			// 2. Eje X (Rojo) - Flechas bidireccionales (+X y -X)
+			std::vector<Vector3> xVerts;
+			AddCylinderTriangles(xVerts, pos - right * shaftLen, pos + right * shaftLen, shaftR, 8);
+			AddConeTriangles(xVerts, pos + right * shaftLen, pos + right * len, coneR, 16);
+			AddConeTriangles(xVerts, pos - right * shaftLen, pos - right * len, coneR, 16);
+			RenderSolidGeometry(xVerts, redColor);
+
+			// 3. Eje Y (Verde) - Flechas bidireccionales (+Y arriba y -Y abajo)
+			std::vector<Vector3> yVerts;
+			AddCylinderTriangles(yVerts, pos - up * shaftLen, pos + up * shaftLen, shaftR, 8);
+			AddConeTriangles(yVerts, pos + up * shaftLen, pos + up * len, coneR, 16);
+			AddConeTriangles(yVerts, pos - up * shaftLen, pos - up * len, coneR, 16);
+			RenderSolidGeometry(yVerts, greenColor);
+
+			// 4. Eje Z (Azul) - Flechas bidireccionales (+Z adelante y -Z atrás)
+			std::vector<Vector3> zVerts;
+			AddCylinderTriangles(zVerts, pos - fwd * shaftLen, pos + fwd * shaftLen, shaftR, 8);
+			AddConeTriangles(zVerts, pos + fwd * shaftLen, pos + fwd * len, coneR, 16);
+			AddConeTriangles(zVerts, pos - fwd * shaftLen, pos - fwd * len, coneR, 16);
+			RenderSolidGeometry(zVerts, blueColor);
 		}
 		else if (sceneMenu->toolMode == ToolMode::Tool_Rotate)
 		{
-			Graphics::DrawSubMesh(selectedGoPos, selectedGoRot, scale, *Editor::s_rotationCircleX->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
-			Graphics::DrawSubMesh(selectedGoPos, selectedGoRot, scale, *Editor::s_rotationCircleY->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
-			Graphics::DrawSubMesh(selectedGoPos, selectedGoRot, scale, *Editor::s_rotationCircleZ->m_subMeshes[0], *AssetManager::unlitMaterial, renderSettings);
+			// Círculos de rotación en Rojo, Verde y Azul
+			const int circleSteps = 48;
+			const float circleRadius = len * 0.95f;
+
+			for (int axis = 0; axis < 3; ++axis)
+			{
+				const Color& circleCol = (axis == 0) ? redColor : ((axis == 1) ? greenColor : blueColor);
+				for (int i = 0; i < circleSteps; ++i)
+				{
+					const float a1 = 2.0f * GIZMO_PI * static_cast<float>(i) / static_cast<float>(circleSteps);
+					const float a2 = 2.0f * GIZMO_PI * static_cast<float>(i + 1) / static_cast<float>(circleSteps);
+
+					Vector3 p1, p2;
+					if (axis == 0) // X
+					{
+						p1 = pos + (up * std::cos(a1) + fwd * std::sin(a1)) * circleRadius;
+						p2 = pos + (up * std::cos(a2) + fwd * std::sin(a2)) * circleRadius;
+					}
+					else if (axis == 1) // Y
+					{
+						p1 = pos + (right * std::cos(a1) + fwd * std::sin(a1)) * circleRadius;
+						p2 = pos + (right * std::cos(a2) + fwd * std::sin(a2)) * circleRadius;
+					}
+					else // Z
+					{
+						p1 = pos + (right * std::cos(a1) + up * std::sin(a1)) * circleRadius;
+						p2 = pos + (right * std::cos(a2) + up * std::sin(a2)) * circleRadius;
+					}
+
+					RenderingSettings lineSettings = RenderingSettings();
+					lineSettings.renderingMode = MaterialRenderingMode::Transparent;
+					lineSettings.useDepth = true;
+					Engine::GetRenderer().DrawLine(Vector3(-p1.x, p1.y, p1.z), Vector3(-p2.x, p2.y, p2.z), circleCol, lineSettings);
+				}
+			}
 		}
-		AssetManager::unlitMaterial->m_texture = nullptr;
 	}
 }
 #endif // #if defined(EDITOR)
