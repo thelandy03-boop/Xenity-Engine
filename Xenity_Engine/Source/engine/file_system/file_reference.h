@@ -119,6 +119,7 @@ protected:
 	friend class SceneManager;
 	friend class EngineDebugMenu;
 	friend class BitFile;
+	friend class XenityFFI;
 
 	std::shared_ptr<File> m_file = nullptr;
 	uint64_t m_filePosition = 0;

@@ -7,6 +7,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #ifdef _WIN32
 #define XENITY_API __declspec(dllexport)
@@ -45,6 +46,8 @@ public:
 	static void SetSimState(int state);
 	static int GetGameObjectCount();
 	static void Shutdown();
+
+	static std::shared_ptr<class Texture> LoadTextureDirect(const std::string& relativePath);
 
 	// Gizmos & Selection
 	static void SetToolMode(int mode);

@@ -344,4 +344,6 @@ protected:
 	TextureResolution previousResolution = TextureResolution::R_2048x2048;
 #endif
 	bool isValid = false;
+
+	friend class XenityFFI;
 };

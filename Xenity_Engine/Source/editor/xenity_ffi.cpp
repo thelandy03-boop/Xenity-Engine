@@ -36,6 +36,11 @@
 #include <engine/tools/shape_spawner.h>
 #include <engine/lighting/lighting.h>
 #include <engine/tools/gameplay_utility.h>
+#include <engine/file_system/file_system.h>
+#include <engine/file_system/file.h>
+#include <engine/graphics/skybox.h>
+#include <engine/graphics/texture/texture.h>
+#include <engine/graphics/texture/texture_default.h>
 
 #include <editor/editor.h>
 #include <editor/ui/menus/basic/scene_menu.h>
@@ -72,6 +77,25 @@ static bool GetAABBDistance(const Vector3& corner1, const Vector3& corner2, cons
 		}
 	}
 	return false;
+}
+
+std::shared_ptr<Texture> XenityFFI::LoadTextureDirect(const std::string& relativePath)
+{
+	std::string finalPath = relativePath;
+	if (!std::filesystem::exists(finalPath))
+	{
+		finalPath = "../" + relativePath;
+	}
+	if (!std::filesystem::exists(finalPath))
+	{
+		return nullptr;
+	}
+
+	auto tex = Texture::MakeTexture(true);
+	tex->m_file = FileSystem::MakeFile(finalPath);
+	tex->LoadTexture();
+	tex->OnLoadFileReferenceFinished();
+	return tex;
 }
 
 int XenityFFI::Init(int width, int height)
@@ -130,13 +154,38 @@ int XenityFFI::Init(int width, int height)
 
 	if (s_camera)
 	{
-		s_camera->GetTransform()->SetPosition(Vector3(0.0f, 8.0f, -16.0f));
-		s_camera->GetTransform()->SetEulerAngles(Vector3(22.0f, 0.0f, 0.0f));
+		s_camera->GetTransform()->SetPosition(Vector3(0.0f, 16.0f, -40.0f));
+		s_camera->GetTransform()->SetEulerAngles(Vector3(20.0f, 0.0f, 0.0f));
 		s_camera->ChangeFrameBufferSize(Vector2Int(s_width, s_height));
 	}
 
-	// 5. Ensure Baseplate and Sunlight exist
+	// 5. Disable noisy debug wireframe grid (eliminates moiré/aliasing artifacts)
+	Graphics::SetIsGridRenderingEnabled(false);
+
+	// 6. Setup Authentic Roblox Skybox
+	auto texSides = LoadTextureDirect("public_engine_assets/textures/roblox/sky_sides.png");
+	auto texUp = LoadTextureDirect("public_engine_assets/textures/roblox/sky_up.png");
+	auto texDown = LoadTextureDirect("public_engine_assets/textures/roblox/sky_down.png");
+	if (texSides && texUp && texDown)
+	{
+		auto sky = std::make_shared<SkyBox>();
+		sky->front = texSides;
+		sky->back = texSides;
+		sky->left = texSides;
+		sky->right = texSides;
+		sky->up = texUp;
+		sky->down = texDown;
+		Graphics::SetSkybox(sky);
+	}
+	else
+	{
+		// Clean atmospheric fallback sky color
+		Graphics::s_settings.skyColor = Color::CreateFromRGBAFloat(0.53f, 0.70f, 0.90f, 1.0f);
+	}
+
+	// 7. Ensure Sunlight, Ambient Lighting and Baseplate exist with authentic Roblox visuals
 	bool hasSun = false;
+	bool hasAmbient = false;
 	bool hasBaseplate = false;
 	const int goCount = GameplayManager::gameObjectCount;
 	for (int i = 0; i < goCount; i++)
@@ -144,10 +193,33 @@ int XenityFFI::Init(int width, int height)
 		const auto& go = GameplayManager::GetGameObjects()[i];
 		if (go)
 		{
-			if (go->GetName() == "Sun" || go->GetComponent<Light>())
+			if (go->GetName() == "Sun")
 				hasSun = true;
+			if (go->GetName() == "Ambient")
+				hasAmbient = true;
 			if (go->GetName() == "Baseplate")
+			{
 				hasBaseplate = true;
+				// Update existing Baseplate to Roblox material & dimensions
+				auto mesh = go->GetComponent<MeshRenderer>();
+				if (mesh)
+				{
+					auto bpMat = Material::MakeMaterial();
+					bpMat->SetShader(AssetManager::standardShader);
+					auto bpTex = LoadTextureDirect("public_engine_assets/textures/roblox/baseplate_diffuse.png");
+					if (bpTex)
+					{
+						bpTex->SetWrapMode(WrapMode::Repeat);
+						bpMat->SetTexture(bpTex);
+						bpMat->SetTiling(Vector2(64.0f, 64.0f));
+					}
+					bpMat->SetColor(Color::CreateFromRGBAFloat(0.38f, 0.40f, 0.43f, 1.0f));
+					bpMat->SetUseLighting(true);
+					mesh->SetMaterial(bpMat, 0);
+					go->GetTransform()->SetPosition(Vector3(0.0f, -4.0f, 0.0f));
+					go->GetTransform()->SetLocalScale(Vector3(512.0f, 8.0f, 512.0f));
+				}
+			}
 		}
 	}
 
@@ -155,8 +227,15 @@ int XenityFFI::Init(int width, int height)
 	{
 		auto sunGO = CreateGameObject("Sun");
 		auto sunLight = sunGO->AddComponent<Light>();
-		sunLight->SetupDirectionalLight(Color::CreateFromRGBAFloat(1.0f, 0.98f, 0.92f, 1.0f), 0.85f);
-		sunGO->GetTransform()->SetEulerAngles(Vector3(45.0f, -35.0f, 0.0f));
+		sunLight->SetupDirectionalLight(Color::CreateFromRGBAFloat(1.0f, 0.98f, 0.94f, 1.0f), 1.0f);
+		sunGO->GetTransform()->SetEulerAngles(Vector3(50.0f, -30.0f, 0.0f));
+	}
+
+	if (!hasAmbient)
+	{
+		auto ambGO = CreateGameObject("Ambient");
+		auto ambLight = ambGO->AddComponent<Light>();
+		ambLight->SetupAmbientLight(Color::CreateFromRGBAFloat(0.60f, 0.65f, 0.72f, 1.0f), 0.70f);
 	}
 
 	if (!hasBaseplate)
@@ -165,8 +244,25 @@ int XenityFFI::Init(int width, int height)
 		if (bp)
 		{
 			bp->SetName("Baseplate");
-			bp->GetTransform()->SetPosition(Vector3(0.0f, -0.5f, 0.0f));
-			bp->GetTransform()->SetLocalScale(Vector3(50.0f, 1.0f, 50.0f));
+			bp->GetTransform()->SetPosition(Vector3(0.0f, -4.0f, 0.0f));
+			bp->GetTransform()->SetLocalScale(Vector3(512.0f, 8.0f, 512.0f));
+
+			auto mesh = bp->GetComponent<MeshRenderer>();
+			if (mesh)
+			{
+				auto bpMat = Material::MakeMaterial();
+				bpMat->SetShader(AssetManager::standardShader);
+				auto bpTex = LoadTextureDirect("public_engine_assets/textures/roblox/baseplate_diffuse.png");
+				if (bpTex)
+				{
+					bpTex->SetWrapMode(WrapMode::Repeat);
+					bpMat->SetTexture(bpTex);
+					bpMat->SetTiling(Vector2(64.0f, 64.0f));
+				}
+				bpMat->SetColor(Color::CreateFromRGBAFloat(0.38f, 0.40f, 0.43f, 1.0f));
+				bpMat->SetUseLighting(true);
+				mesh->SetMaterial(bpMat, 0);
+			}
 		}
 	}
 
