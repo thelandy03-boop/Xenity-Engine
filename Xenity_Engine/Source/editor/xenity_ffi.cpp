@@ -41,6 +41,7 @@
 #include <engine/graphics/skybox.h>
 #include <engine/graphics/texture/texture.h>
 #include <engine/graphics/texture/texture_default.h>
+#include <engine/math/quaternion.h>
 
 #include <editor/editor.h>
 #include <editor/ui/menus/basic/scene_menu.h>
@@ -148,14 +149,16 @@ int XenityFFI::Init(int width, int height)
 	{
 		auto camGO = CreateGameObjectEditor("EditorCamera");
 		s_camera = camGO->AddComponent<Camera>();
-		s_camera->SetNearClippingPlane(0.05f);
-		s_camera->SetFarClippingPlane(2000.0f);
+		s_camera->SetNearClippingPlane(0.5f);
+		s_camera->SetFarClippingPlane(4000.0f);
 		s_camera->SetFov(70.0f);
 		s_camera->SetIsEditor(true);
 	}
 
 	if (s_camera)
 	{
+		s_camera->SetNearClippingPlane(0.5f);
+		s_camera->SetFarClippingPlane(4000.0f);
 		s_camera->GetTransform()->SetPosition(Vector3(0.0f, 16.0f, -40.0f));
 		s_camera->GetTransform()->SetEulerAngles(Vector3(20.0f, 0.0f, 0.0f));
 		s_camera->ChangeFrameBufferSize(Vector2Int(s_width, s_height));
@@ -374,20 +377,25 @@ void XenityFFI::CameraOrbit(float delta_yaw, float delta_pitch, float move_fwd, 
 	if (!camTrans)
 		return;
 
-	// Rotation
-	Vector3 rot = camTrans->GetEulerAngles();
-	rot.x += delta_pitch;
-	rot.y += delta_yaw;
-	if (rot.x > 89.0f) rot.x = 89.0f;
-	if (rot.x < -89.0f) rot.x = -89.0f;
-	camTrans->SetEulerAngles(rot);
+	// Rotation using quaternions for stable, gimbal-free orbit
+	if (delta_yaw != 0.0f || delta_pitch != 0.0f)
+	{
+		const Quaternion& rotQ = camTrans->GetRotation();
+		Quaternion rotX = Quaternion::AngleAxis(delta_pitch, Vector3(1, 0, 0));
+		Quaternion rotY = Quaternion::AngleAxis(delta_yaw, Vector3(0, 1, 0));
+		Quaternion newRot = rotY * rotQ * rotX;
+		camTrans->SetRotation(newRot);
+	}
 
 	// Translation
-	Vector3 pos = camTrans->GetPosition();
-	pos -= camTrans->GetForward() * move_fwd;
-	pos -= camTrans->GetLeft() * move_right;
-	pos += Vector3(0.0f, 1.0f, 0.0f) * move_up;
-	camTrans->SetPosition(pos);
+	if (move_fwd != 0.0f || move_right != 0.0f || move_up != 0.0f)
+	{
+		Vector3 pos = camTrans->GetPosition();
+		pos -= camTrans->GetForward() * move_fwd;
+		pos -= camTrans->GetLeft() * move_right;
+		pos += Vector3(0.0f, 1.0f, 0.0f) * move_up;
+		camTrans->SetPosition(pos);
+	}
 }
 
 void XenityFFI::SpawnPrimitive(int primitive_type)

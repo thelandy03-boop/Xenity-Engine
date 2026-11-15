@@ -551,3 +551,9 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Editor local user settings & runtime scratch projects
+menu_settings.json
+xenity-editor/menu_settings.json
+DefaultProject/
+xenity-editor/DefaultProject/

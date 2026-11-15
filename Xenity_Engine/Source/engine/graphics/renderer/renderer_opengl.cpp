@@ -388,7 +388,7 @@ void RendererOpengl::DrawSubMesh(const MeshData::SubMesh& subMesh, const Materia
 	{
 		if (settings.max_depth)
 		{
-			glDepthRange(0.9999f, 1);
+			glDepthRange(0.99999f, 1);
 		}
 		else
 		{
