@@ -138,15 +138,20 @@ impl StudioViewportState {
             // Controles de cámara de Studio: Arrastre con clic derecho o Alt + Clic izquierdo
             if vp_resp.dragged_by(egui::PointerButton::Secondary) || (vp_resp.dragged_by(egui::PointerButton::Primary) && ui.input(|i| i.modifiers.alt)) {
                 let delta = vp_resp.drag_delta();
-                eng.camera_orbit(delta.x * 0.35, delta.y * 0.35, 0.0, 0.0, 0.0);
+                // Sensibilidad y orientación natural de Roblox Studio (arrastrar a la derecha gira a la derecha)
+                let rot_sens = 0.35;
+                eng.camera_orbit(-delta.x * rot_sens, delta.y * rot_sens, 0.0, 0.0, 0.0);
             }
 
-            // Movimiento WASD si el ratón está sobre el viewport
+            // Movimiento WASD + Zoom rueda si el ratón está sobre el viewport
             if vp_resp.hovered() {
                 let mut fwd = 0.0f32;
                 let mut right = 0.0f32;
                 let mut up = 0.0f32;
-                let speed = if ui.input(|i| i.modifiers.shift) { 0.7 } else { 0.25 };
+                
+                // Velocidad ágil de Roblox Studio (base rápida + sprint x3.5 con Shift)
+                let base_speed = 1.25f32;
+                let speed = if ui.input(|i| i.modifiers.shift) { base_speed * 3.5 } else { base_speed };
 
                 if ui.input(|i| i.key_down(egui::Key::W)) { fwd += speed; }
                 if ui.input(|i| i.key_down(egui::Key::S)) { fwd -= speed; }
@@ -154,6 +159,13 @@ impl StudioViewportState {
                 if ui.input(|i| i.key_down(egui::Key::A)) { right -= speed; }
                 if ui.input(|i| i.key_down(egui::Key::E)) { up += speed; }
                 if ui.input(|i| i.key_down(egui::Key::Q)) { up -= speed; }
+
+                // Zoom con la rueda del ratón (desplazamiento suave adelante / atrás)
+                let scroll_y = ui.input(|i| i.raw_scroll_delta.y);
+                if scroll_y != 0.0 {
+                    let zoom_factor = if ui.input(|i| i.modifiers.shift) { 4.5 } else { 1.8 };
+                    fwd += (scroll_y / 30.0).clamp(-5.0, 5.0) * zoom_factor;
+                }
 
                 if fwd != 0.0 || right != 0.0 || up != 0.0 {
                     eng.camera_orbit(0.0, 0.0, fwd, right, up);

@@ -391,8 +391,8 @@ void XenityFFI::CameraOrbit(float delta_yaw, float delta_pitch, float move_fwd, 
 	if (move_fwd != 0.0f || move_right != 0.0f || move_up != 0.0f)
 	{
 		Vector3 pos = camTrans->GetPosition();
-		pos -= camTrans->GetForward() * move_fwd;
-		pos -= camTrans->GetLeft() * move_right;
+		pos += camTrans->GetForward() * move_fwd;
+		pos += camTrans->GetRight() * move_right;
 		pos += Vector3(0.0f, 1.0f, 0.0f) * move_up;
 		camTrans->SetPosition(pos);
 	}
