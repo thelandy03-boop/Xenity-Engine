@@ -93,6 +93,8 @@ std::shared_ptr<Texture> XenityFFI::LoadTextureDirect(const std::string& relativ
 
 	auto tex = Texture::MakeTexture(true);
 	tex->m_file = FileSystem::MakeFile(finalPath);
+	tex->SetFilter(Filter::Bilinear);
+	tex->SetUseMipmap(true);
 	tex->LoadTexture();
 	tex->OnLoadFileReferenceFinished();
 	return tex;
@@ -213,7 +215,7 @@ int XenityFFI::Init(int width, int height)
 						bpMat->SetTexture(bpTex);
 						bpMat->SetTiling(Vector2(64.0f, 64.0f));
 					}
-					bpMat->SetColor(Color::CreateFromRGBAFloat(0.38f, 0.40f, 0.43f, 1.0f));
+					bpMat->SetColor(Color::CreateFromRGBAFloat(1.0f, 1.0f, 1.0f, 1.0f));
 					bpMat->SetUseLighting(true);
 					mesh->SetMaterial(bpMat, 0);
 					go->GetTransform()->SetPosition(Vector3(0.0f, -4.0f, 0.0f));
@@ -227,7 +229,7 @@ int XenityFFI::Init(int width, int height)
 	{
 		auto sunGO = CreateGameObject("Sun");
 		auto sunLight = sunGO->AddComponent<Light>();
-		sunLight->SetupDirectionalLight(Color::CreateFromRGBAFloat(1.0f, 0.98f, 0.94f, 1.0f), 1.0f);
+		sunLight->SetupDirectionalLight(Color::CreateFromRGBAFloat(1.0f, 0.98f, 0.95f, 1.0f), 0.95f);
 		sunGO->GetTransform()->SetEulerAngles(Vector3(50.0f, -30.0f, 0.0f));
 	}
 
@@ -235,7 +237,7 @@ int XenityFFI::Init(int width, int height)
 	{
 		auto ambGO = CreateGameObject("Ambient");
 		auto ambLight = ambGO->AddComponent<Light>();
-		ambLight->SetupAmbientLight(Color::CreateFromRGBAFloat(0.60f, 0.65f, 0.72f, 1.0f), 0.70f);
+		ambLight->SetupAmbientLight(Color::CreateFromRGBAFloat(0.70f, 0.75f, 0.82f, 1.0f), 0.85f);
 	}
 
 	if (!hasBaseplate)
@@ -259,7 +261,7 @@ int XenityFFI::Init(int width, int height)
 					bpMat->SetTexture(bpTex);
 					bpMat->SetTiling(Vector2(64.0f, 64.0f));
 				}
-				bpMat->SetColor(Color::CreateFromRGBAFloat(0.38f, 0.40f, 0.43f, 1.0f));
+				bpMat->SetColor(Color::CreateFromRGBAFloat(1.0f, 1.0f, 1.0f, 1.0f));
 				bpMat->SetUseLighting(true);
 				mesh->SetMaterial(bpMat, 0);
 			}

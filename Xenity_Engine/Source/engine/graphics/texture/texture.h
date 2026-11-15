@@ -165,6 +165,11 @@ public:
 		m_settings.at(Application::GetAssetPlatform())->wrapMode = mode;
 	}
 
+	void SetUseMipmap(const bool use)
+	{
+		m_settings.at(Application::GetAssetPlatform())->useMipMap = use;
+	}
+
 	/**
 	 * @brief Get texture width
 	 */
