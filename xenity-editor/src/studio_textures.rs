@@ -108,6 +108,20 @@ pub struct StudioIcons {
     pub rib_analysis: TextureHandle,
     pub rib_performance: TextureHandle,
 
+    // Official Ribbon Model Tab Icons
+    pub rib_edit_pivot: TextureHandle,
+    pub rib_reset_pivot: TextureHandle,
+    pub rib_effect: TextureHandle,
+    pub rib_attachment: TextureHandle,
+    pub rib_constraint: TextureHandle,
+    pub rib_weld: TextureHandle,
+    pub rib_texture: TextureHandle,
+    pub rib_align: TextureHandle,
+    pub rib_union: TextureHandle,
+    pub rib_intersect: TextureHandle,
+    pub rib_separate: TextureHandle,
+    pub rib_negate: TextureHandle,
+
     // Top Right Official Studio Utility Icons
     pub top_avatar: TextureHandle,
     pub top_bell: TextureHandle,
@@ -234,6 +248,19 @@ impl StudioIcons {
             rib_watch: load_png(ctx, "rbx_rib_watch", include_bytes!("../assets/icons/ribbon/RibbonWatch.png")),
             rib_analysis: load_png(ctx, "rbx_rib_analysis", include_bytes!("../assets/icons/ribbon/RibbonAnalysis.png")),
             rib_performance: load_png(ctx, "rbx_rib_performance", include_bytes!("../assets/icons/ribbon/RibbonPerformance.png")),
+
+            rib_edit_pivot: load_png(ctx, "rbx_rib_edit_pivot", include_bytes!("../assets/icons/ribbon/RibbonEditPivot.png")),
+            rib_reset_pivot: load_png(ctx, "rbx_rib_reset_pivot", include_bytes!("../assets/icons/ribbon/RibbonResetPivot.png")),
+            rib_effect: load_png(ctx, "rbx_rib_effect", include_bytes!("../assets/icons/ribbon/RibbonEffect_Sparkles.png")),
+            rib_attachment: load_png(ctx, "rbx_rib_attachment", include_bytes!("../assets/icons/ribbon/RibbonAttachment.png")),
+            rib_constraint: load_png(ctx, "rbx_rib_constraint", include_bytes!("../assets/icons/ribbon/RibbonRodConstraint.png")),
+            rib_weld: load_png(ctx, "rbx_rib_weld", include_bytes!("../assets/icons/ribbon/RibbonWeldConstraint.png")),
+            rib_texture: load_png(ctx, "rbx_rib_texture", include_bytes!("../assets/icons/ribbon/RibbonMeshTextureTool.png")),
+            rib_align: load_png(ctx, "rbx_rib_align", include_bytes!("../assets/icons/ribbon/RibbonAlignTool.png")),
+            rib_union: load_png(ctx, "rbx_rib_union", include_bytes!("../assets/icons/ribbon/RibbonUnionOperation.png")),
+            rib_intersect: load_png(ctx, "rbx_rib_intersect", include_bytes!("../assets/icons/ribbon/RibbonIntersectOperation.png")),
+            rib_separate: load_png(ctx, "rbx_rib_separate", include_bytes!("../assets/icons/ribbon/RibbonSeparateOperation.png")),
+            rib_negate: load_png(ctx, "rbx_rib_negate", include_bytes!("../assets/icons/ribbon/RibbonNegateOperation.png")),
 
             top_avatar: load_png(ctx, "rbx_top_avatar", include_bytes!("../assets/icons/top_avatar.png")),
             top_bell: load_png(ctx, "rbx_top_bell", include_bytes!("../assets/icons/top_bell.png")),

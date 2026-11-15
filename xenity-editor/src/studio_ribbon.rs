@@ -619,58 +619,121 @@ impl StudioRibbonState {
         }
     }
 
-    // --- MODEL RIBBON CON ICONOS REALES ---
+    // --- MODEL RIBBON CON ICONOS OFICIALES REALES (Idéntico a Imagen de Referencia de Modelo) ---
     fn draw_model_ribbon(&mut self, ui: &mut egui::Ui, icons: &StudioIcons, action: &mut RibbonAction) {
-        ui.add_space(8.0);
-        ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                if draw_real_icon_button(ui, "Select", self.current_tool == StudioTool::Select, &icons.tool_select) {
-                    self.current_tool = StudioTool::Select;
-                }
-                if draw_real_icon_button(ui, "Move", self.current_tool == StudioTool::Move, &icons.tool_move) {
-                    self.current_tool = StudioTool::Move;
-                }
-                if draw_real_icon_button(ui, "Rotate", self.current_tool == StudioTool::Rotate, &icons.tool_rotate) {
-                    self.current_tool = StudioTool::Rotate;
-                }
-                if draw_real_icon_button(ui, "Scale", self.current_tool == StudioTool::Scale, &icons.tool_scale) {
-                    self.current_tool = StudioTool::Scale;
-                }
-                if draw_real_icon_button(ui, "Transform", false, &icons.tool_transform) {}
-            });
-            draw_group_footer(ui, "Tools");
-        });
+        ui.add_space(4.0);
 
-        draw_ribbon_divider(ui);
+        // 1. Herramientas de Transformación (Seleccionar, Mover, Escalar, Girar, Transformar)
+        if draw_modern_ribbon_button(ui, "Seleccionar", self.current_tool == StudioTool::Select, &icons.rib_select, false) {
+            self.current_tool = StudioTool::Select;
+            *action = RibbonAction::ChangeTool(StudioTool::Select);
+        }
+        if draw_modern_ribbon_button(ui, "Mover", self.current_tool == StudioTool::Move, &icons.rib_move, false) {
+            self.current_tool = StudioTool::Move;
+            *action = RibbonAction::ChangeTool(StudioTool::Move);
+        }
+        if draw_modern_ribbon_button(ui, "Escalar", self.current_tool == StudioTool::Scale, &icons.rib_scale, false) {
+            self.current_tool = StudioTool::Scale;
+            *action = RibbonAction::ChangeTool(StudioTool::Scale);
+        }
+        if draw_modern_ribbon_button(ui, "Girar", self.current_tool == StudioTool::Rotate, &icons.rib_rotate, false) {
+            self.current_tool = StudioTool::Rotate;
+            *action = RibbonAction::ChangeTool(StudioTool::Rotate);
+        }
+        if draw_modern_ribbon_button(ui, "Transformar", self.current_tool == StudioTool::Transform, &icons.rib_transform, false) {
+            self.current_tool = StudioTool::Transform;
+            *action = RibbonAction::ChangeTool(StudioTool::Transform);
+        }
 
-        ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    ui.add_space(4.0);
-                    ui.horizontal(|ui| {
-                        ui.checkbox(&mut self.rotate_snap_enabled, "Rotate");
-                        ui.add(egui::DragValue::new(&mut self.rotate_snap_deg).suffix("°").speed(5.0));
-                    });
-                    ui.horizontal(|ui| {
-                        ui.checkbox(&mut self.move_snap_enabled, "Move");
-                        ui.add(egui::DragValue::new(&mut self.move_snap_studs).suffix(" studs").speed(0.5));
-                    });
-                });
-            });
-            draw_group_footer(ui, "Snap to Grid");
-        });
-
-        draw_ribbon_divider(ui);
+        // 2. Geométrico + Snap Steppers
+        if draw_modern_ribbon_button(ui, "Geométrico", false, &icons.rib_geometric, true) {
+            // Dropdown de tipo de pivote geométrico
+        }
 
         ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                if draw_real_icon_button(ui, "Spawn", false, &icons.insert_spawn) {
-                    *action = RibbonAction::InsertPart(PartShape::Block);
-                }
-                draw_real_icon_button(ui, "PointLight", false, &icons.insert_light);
-            });
-            draw_group_footer(ui, "Gameplay");
+            ui.add_space(8.0);
+            draw_snap_row(ui, &mut self.move_snap_enabled, &mut self.move_snap_studs, &icons.rib_move_spin, true);
+            ui.add_space(2.0);
+            draw_snap_row(ui, &mut self.rotate_snap_enabled, &mut self.rotate_snap_deg, &icons.rib_rotate_spin, false);
         });
+
+        draw_modern_divider(ui);
+
+        // 3. Pivote (Pivote ▾, Restablecer)
+        if draw_modern_ribbon_button(ui, "Pivote", false, &icons.rib_edit_pivot, true) {
+            // Dropdown de Pivote
+        }
+        if draw_modern_ribbon_button(ui, "Restablecer", false, &icons.rib_reset_pivot, false) {
+            // Restablecer pivote
+        }
+
+        draw_modern_divider(ui);
+
+        // 4. Objetos y Efectos (Pieza ▾, Efecto ▾)
+        if draw_modern_ribbon_button(ui, "Pieza", false, &icons.rib_part, true) {
+            *action = RibbonAction::InsertPart(PartShape::Block);
+        }
+        if draw_modern_ribbon_button(ui, "Efecto", false, &icons.rib_effect, true) {
+            // Dropdown de Efectos (Partículas, Luces, Humo, Fuego)
+        }
+
+        draw_modern_divider(ui);
+
+        // 5. Restricciones y Conexiones (Conexión ▾, Restricciones ▾, Soldadura ▾)
+        if draw_modern_ribbon_button(ui, "Conexión", false, &icons.rib_attachment, true) {
+            // Conexión / Attachment
+        }
+        if draw_modern_ribbon_button(ui, "Restricciones", false, &icons.rib_constraint, true) {
+            // Restricciones / Constraints
+        }
+        if draw_modern_ribbon_button(ui, "Soldadura", false, &icons.rib_weld, true) {
+            // Soldadura / Weld
+        }
+
+        draw_modern_divider(ui);
+
+        // 6. Material, Color, Texturas, Agrupación (Material ▾, Color ▾, Texture, Grupo ▾, Bloquear ▾, Anclar ▾)
+        if draw_modern_ribbon_button(ui, "Material", false, &icons.rib_material, true) {
+            // Material Picker
+        }
+        if draw_modern_ribbon_button(ui, "Color", false, &icons.rib_color, true) {
+            // Color Picker
+        }
+        if draw_modern_ribbon_button(ui, "Texture", false, &icons.rib_texture, false) {
+            // Texture Generator / Tool
+        }
+        if draw_modern_ribbon_button(ui, "Grupo", false, &icons.rib_group, true) {
+            // Group Objects
+        }
+        if draw_modern_ribbon_button(ui, "Bloquear", false, &icons.rib_lock, true) {
+            // Bloquear / Lock Tool
+        }
+        if draw_modern_ribbon_button(ui, "Anclar", false, &icons.rib_anchor, true) {
+            *action = RibbonAction::ToggleAnchor;
+        }
+
+        draw_modern_divider(ui);
+
+        // 7. Alineación (Alinear)
+        if draw_modern_ribbon_button(ui, "Alinear", false, &icons.rib_align, false) {
+            // Align Tool
+        }
+
+        draw_modern_divider(ui);
+
+        // 8. Operaciones CSG / Sólidos (Unir, Intersecar, Separar, Sustraer)
+        if draw_modern_ribbon_button(ui, "Unir", false, &icons.rib_union, false) {
+            // CSG Union
+        }
+        if draw_modern_ribbon_button(ui, "Intersecar", false, &icons.rib_intersect, false) {
+            // CSG Intersect
+        }
+        if draw_modern_ribbon_button(ui, "Separar", false, &icons.rib_separate, false) {
+            // CSG Separate
+        }
+        if draw_modern_ribbon_button(ui, "Sustraer", false, &icons.rib_negate, false) {
+            // CSG Negate
+        }
     }
 
     // --- AVATAR RIBBON CON ICONOS OFICIALES REALES (Idéntico a Imagen 1 de Referencia) ---
