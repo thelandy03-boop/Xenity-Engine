@@ -361,18 +361,6 @@ int XenityFFI::ReadFrame(unsigned char* out_pixels, int width, int height)
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, out_pixels);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	// Flip vertically for top-left UI origin
-	const int row_size = width * 4;
-	std::vector<unsigned char> temp_row(row_size);
-	for (int y = 0; y < height / 2; ++y)
-	{
-		unsigned char* row_top = out_pixels + y * row_size;
-		unsigned char* row_bottom = out_pixels + (height - 1 - y) * row_size;
-		std::memcpy(temp_row.data(), row_top, row_size);
-		std::memcpy(row_top, row_bottom, row_size);
-		std::memcpy(row_bottom, temp_row.data(), row_size);
-	}
-
 	return 1;
 }
 
@@ -682,8 +670,8 @@ void XenityFFI::TransformSelected(float delta_x, float delta_y, int tool_mode, i
 
 	if (tool_mode == 1) // Tool_Move
 	{
-		Vector3 camRight = -s_camera->GetTransform()->GetLeft();
-		Vector3 camUp = s_camera->GetTransform()->GetUp();
+		Vector3 camFwd = s_camera->GetTransform()->GetForward();
+		Vector3 camRight = s_camera->GetTransform()->GetRight();
 		float camDist = Vector3::Distance(trans->GetPosition(), s_camera->GetTransform()->GetPosition());
 		float factor = std::max(0.001f, camDist * 0.0018f);
 
@@ -694,8 +682,12 @@ void XenityFFI::TransformSelected(float delta_x, float delta_y, int tool_mode, i
 			move = Vector3(0.0f, 1.0f, 0.0f) * (-delta_y * factor);
 		else if (axis == 3) // Z axis
 			move = Vector3(0.0f, 0.0f, 1.0f) * (delta_x * factor);
-		else // View aligned
-			move = (camRight * delta_x - camUp * delta_y) * factor;
+		else // View aligned - Horizontal Ground plane (XZ plane) like Roblox Studio
+		{
+			Vector3 groundFwd = Vector3(camFwd.x, 0.0f, camFwd.z).Normalized();
+			Vector3 groundRight = Vector3(camRight.x, 0.0f, camRight.z).Normalized();
+			move = (groundRight * delta_x - groundFwd * delta_y) * factor;
+		}
 
 		trans->SetPosition(trans->GetPosition() + move);
 	}

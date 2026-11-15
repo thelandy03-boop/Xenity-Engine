@@ -405,26 +405,11 @@ impl eframe::App for RobloxStudioApp {
             self.right_width = panel_resp.response.rect.width();
         }
 
-        // Sincronizar selección y propiedades con el motor C++ antes de renderizar el Viewport
+        // Sincronizar selección con el motor C++ antes de renderizar el Viewport
         if let Some(ref mut eng) = self.engine {
             if let Some(sel_id) = self.hierarchy.selected_id {
                 if let Some(x_idx) = self.hierarchy.get_xenity_index_for_id(sel_id) {
                     eng.select_gameobject(x_idx);
-
-                    if let Some(item) = self.hierarchy.find_item_mut(sel_id) {
-                        eng.set_gameobject_transform(
-                            x_idx,
-                            item.properties.position,
-                            item.properties.orientation,
-                            item.properties.size,
-                        );
-                        let c = item.properties.color;
-                        eng.set_gameobject_color(
-                            x_idx,
-                            [c.r() as f32 / 255.0, c.g() as f32 / 255.0, c.b() as f32 / 255.0, c.a() as f32 / 255.0],
-                        );
-                        eng.set_gameobject_name(x_idx, &item.name);
-                    }
                 }
             } else {
                 eng.select_gameobject(-1);
@@ -453,6 +438,21 @@ impl eframe::App for RobloxStudioApp {
                 }
             });
 
+        // Sincronizar transformación en vivo desde el motor C++ hacia la jerarquía de Studio
+        if let Some(ref mut eng) = self.engine {
+            if let Some(sel_id) = self.hierarchy.selected_id {
+                if let Some(x_idx) = self.hierarchy.get_xenity_index_for_id(sel_id) {
+                    if let Some(info) = eng.get_gameobject_info(x_idx) {
+                        if let Some(item) = self.hierarchy.find_item_mut(sel_id) {
+                            item.properties.position = info.pos;
+                            item.properties.orientation = info.rot;
+                            item.properties.size = info.scale;
+                        }
+                    }
+                }
+            }
+        }
+
         // 6. DIÁLOGO MODAL: BUILD & EXPORT (PS3, PSP, VITA, PC)
         let build_action = self.build_dialog.show(ctx, &mut self.engine);
         match build_action {
@@ -463,9 +463,16 @@ impl eframe::App for RobloxStudioApp {
             BuildDialogAction::None => {}
         }
 
-        // Solicitar refresco continuo si la simulación está activa o el motor está inicializado
-        if self.is_playing || self.engine.as_ref().map(|e| e.is_initialized).unwrap_or(false) {
-            ctx.request_repaint();
+        // Refresco fluido con control de tasa de cuadros (60 FPS activos, 30 FPS en reposo)
+        if self.is_playing {
+            ctx.request_repaint_after(std::time::Duration::from_millis(16));
+        } else if self.engine.as_ref().map(|e| e.is_initialized).unwrap_or(false) {
+            let active = ctx.input(|i| i.pointer.any_down() || !i.events.is_empty());
+            if active {
+                ctx.request_repaint_after(std::time::Duration::from_millis(16));
+            } else {
+                ctx.request_repaint_after(std::time::Duration::from_millis(33));
+            }
         }
     }
 }

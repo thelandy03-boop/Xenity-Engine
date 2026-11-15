@@ -195,13 +195,13 @@ impl StudioViewportState {
             }
         }
 
-        // Si el motor renderizó el frame, dibujamos la textura OpenGL
+        // Si el motor renderizó el frame, dibujamos la textura OpenGL (invertida en V por GPU para máxima velocidad)
         if self.engine_rendered && self.viewport_texture.is_some() {
             let tex = self.viewport_texture.as_ref().unwrap();
             ui.painter().image(
                 tex.id(),
                 vp_rect,
-                Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                Rect::from_min_max(Pos2::new(0.0, 1.0), Pos2::new(1.0, 0.0)),
                 Color32::WHITE,
             );
         } else {
