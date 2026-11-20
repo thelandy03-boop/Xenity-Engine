@@ -271,8 +271,18 @@ void ProjectManager::CreateVisualStudioSettings(bool forceCreation)
 
 		// Read the empty vscode settings file
 		std::shared_ptr<File> emptyVSCodeParamFile = FileSystem::MakeFile("./vscodeSample/c_cpp_properties.json");
+		bool isOpen = emptyVSCodeParamFile->Open(FileMode::ReadOnly);
+		if (!isOpen)
+		{
+			emptyVSCodeParamFile = FileSystem::MakeFile(enginePath + "Xenity_Engine_Executable/vscodeSample/c_cpp_properties.json");
+			isOpen = emptyVSCodeParamFile->Open(FileMode::ReadOnly);
+		}
+		if (!isOpen)
+		{
+			emptyVSCodeParamFile = FileSystem::MakeFile("./Xenity_Engine_Executable/vscodeSample/c_cpp_properties.json");
+			isOpen = emptyVSCodeParamFile->Open(FileMode::ReadOnly);
+		}
 
-		const bool isOpen = emptyVSCodeParamFile->Open(FileMode::ReadOnly);
 		if (isOpen)
 		{
 			std::string vsCodeText = emptyVSCodeParamFile->ReadAll();

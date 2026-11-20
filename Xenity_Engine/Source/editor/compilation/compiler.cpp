@@ -197,6 +197,7 @@ void Compiler::Init()
 {
 	UpdatePaths();
 
+#if defined(_WIN32) || defined(_WIN64)
 	CompilerParams params;
 	params.buildPlatform = BuildSettingsMenu::GetBuildPlatform(Platform::P_Windows);
 	const CompilerAvailability availability = CheckCompilerAvailability(params);
@@ -204,6 +205,7 @@ void Compiler::Init()
 	{
 		Debug::PrintError("The compiler is not correctly setup. Please check compiler settings at [Window->Engine Settings]", false);
 	}
+#endif
 }
 
 void Compiler::UpdatePaths()
@@ -319,20 +321,25 @@ CompileResult Compiler::CompilePlugin(Platform platform, const std::string& plug
 	return result;
 }
 
+#if defined(_WIN32) || defined(_WIN64)
+#define DEV_NULL "nul"
+#else
+#define DEV_NULL "/dev/null"
+#endif
+
 DockerState Compiler::CheckDockerState(Event<DockerState>* callback)
 {
-	// 2>nul Silent error
-	// 1>nul Silent standard output
+	// Silent error & standard output
 	DockerState result = DockerState::NOT_INSTALLED;
 
-	const int checkDockerInstallResult = system("docker 2>nul 1>nul");
+	const int checkDockerInstallResult = system("docker 2>" DEV_NULL " 1>" DEV_NULL);
 	if (checkDockerInstallResult != 0)
 	{
 		result = DockerState::NOT_INSTALLED;
 	}
 	else
 	{
-		const int checkDockerRunningResult = system("docker ps 2>nul 1>nul");
+		const int checkDockerRunningResult = system("docker ps 2>" DEV_NULL " 1>" DEV_NULL);
 		if (checkDockerRunningResult != 0)
 		{
 			result = DockerState::NOT_RUNNING;
@@ -341,7 +348,7 @@ DockerState Compiler::CheckDockerState(Event<DockerState>* callback)
 		{
 			system("docker images -f r=u"); // Workaround for docker image inspect not working when resource saver mode is enabled
 
-			const int checkDockerImageResult = system("docker image inspect xenity_1_0_0 2>nul 1>nul");
+			const int checkDockerImageResult = system("docker image inspect xenity_1_0_0 2>" DEV_NULL " 1>" DEV_NULL);
 			if (checkDockerImageResult != 0)
 			{
 				result = DockerState::MISSING_IMAGE;
@@ -935,7 +942,7 @@ CompileResult Compiler::CompileWSL(const CompilerParams& params)
 
 bool Compiler::CreateDockerImage()
 {
-	const int result = system("docker build -t xenity_1_0_0 . 1>nul");
+	const int result = system("docker build -t xenity_1_0_0 . 1>" DEV_NULL);
 	return result == 0;
 }
 

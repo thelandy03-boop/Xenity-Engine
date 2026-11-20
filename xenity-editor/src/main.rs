@@ -576,7 +576,26 @@ fn setup_fonts(ctx: &egui::Context) {
 }
 
 fn main() -> eframe::Result<()> {
+    #[cfg(target_os = "linux")]
+    {
+        if std::env::var("WGPU_BACKEND").is_err() {
+            unsafe {
+                std::env::set_var("WGPU_BACKEND", "vulkan");
+            }
+        }
+    }
+
     env_logger::init();
+
+    let mut wgpu_options = eframe::egui_wgpu::WgpuConfiguration::default();
+    #[cfg(target_os = "linux")]
+    {
+        wgpu_options.wgpu_setup = eframe::egui_wgpu::WgpuSetup::CreateNew {
+            supported_backends: eframe::wgpu::Backends::VULKAN,
+            power_preference: eframe::wgpu::PowerPreference::HighPerformance,
+            device_descriptor: std::sync::Arc::new(|_adapter| Default::default()),
+        };
+    }
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -584,6 +603,7 @@ fn main() -> eframe::Result<()> {
             .with_inner_size([1440.0, 900.0])
             .with_min_inner_size([1024.0, 680.0]),
         renderer: eframe::Renderer::Wgpu,
+        wgpu_options,
         ..Default::default()
     };
 
