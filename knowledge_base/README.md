@@ -44,3 +44,6 @@ Cuando un asistente de IA genere o proponga nueva documentación técnica para X
 
 ### 🎮 Plataformas & Consolas
 * [**01. Restricciones de Hardware en Consolas**](platforms/01_console_hardware_constraints.md): Cuadro comparativo de memoria, GPUs, limitaciones de shaders y estrategias de optimización para PS3, Xbox 360, PS Vita, PSP y PC.
+
+### 🏛️ Arquitectura del Motor
+* [**01. Arquitectura del Núcleo de Xenity Engine**](architecture/01_engine_architecture_overview.md): Ciclo de arranque `Engine::Init()`, GameObjects, sistema de reflexión `Reflective` y puente FFI con el editor en Rust.

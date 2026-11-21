@@ -1,0 +1,8 @@
+# Cursor Rules - Xenity Engine
+# Refer to AGENT.md for full context.
+
+1. Automatically check `knowledge_base/` before suggesting or writing engine architectural changes.
+2. Whenever creating design plans, research, or graphics proposals, automatically save them as markdown files in `knowledge_base/<category>/` using `knowledge_base/templates/ai_document_template.md`.
+3. Target Platforms: Linux (native CMake/ELF), Windows, PS3 (256MB VRAM limit), Xbox 360, PS Vita, PSP (fixed-function only).
+4. Language Standards: Engine Core is C++17, Editor is Rust 2024 (eframe/wgpu on Vulkan for Linux).
+5. Always keep the codebase cross-platform and memory-constrained.
