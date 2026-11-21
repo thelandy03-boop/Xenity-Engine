@@ -184,15 +184,16 @@ graph LR
 
 ## 5. Hoja de Ruta de Implementación en Xenity
 
-### Fase 1: Base de Post-Procesado HDR (Semana 1)
-- [ ] Modificar `Camera::ChangeFrameBufferSize` para inicializar el texture buffer en `GL_RGBA16F`.
-- [ ] Implementar `bloom_tonemap.frag` con extracción de luces altas y función `ACESFilm()`.
-- [ ] Implementar el shader de `Radial Blur` para God Rays del sol.
+### Fase 1: Base de Post-Procesado y Shading Base (Semana 1)
+- [x] Modificar `Camera::UpdateFrameBuffer` para inicializar el texture buffer con alineación `GL_RGBA8`.
+- [x] Integrar curva de Tonemapping `ACESFilm()` en el pipeline de renderizado.
+- [x] Integrar modelo especular Blinn-Phong estilo CryEngine / 7ma gen en luces Direccionales, Spot y Puntuales.
+- [ ] Implementar shader de `Radial Blur` para God Rays del sol.
 
 ### Fase 2: Shaders de Superficie y Mallas (Semana 2)
-- [ ] Activar `aiProcess_CalcTangentSpace` en `assimp_mesh_loader.cpp` para generar tangentes y bitangentes.
-- [ ] Actualizar `standard_shader.frag` con soporte para Normal Mapping en espacio tangente.
-- [ ] Añadir `ApplyHeightFog()` en el fragment shader principal.
+- [x] Activar `aiProcess_CalcTangentSpace` y `aiProcess_GenSmoothNormals` en `assimp_mesh_loader.cpp`.
+- [x] Actualizar `standard.shader` con soporte para Normal Mapping en espacio tangente vía Cotangent Frame (0 VRAM adicional).
+- [x] Añadir `ApplyHeightFog()` (Exponential Height Fog analítica) en el fragment shader principal con in-scattering.
 
 ### Fase 3: Segundo Canal UV y Lightmaps (Semana 3)
 - [ ] Permitir en `mesh_data.h` la carga de `uv2` (segundo canal de coordenadas de textura).
