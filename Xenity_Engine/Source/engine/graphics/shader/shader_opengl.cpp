@@ -276,22 +276,22 @@ void ShaderOpenGL::SetShaderCameraPosition()
 	if (Graphics::usedCamera != nullptr)
 	{
 		glUniformMatrix4fv(m_cameraLocation, 1, false, glm::value_ptr(Graphics::usedCamera->viewMatrix)); // Y position and rotation inverted
-		if (m_viewPosLocation != 0 && m_viewPosLocation != static_cast<unsigned int>(-1))
+		if (m_viewPosLocation != static_cast<unsigned int>(-1))
 		{
 			const Vector3& pos = Graphics::usedCamera->GetTransformRaw()->GetPosition();
 			glUniform3f(m_viewPosLocation, -pos.x, pos.y, pos.z);
 		}
-		if (m_fogParamsLocation != 0 && m_fogParamsLocation != static_cast<unsigned int>(-1))
+		if (m_fogParamsLocation != static_cast<unsigned int>(-1))
 		{
 			const auto& s = Graphics::s_settings;
 			glUniform4f(m_fogParamsLocation, s.isFogEnabled ? 1.0f : 0.0f, 0.0004f, 0.04f, 0.0f);
 		}
-		if (m_fogColorLocation != 0 && m_fogColorLocation != static_cast<unsigned int>(-1))
+		if (m_fogColorLocation != static_cast<unsigned int>(-1))
 		{
 			const RGBA& c = Graphics::s_settings.fogColor.GetRGBA();
 			glUniform3f(m_fogColorLocation, c.r, c.g, c.b);
 		}
-		if (m_timeLocation != 0 && m_timeLocation != static_cast<unsigned int>(-1))
+		if (m_timeLocation != static_cast<unsigned int>(-1))
 		{
 			glUniform1f(m_timeLocation, Time::GetTime());
 		}

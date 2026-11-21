@@ -249,8 +249,8 @@ int XenityFFI::Init(int width, int height)
 					bpMat->SetColor(Color::CreateFromRGBAFloat(1.0f, 1.0f, 1.0f, 1.0f));
 					bpMat->SetUseLighting(true);
 					mesh->SetMaterial(bpMat, 0);
-					go->GetTransform()->SetPosition(Vector3(0.0f, -4.0f, 0.0f));
-					go->GetTransform()->SetLocalScale(Vector3(512.0f, 8.0f, 512.0f));
+					go->GetTransform()->SetPosition(Vector3(0.0f, -2.0f, 0.0f));
+					go->GetTransform()->SetLocalScale(Vector3(80.0f, 4.0f, 80.0f));
 				}
 			}
 		}
@@ -277,8 +277,8 @@ int XenityFFI::Init(int width, int height)
 		if (bp)
 		{
 			bp->SetName("Baseplate");
-			bp->GetTransform()->SetPosition(Vector3(0.0f, -4.0f, 0.0f));
-			bp->GetTransform()->SetLocalScale(Vector3(512.0f, 8.0f, 512.0f));
+			bp->GetTransform()->SetPosition(Vector3(0.0f, -2.0f, 0.0f));
+			bp->GetTransform()->SetLocalScale(Vector3(80.0f, 4.0f, 80.0f));
 
 			auto mesh = bp->GetComponent<MeshRenderer>();
 			if (mesh)
@@ -300,35 +300,38 @@ int XenityFFI::Init(int width, int height)
 	}
 
 	// 8. Setup CryEngine Tropical Ocean demo body
-	bool hasWater = false;
+	std::shared_ptr<GameObject> oceanGO = nullptr;
 	for (int i = 0; i < goCount; i++)
 	{
 		const auto& go = GameplayManager::GetGameObjects()[i];
 		if (go && go->GetName() == "TropicalOcean")
 		{
-			hasWater = true;
+			oceanGO = go;
 			break;
 		}
 	}
-	if (!hasWater && AssetManager::waterShader)
+	if (!oceanGO && AssetManager::waterShader)
 	{
-		auto oceanGO = ShapeSpawner::SpawnPlane();
+		oceanGO = ShapeSpawner::SpawnPlane();
 		if (oceanGO)
 		{
 			oceanGO->SetName("TropicalOcean");
-			oceanGO->GetTransform()->SetPosition(Vector3(0.0f, -2.5f, 0.0f));
-			oceanGO->GetTransform()->SetLocalScale(Vector3(1500.0f, 1.0f, 1500.0f));
-			auto oceanMesh = oceanGO->GetComponent<MeshRenderer>();
-			if (oceanMesh)
-			{
-				auto waterMat = Material::MakeMaterial();
-				waterMat->SetShader(AssetManager::waterShader);
-				waterMat->SetRenderingMode(MaterialRenderingMode::Transparent);
-				waterMat->SetColor(Color::CreateFromRGBAFloat(0.06f, 0.55f, 0.68f, 0.70f));
-				waterMat->SetTiling(Vector2(64.0f, 64.0f));
-				waterMat->SetUseLighting(true);
-				oceanMesh->SetMaterial(waterMat, 0);
-			}
+		}
+	}
+	if (oceanGO && AssetManager::waterShader)
+	{
+		oceanGO->GetTransform()->SetPosition(Vector3(0.0f, -0.4f, 0.0f));
+		oceanGO->GetTransform()->SetLocalScale(Vector3(3000.0f, 1.0f, 3000.0f));
+		auto oceanMesh = oceanGO->GetComponent<MeshRenderer>();
+		if (oceanMesh)
+		{
+			auto waterMat = Material::MakeMaterial();
+			waterMat->SetShader(AssetManager::waterShader);
+			waterMat->SetRenderingMode(MaterialRenderingMode::Transparent);
+			waterMat->SetColor(Color::CreateFromRGBAFloat(0.05f, 0.62f, 0.72f, 0.70f));
+			waterMat->SetTiling(Vector2(64.0f, 64.0f));
+			waterMat->SetUseLighting(true);
+			oceanMesh->SetMaterial(waterMat, 0);
 		}
 	}
 

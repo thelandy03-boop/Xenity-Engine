@@ -188,13 +188,13 @@ protected:
 	unsigned int m_offsetLocation = 0;
 	unsigned int m_alphaThresholdLocation = 0;
 
-	unsigned int m_usedPointLightCountLocation = 0;
-	unsigned int m_usedSpotLightCountLocation = 0;
-	unsigned int m_usedDirectionalLightCountLocation = 0;
-	unsigned int m_viewPosLocation = 0;
-	unsigned int m_fogParamsLocation = 0;
-	unsigned int m_fogColorLocation = 0;
-	unsigned int m_timeLocation = 0;
+	unsigned int m_usedPointLightCountLocation = INVALID_SHADER_UNIFORM;
+	unsigned int m_usedSpotLightCountLocation = INVALID_SHADER_UNIFORM;
+	unsigned int m_usedDirectionalLightCountLocation = INVALID_SHADER_UNIFORM;
+	unsigned int m_viewPosLocation = INVALID_SHADER_UNIFORM;
+	unsigned int m_fogParamsLocation = INVALID_SHADER_UNIFORM;
+	unsigned int m_fogColorLocation = INVALID_SHADER_UNIFORM;
+	unsigned int m_timeLocation = INVALID_SHADER_UNIFORM;
 };
 
 #endif

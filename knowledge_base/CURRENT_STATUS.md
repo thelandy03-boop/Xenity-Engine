@@ -33,11 +33,12 @@ graph TD
 - [x] **Modelo Especular Blinn-Phong**: Integrado en el cálculo de luces Direccionales, Spot y Puntuales en `standard.shader`.
 - [x] **Niebla Atmosférica por Altura Exponencial (Exponential Height Fog)**: Implementación analítica en `standard.shader`, vinculando uniforms `fogParams` y `fogColor` desde el subsistema `ShaderOpenGL` y `xenity_ffi.cpp`.
 
-### Fase 2: Superficies, Tangentes y Mallas (90% COMPLETADO - ACTIVO)
+### Fase 2: Superficies, Tangentes y Mallas (95% COMPLETADO - ACTIVO)
 - [x] **Cálculo de Tangentes y Normales Suaves en Assimp**: Agregadas las banderas `aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals` en `assimp_mesh_loader.cpp`.
 - [x] **Normal Mapping sin Descriptores de Vértice (Cotangent Frame)**: Función `CotangentFrame` integrada en `standard.shader` derivada del paper de Christian Schüler (ShaderX5). Permite relieve fotorrealista con 0 bytes adicionales de memoria en VRAM.
-- [x] **Shader de Océano Tropical CryEngine (`water.shader`)**: Implementado con perturbación de oleaje analítico dual (Gerstner Wavelets), aproximación de Fresnel de Schlick ($R_0 = 0.02$), gradiente de profundidad Caribeña (cyan/turquesa a azul marino) y destello solar especular (Sun Glitter).
-- [x] **Sincronización de Tiempo (`time` uniform)**: Subida automática de `Time::GetTime()` a la GPU en `ShaderOpenGL::SetShaderCameraPosition` para animación fluida de shaders de agua y efectos de viento.
+- [x] **Shader de Océano Tropical CryEngine (`water.shader`)**: Implementado con perturbación de oleaje analítico dual (6 Gerstner Wavelets), aproximación de Fresnel de Schlick ($R_0 = 0.02$), espuma de cresta (whitecap crest foam), gradiente de profundidad Caribeña (cyan/turquesa a azul marino), reflejo dinámico del domo celeste y destello solar especular (Sun Glitter).
+- [x] **Sincronización de Tiempo (`time` uniform) y Corrección de Uniform Location 0**: Subida de `Time::GetTime()` corregida en `ShaderOpenGL::SetShaderCameraPosition` eliminando la condición errónea `!= 0` que bloqueaba uniforms con índice 0 en OpenGL.
+- [x] **Composición del Escenario Océano + Baseplate**: En `xenity_ffi.cpp`, la plataforma Baseplate se ajustó a $80 \times 4 \times 80$ a $Y = -2.0$ (superficie en $Y = 0.0$), rodeada por el cuerpo oceánico en $Y = -0.4$ con escala $3000 \times 3000$ que se extiende al horizonte y actualiza sus propiedades de forma incondicional en cada carga.
 - [ ] **Siguiente Entregable Inmediato**: Implementar shader de `Radial Blur` para Rayos Solares Crepusculares (God Rays) o slot de textura `normalMap` expuesto directamente en el Inspector del Editor de Rust.
 
 ### Fase 3: Lightmaps UV2 y Áreas Estáticas (PENDIENTE)
@@ -54,10 +55,10 @@ graph TD
 
 | Archivo | Qué se modificó |
 | :--- | :--- |
-| `Xenity_Engine/Source/editor/xenity_ffi.cpp` | Activación de niebla atmosférica y cielo inicial en el FFI del editor. |
-| `Xenity_Engine/Source/engine/graphics/camera.cpp` | Formato interno del buffer de color cambiado de `GL_RGB` a `GL_RGBA8`. |
-| `Xenity_Engine/Source/engine/graphics/shader/shader_opengl.h` | Declaración de ubicaciones de uniforms `m_fogParamsLocation` y `m_fogColorLocation`. |
-| `Xenity_Engine/Source/engine/graphics/shader/shader_opengl.cpp` | Subida de parámetros de niebla por cámara y registro de uniforms. |
+| `Xenity_Engine/Source/editor/xenity_ffi.cpp` | Escenario demo CryEngine con Baseplate y Océano $3000\times3000$ actualizado incondicionalmente. |
+| `Xenity_Engine/Source/engine/graphics/shader/shader_opengl.h` | Inicialización de locations de uniforms a `INVALID_SHADER_UNIFORM` (-1). |
+| `Xenity_Engine/Source/engine/graphics/shader/shader_opengl.cpp` | Corrección de subida de `viewPos`, `fogParams`, `fogColor` y `time` permitiendo uniform location 0. |
+| `Xenity_Engine_Executable/public_engine_assets/shaders/water.shader` | Shader de agua CryEngine 2/3 con 6 Gerstner wavelets, crest foam, reflejo del domo celeste y transparencia Fresnel. |
 | `Xenity_Engine/Source/editor/mesh_loaders/assimp_mesh_loader.cpp` | Flags de importación `aiProcess_CalcTangentSpace` y `aiProcess_GenSmoothNormals`. |
 | `Xenity_Engine_Executable/public_engine_assets/shaders/standard.shader` | Integración de Blinn-Phong, ACES Tonemapping, Exponential Height Fog y Cotangent Normal Mapping. |
 | `AGENT.md`, `.cursorrules`, `CLAUDE.md` | Protocolo obligatorio de ejecución con `cargo run --release` y consulta de knowledge base. |
