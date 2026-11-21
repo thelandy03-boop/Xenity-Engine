@@ -98,31 +98,81 @@ pub struct XenityEngine {
     pub height: u32,
 }
 
+#[cfg(windows)]
+fn add_dll_search_path(dir: &std::path::Path) {
+    use std::os::windows::ffi::OsStrExt;
+    let mut wide: Vec<u16> = dir.as_os_str().encode_wide().collect();
+    wide.push(0);
+    unsafe {
+        unsafe extern "system" {
+            fn SetDllDirectoryW(lpPathName: *const u16) -> i32;
+        }
+        SetDllDirectoryW(wide.as_ptr());
+    }
+}
+
 impl XenityEngine {
     pub fn try_load() -> Option<Self> {
-        let candidates = [
-            // Linux candidates
-            PathBuf::from("libXenity_Editor.so"),
-            PathBuf::from("Xenity_Editor.so"),
-            PathBuf::from("build/libXenity_Editor.so"),
-            PathBuf::from("../build/libXenity_Editor.so"),
-            PathBuf::from("build/Xenity_Editor.so"),
-            PathBuf::from("../build/Xenity_Editor.so"),
-            PathBuf::from("xenity-editor/libXenity_Editor.so"),
-            // Windows candidates
-            PathBuf::from("Xenity_Editor.dll"),
-            PathBuf::from("xenity-editor/Xenity_Editor.dll"),
-            PathBuf::from("xenity-editor/target/debug/Xenity_Editor.dll"),
-            PathBuf::from("Xenity_Engine/XenityBuild/x64/Release Editor/Xenity_Editor.dll"),
-            PathBuf::from("../Xenity_Engine/XenityBuild/x64/Release Editor/Xenity_Editor.dll"),
-            PathBuf::from("C:/Landy_proyectos/Xenity-Engine/Xenity_Engine/XenityBuild/x64/Release Editor/Xenity_Editor.dll"),
+        // 1. Gather all potential root directories
+        let mut search_roots = Vec::new();
+
+        // Manifest directory (compile time)
+        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        if let Some(parent) = manifest_dir.parent() {
+            search_roots.push(parent.to_path_buf());
+        }
+        search_roots.push(manifest_dir.clone());
+
+        // Executable directory (runtime)
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                search_roots.push(exe_dir.to_path_buf());
+                if let Some(p1) = exe_dir.parent() {
+                    search_roots.push(p1.to_path_buf());
+                    if let Some(p2) = p1.parent() {
+                        search_roots.push(p2.to_path_buf());
+                        if let Some(p3) = p2.parent() {
+                            search_roots.push(p3.to_path_buf());
+                        }
+                    }
+                }
+            }
+        }
+
+        // Current working directory
+        if let Ok(cwd) = std::env::current_dir() {
+            search_roots.push(cwd);
+        }
+
+        // Hardcoded known workspace path
+        search_roots.push(PathBuf::from("C:/Landy_proyectos/Xenity-Engine"));
+
+        // Sub-paths where Xenity_Editor library lives
+        let relative_candidates = [
+            // Windows
+            "Xenity_Editor.dll",
+            "xenity-editor/target/release/Xenity_Editor.dll",
+            "xenity-editor/target/debug/Xenity_Editor.dll",
+            "xenity-editor/Xenity_Editor.dll",
+            "XenityBuild/x64/Release Editor/Xenity_Editor.dll",
+            "Xenity_Engine/XenityBuild/x64/Release Editor/Xenity_Editor.dll",
+            // Linux
+            "libXenity_Editor.so",
+            "build/libXenity_Editor.so",
+            "xenity-editor/libXenity_Editor.so",
         ];
 
         let mut found_path: Option<PathBuf> = None;
-        for path in &candidates {
-            if path.exists() {
-                found_path = Some(path.clone());
-                break;
+        let mut matched_root: Option<PathBuf> = None;
+
+        'search: for root in &search_roots {
+            for rel in &relative_candidates {
+                let candidate = root.join(rel);
+                if candidate.exists() {
+                    found_path = Some(candidate);
+                    matched_root = Some(root.clone());
+                    break 'search;
+                }
             }
         }
 
@@ -133,6 +183,23 @@ impl XenityEngine {
                 return None;
             }
         };
+
+        // If matched_root contains public_engine_assets, switch process working directory to it!
+        // This ensures shaders, models, and textures load properly from ANY launching path.
+        if let Some(ref root) = matched_root {
+            let assets = root.join("public_engine_assets");
+            if assets.exists() {
+                let _ = std::env::set_current_dir(root);
+                #[cfg(windows)]
+                add_dll_search_path(root);
+            }
+        }
+
+        // Also add the DLL's own directory to Windows DLL search path so SDL3.dll, freetype.dll, etc. are found
+        if let Some(dll_dir) = dll_path.parent() {
+            #[cfg(windows)]
+            add_dll_search_path(dll_dir);
+        }
 
         info!("[Xenity FFI] Loading dynamic library from {:?}", dll_path);
         let lib = unsafe {
