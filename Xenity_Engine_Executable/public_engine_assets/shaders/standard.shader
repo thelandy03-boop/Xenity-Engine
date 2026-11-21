@@ -40,6 +40,8 @@ uniform vec2 tiling;
 uniform vec2 offset;
 uniform vec3 ambientLight;
 uniform vec3 viewPos;
+uniform vec4 fogParams;
+uniform vec3 fogColor;
 
 struct DirectionalLight 
 {
@@ -188,6 +190,24 @@ void main()
 	}
 
 	vec3 litColor = ACESFilm(result * color.xyz);
+
+	// Exponential Height Fog (CryEngine atmospheric haze)
+	if (fogParams.x > 0.5)
+	{
+		vec3 viewVec = v_FragPos - viewPos;
+		float dist = length(viewVec);
+		vec3 viewDir = normalize(viewVec);
+
+		float fogDensity = fogParams.y > 0.0 ? fogParams.y : 0.003;
+		float fogHeightFalloff = fogParams.z > 0.0 ? fogParams.z : 0.08;
+		float fogHeight = fogParams.w;
+
+		float fogAmount = (fogDensity / fogHeightFalloff) * exp(-viewPos.y * fogHeightFalloff) * (1.0 - exp(-dist * max(abs(viewDir.y), 0.001) * fogHeightFalloff)) / max(abs(viewDir.y), 0.001);
+		fogAmount = clamp(1.0 - exp(-fogAmount), 0.0, 0.95);
+
+		litColor = mix(litColor, fogColor, fogAmount);
+	}
+
 	gl_FragColor = vec4(litColor, alpha) * vertCol;
 }
 

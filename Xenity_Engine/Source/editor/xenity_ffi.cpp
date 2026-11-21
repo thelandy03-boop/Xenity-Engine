@@ -198,6 +198,10 @@ int XenityFFI::Init(int width, int height)
 		Graphics::s_settings.skyColor = Color::CreateFromRGBAFloat(0.53f, 0.70f, 0.90f, 1.0f);
 	}
 
+	// 6b. Enable CryEngine-style subtle atmospheric height fog
+	Graphics::s_settings.isFogEnabled = true;
+	Graphics::s_settings.fogColor = Color::CreateFromRGBAFloat(0.65f, 0.75f, 0.88f, 1.0f);
+
 	// 7. Ensure Sunlight, Ambient Lighting and Baseplate exist with authentic Roblox visuals
 	bool hasSun = false;
 	bool hasAmbient = false;

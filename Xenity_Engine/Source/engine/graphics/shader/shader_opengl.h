@@ -192,6 +192,8 @@ protected:
 	unsigned int m_usedSpotLightCountLocation = 0;
 	unsigned int m_usedDirectionalLightCountLocation = 0;
 	unsigned int m_viewPosLocation = 0;
+	unsigned int m_fogParamsLocation = 0;
+	unsigned int m_fogColorLocation = 0;
 };
 
 #endif
