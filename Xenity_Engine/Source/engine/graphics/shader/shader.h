@@ -54,6 +54,8 @@ public:
 	Shader();
 	~Shader();
 
+	void LoadFileReference(const LoadOptions& loadOptions) override;
+
 protected:
 	enum class ShaderType
 	{
@@ -122,11 +124,11 @@ protected:
 	friend class Renderer;
 	friend class AssetManager;
 	friend class ProjectManager;
+	friend class XenityFFI;
 
 	ReflectiveData GetReflectiveData() override;
 	ReflectiveData GetMetaReflectiveData(AssetPlatform platform) override;
 
-	void LoadFileReference(const LoadOptions& loadOptions) override;
 	virtual void Load(const LoadOptions& loadOptions) = 0;
 
 	[[nodiscard]] static std::shared_ptr<Shader> MakeShader();

@@ -42,6 +42,7 @@ uniform vec3 ambientLight;
 uniform vec3 viewPos;
 uniform vec4 fogParams;
 uniform vec3 fogColor;
+uniform float time;
 
 struct DirectionalLight 
 {
@@ -66,8 +67,6 @@ struct SpotLight
 };
 
 uniform sampler2D diffuse;
-uniform sampler2D normalMap;
-uniform float hasNormalMap;
 
 #define NR_POINT_LIGHTS 10 
 uniform PointLight pointLights[NR_POINT_LIGHTS];
@@ -88,81 +87,7 @@ layout(std140) uniform LightIndices
 	ivec4 directionalLightsIndices[NR_DIRECTIONAL_LIGHTS];
 } lightIndices;
 
-vec3 CalculateDirectionalLight(DirectionalLight light2, vec3 norm, vec3 fragPos) 
-{
-	vec3 lightDir = normalize(-light2.direction); // Directional light
-	float diff = max(dot(norm, lightDir), 0.0); //If the light is behind the face, diff is 0
-	vec3 texColor = vec3(texture(diffuse, (v_TexCoord * tiling) + offset));
-	vec3 diffColor = (diff * texColor) * light2.color * 2.0;
-
-	// Blinn-Phong Specular (only where light directly illuminates the surface)
-	vec3 specColor = vec3(0.0);
-	if (diff > 0.0)
-	{
-		vec3 viewDir = normalize(viewPos - fragPos);
-		vec3 halfDir = normalize(lightDir + viewDir);
-		float specAngle = max(dot(norm, halfDir), 0.0);
-		float spec = pow(specAngle, 32.0);
-		specColor = (spec * 0.20) * light2.color;
-	}
-
-	return diffColor + specColor;
-}
-
-vec3 CalculatePointLight(PointLight light2, vec3 norm, vec3 fragPos) 
-{
-	vec3 lightVec = light2.position - fragPos;
-	vec3 lightDir = normalize(lightVec);
-	float diff = max(dot(norm, lightDir), 0.0);
-	vec3 texColor = vec3(texture(diffuse, (v_TexCoord * tiling) + offset));
-	vec3 diffColor = (diff * texColor) * light2.color * 2.0;
-
-	// Blinn-Phong Specular
-	vec3 specColor = vec3(0.0);
-	if (diff > 0.0)
-	{
-		vec3 viewDir = normalize(viewPos - fragPos);
-		vec3 halfDir = normalize(lightDir + viewDir);
-		float specAngle = max(dot(norm, halfDir), 0.0);
-		float spec = pow(specAngle, 32.0);
-		specColor = (spec * 0.20) * light2.color;
-	}
-
-	float distanceSq = dot(lightVec, lightVec);
-	float attenuation = 1.0f / (light2.light_data.x + light2.light_data.y * sqrt(distanceSq) + light2.light_data.z * distanceSq);
-
-	return (diffColor + specColor) * attenuation;
-}
-
-vec3 CalculateSpotLight(SpotLight light2, vec3 norm, vec3 fragPos) 
-{
-	vec3 lightDir = normalize(light2.position - fragPos);
-	float diff = max(dot(norm, lightDir), 0.0);
-	vec3 texColor = vec3(texture(diffuse, (v_TexCoord * tiling) + offset));
-	vec3 diffColor = (diff * texColor) * light2.color * 2.0;
-
-	// Blinn-Phong Specular
-	vec3 specColor = vec3(0.0);
-	if (diff > 0.0)
-	{
-		vec3 viewDir = normalize(viewPos - fragPos);
-		vec3 halfDir = normalize(lightDir + viewDir);
-		float specAngle = max(dot(norm, halfDir), 0.0);
-		float spec = pow(specAngle, 32.0);
-		specColor = (spec * 0.20) * light2.color;
-	}
-
-	float distance = length(light2.position - fragPos);
-	float attenuation = 1.0 / (1.0 + light2.light_data.x * distance + light2.light_data.y * (distance * distance));
-
-	float theta = dot(lightDir, normalize(-light2.direction));
-	float epsilon = light2.light_data.z - light2.light_data.w;
-	float intensity = clamp((theta - light2.light_data.w) / epsilon, 0.0, 1.0);
-
-	return (diffColor + specColor) * attenuation * intensity;
-}
-
-// Curva de Tonemapping ACES (Naughty Dog & Crytek)
+// ACES Filmic tonemapping curve (CryEngine 3)
 vec3 ACESFilm(vec3 x)
 {
 	float a = 2.51;
@@ -173,80 +98,113 @@ vec3 ACESFilm(vec3 x)
 	return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
 
-// Screen-space cotangent frame for tangent-space normal mapping without precomputed vertex tangents
-// Enables CryEngine-style micro-detail bump mapping across all meshes with 0 additional VRAM cost
-mat3 CotangentFrame(vec3 N, vec3 p, vec2 uv)
+vec3 CalculateDirectionalLight(DirectionalLight light2, vec3 norm, vec3 fragPos, vec3 viewDir, vec3 texColor) 
 {
-	vec3 dp1 = dFdx(p);
-	vec3 dp2 = dFdy(p);
-	vec2 duv1 = dFdx(uv);
-	vec2 duv2 = dFdy(uv);
+	vec3 lightDir = normalize(-light2.direction);
+	float diff = max(dot(norm, lightDir), 0.0);
+	vec3 diffuseLight = diff * texColor * light2.color * 2.0;
 
-	vec3 dp2perp = cross(dp2, N);
-	vec3 dp1perp = cross(N, dp1);
-	vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
-	vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+	// CryEngine Blinn-Phong Specular
+	vec3 halfDir = normalize(lightDir + viewDir);
+	float NdotH = max(dot(norm, halfDir), 0.0);
+	float spec = pow(NdotH, 48.0) * 0.45;
+	vec3 specularLight = spec * light2.color * 1.5;
 
-	float invmax = inversesqrt(max(dot(T, T), dot(B, B)));
-	return mat3(T * invmax, B * invmax, N);
+	return diffuseLight + specularLight;
+}
+
+vec3 CalculatePointLight(PointLight light2, vec3 norm, vec3 fragPos, vec3 viewDir, vec3 texColor) 
+{
+	vec3 lightVec = light2.position - fragPos;
+	vec3 lightDir = normalize(lightVec);
+	float diff = max(dot(norm, lightDir), 0.0);
+	vec3 diffuseLight = diff * texColor * light2.color * 2.0;
+
+	vec3 halfDir = normalize(lightDir + viewDir);
+	float NdotH = max(dot(norm, halfDir), 0.0);
+	float spec = pow(NdotH, 32.0) * 0.35;
+	vec3 specularLight = spec * light2.color;
+
+	float distanceSq = dot(lightVec, lightVec);
+	float attenuation = 1.0f / (light2.light_data.x + light2.light_data.y * sqrt(distanceSq) + light2.light_data.z * distanceSq);
+
+	return (diffuseLight + specularLight) * attenuation;
+}
+
+vec3 CalculateSpotLight(SpotLight light2, vec3 norm, vec3 fragPos, vec3 viewDir, vec3 texColor) 
+{
+	vec3 lightVec = light2.position - fragPos;
+	vec3 lightDir = normalize(lightVec);
+	float diff = max(dot(norm, lightDir), 0.0);
+	vec3 diffuseLight = diff * texColor * light2.color * 2.0;
+
+	vec3 halfDir = normalize(lightDir + viewDir);
+	float NdotH = max(dot(norm, halfDir), 0.0);
+	float spec = pow(NdotH, 32.0) * 0.35;
+	vec3 specularLight = spec * light2.color;
+
+	float distance = length(lightVec);
+	float attenuation = 1.0 / (1.0 + light2.light_data.x * distance + light2.light_data.y * (distance * distance));
+
+	float theta = dot(lightDir, normalize(-light2.direction));
+	float epsilon = light2.light_data.z - light2.light_data.w;
+	float intensity = clamp((theta - light2.light_data.w) / epsilon, 0.0, 1.0);
+
+	return (diffuseLight + specularLight) * (attenuation * intensity);
 }
 
 void main()
 {
 	vec4 textureFrag = texture(diffuse, (v_TexCoord * tiling) + offset);
+	vec3 norm = normalize(v_Normal);
+	vec3 viewDir = normalize(viewPos - v_FragPos);
 
-	vec3 norm = normalize(v_Normal); //Direction of normals
-	if (hasNormalMap > 0.5)
-	{
-		vec3 mapNormal = texture(normalMap, (v_TexCoord * tiling) + offset).xyz * 2.0 - 1.0;
-		mat3 TBN = CotangentFrame(norm, v_FragPos, v_TexCoord);
-		norm = normalize(TBN * mapNormal);
-	}
-
-	//Result
 	vec3 result = vec3(0.0);
 	for (int i = 0; i < lightIndices.usedPointLightCount; i++)
 	{
-		result += CalculatePointLight(pointLights[lightIndices.pointLightsIndices[i].x], norm, v_FragPos);
+		result += CalculatePointLight(pointLights[lightIndices.pointLightsIndices[i].x], norm, v_FragPos, viewDir, textureFrag.xyz);
 	}	
 	for (int i = 0; i < lightIndices.usedSpotLightCount; i++)
 	{
-		result += CalculateSpotLight(spotLights[lightIndices.spotLightsIndices[i].x], norm, v_FragPos);
+		result += CalculateSpotLight(spotLights[lightIndices.spotLightsIndices[i].x], norm, v_FragPos, viewDir, textureFrag.xyz);
 	}
 	for (int i = 0; i < lightIndices.usedDirectionalLightCount; i++)
 	{
-		result += CalculateDirectionalLight(directionalLights[lightIndices.directionalLightsIndices[i].x], norm, v_FragPos);
+		result += CalculateDirectionalLight(directionalLights[lightIndices.directionalLightsIndices[i].x], norm, v_FragPos, viewDir, textureFrag.xyz);
 	}
 	result += textureFrag.xyz * ambientLight;
 
-	float alpha = textureFrag.w * color.w;
+	vec3 shadedColor = result * color.xyz;
 
+	// CryEngine Atmospheric Exponential Height Fog with Directional Sun In-Scattering
+	if (fogParams.x > 0.5)
+	{
+		vec3 viewVec = v_FragPos - viewPos;
+		float dist = length(viewVec);
+		float fogDensity = fogParams.y > 0.0 ? fogParams.y : 0.0004;
+		float fogAmount = clamp(1.0 - exp(-dist * fogDensity), 0.0, 0.90);
+
+		vec3 sunDir = vec3(0.5, 0.7, 0.5);
+		if (lightIndices.usedDirectionalLightCount > 0)
+		{
+			sunDir = normalize(-directionalLights[lightIndices.directionalLightsIndices[0].x].direction);
+		}
+		float sunScattering = max(dot(normalize(viewVec), sunDir), 0.0);
+		vec3 sunFogColor = vec3(1.0, 0.95, 0.85);
+		vec3 finalFogColor = mix(fogColor, sunFogColor, pow(sunScattering, 4.0) * 0.4);
+
+		shadedColor = mix(shadedColor, finalFogColor, fogAmount);
+	}
+
+	shadedColor = ACESFilm(shadedColor);
+
+	float alpha = textureFrag.w * color.w;
 	vec4 vertCol = v_Color;
 	if (vertCol.a == 0.0 || (vertCol.r == 0.0 && vertCol.g == 0.0 && vertCol.b == 0.0 && vertCol.a == 0.0))
 	{
 		vertCol = vec4(1.0, 1.0, 1.0, 1.0);
 	}
-
-	vec3 litColor = ACESFilm(result * color.xyz);
-
-	// Exponential Height Fog (CryEngine atmospheric haze)
-	if (fogParams.x > 0.5)
-	{
-		vec3 viewVec = v_FragPos - viewPos;
-		float dist = length(viewVec);
-		vec3 viewDir = normalize(viewVec);
-
-		float fogDensity = fogParams.y > 0.0 ? fogParams.y : 0.003;
-		float fogHeightFalloff = fogParams.z > 0.0 ? fogParams.z : 0.08;
-		float fogHeight = fogParams.w;
-
-		float fogAmount = (fogDensity / fogHeightFalloff) * exp(-viewPos.y * fogHeightFalloff) * (1.0 - exp(-dist * max(abs(viewDir.y), 0.001) * fogHeightFalloff)) / max(abs(viewDir.y), 0.001);
-		fogAmount = clamp(1.0 - exp(-fogAmount), 0.0, 0.95);
-
-		litColor = mix(litColor, fogColor, fogAmount);
-	}
-
-	gl_FragColor = vec4(litColor, alpha) * vertCol;
+	gl_FragColor = vec4(shadedColor, alpha) * vertCol;
 }
 
 //-------------- {psvita}
@@ -352,7 +310,7 @@ vec3 CalculateSpotLight(SpotLight light, vec3 norm, vec3 fragPos, vec3 textureCo
 	float diff = max(dot(norm, lightDir), 0.0); //If the light is behind the face, diff is 0
 	vec3 diffuse = (diff * textureColor) * light.color * 2; //Set the light color and intensity
 
-	float distanceSq = dot(lightVec, lightVec); // distance�
+	float distanceSq = dot(lightVec, lightVec); // distance
 	float attenuation = 1.0f / (1 + light.light_data.x * sqrt(distanceSq) + light.light_data.y * distanceSq);
 
 	float theta = dot(lightDir, normalize(-light.direction));
@@ -373,7 +331,7 @@ float3 CalculatePointLight(PointLight light, float3 norm, float3 fragPos, float3
 	float diff = max(dot(norm, lightDir), 0.0f); //If the light is behind the face, diff is 0
 	float3 diffuse = (diff * textureColor) * light.color * 2; //Set the light color and intensity
 
-	float distanceSq = dot(lightVec, lightVec); // distance�
+	float distanceSq = dot(lightVec, lightVec); // distance
 	float attenuation = 1.0f / (light.light_data.x + light.light_data.y * sqrt(distanceSq) + light.light_data.z * distanceSq);
 	//float distance = length(light.position - fragPos);
 	//float attenuation = 1.0 / (light.light_data.x + light.light_data.y * distance + light.light_data.z * (distance * distance));
@@ -527,7 +485,7 @@ float3 CalculateSpotLight(SpotLight light, float3 norm, float3 fragPos, float4 t
 	//float distance = length(light.position - fragPos);
 	//float attenuation = 1.0 / (light.constant + light.light_data * distance + light.quadratic * (distance * distance));
 
-	float distanceSq = dot(lightVec, lightVec); // distance�
+	float distanceSq = dot(lightVec, lightVec); // distance
 	float attenuation = 1.0 / (1 + light.light_data.x * sqrt(distanceSq) + light.light_data.y * distanceSq);
 
 	float theta = dot(lightDir, normalize(-light.direction));
@@ -545,7 +503,7 @@ float3 CalculatePointLight(PointLight light, float3 norm, float3 fragPos, float4
 	float diff = max(dot(norm, lightDir), 0.0f); //If the light is behind the face, diff is 0
 	float3 diffuse = (diff * textureFrag.xyz) * light.color; //Set the light color and intensity
 
-	float distanceSq = dot(lightVec, lightVec); // distance�
+	float distanceSq = dot(lightVec, lightVec); // distance
 	float attenuation = 1.0f / (1 + light.light_data.y * sqrt(distanceSq) + light.light_data.z * distanceSq);
 
 	return diffuse * attenuation;

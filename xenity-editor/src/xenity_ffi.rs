@@ -112,9 +112,10 @@ impl XenityEngine {
             // Windows candidates
             PathBuf::from("Xenity_Editor.dll"),
             PathBuf::from("xenity-editor/Xenity_Editor.dll"),
-            PathBuf::from("../XenityBuild/x64/Release Editor/Xenity_Editor.dll"),
-            PathBuf::from("XenityBuild/x64/Release Editor/Xenity_Editor.dll"),
-            PathBuf::from("C:/Landy_proyectos/Xenity-Engine/XenityBuild/x64/Release Editor/Xenity_Editor.dll"),
+            PathBuf::from("xenity-editor/target/debug/Xenity_Editor.dll"),
+            PathBuf::from("Xenity_Engine/XenityBuild/x64/Release Editor/Xenity_Editor.dll"),
+            PathBuf::from("../Xenity_Engine/XenityBuild/x64/Release Editor/Xenity_Editor.dll"),
+            PathBuf::from("C:/Landy_proyectos/Xenity-Engine/Xenity_Engine/XenityBuild/x64/Release Editor/Xenity_Editor.dll"),
         ];
 
         let mut found_path: Option<PathBuf> = None;

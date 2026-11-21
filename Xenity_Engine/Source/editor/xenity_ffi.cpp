@@ -162,8 +162,8 @@ int XenityFFI::Init(int width, int height)
 	{
 		s_camera->SetNearClippingPlane(0.5f);
 		s_camera->SetFarClippingPlane(4000.0f);
-		s_camera->GetTransform()->SetPosition(Vector3(0.0f, 16.0f, -40.0f));
-		s_camera->GetTransform()->SetEulerAngles(Vector3(20.0f, 0.0f, 0.0f));
+		s_camera->GetTransform()->SetPosition(Vector3(0.0f, 22.0f, -65.0f));
+		s_camera->GetTransform()->SetEulerAngles(Vector3(18.0f, 0.0f, 0.0f));
 		s_camera->ChangeFrameBufferSize(Vector2Int(s_width, s_height));
 	}
 
@@ -300,8 +300,21 @@ int XenityFFI::Init(int width, int height)
 	}
 
 	// 8. Setup CryEngine Tropical Ocean demo body
+	if (!AssetManager::waterShader)
+	{
+		AssetManager::waterShader = AssetManager::LoadEngineAsset<Shader>("public_engine_assets/shaders/water.shader");
+	}
+	if (AssetManager::waterShader && AssetManager::waterShader->GetFileStatus() != FileStatus::FileStatus_Loaded)
+	{
+		FileReference::LoadOptions syncLoadOptions;
+		syncLoadOptions.platform = Application::GetPlatform();
+		syncLoadOptions.threaded = false;
+		AssetManager::waterShader->LoadFileReference(syncLoadOptions);
+	}
+
 	std::shared_ptr<GameObject> oceanGO = nullptr;
-	for (int i = 0; i < goCount; i++)
+	const int currentGoCount = GameplayManager::gameObjectCount;
+	for (int i = 0; i < currentGoCount; i++)
 	{
 		const auto& go = GameplayManager::GetGameObjects()[i];
 		if (go && go->GetName() == "TropicalOcean")
@@ -310,14 +323,21 @@ int XenityFFI::Init(int width, int height)
 			break;
 		}
 	}
-	if (!oceanGO && AssetManager::waterShader)
+	if (!oceanGO)
 	{
 		std::shared_ptr<FileReference> oceanGridRef = ProjectManager::GetFileReferenceByFilePath("public_engine_assets/models/OceanGrid.obj");
 		if (oceanGridRef)
 		{
+			if (oceanGridRef->GetFileStatus() != FileStatus::FileStatus_Loaded)
+			{
+				FileReference::LoadOptions syncLoadOptions;
+				syncLoadOptions.platform = Application::GetPlatform();
+				syncLoadOptions.threaded = false;
+				oceanGridRef->LoadFileReference(syncLoadOptions);
+			}
 			oceanGO = ShapeSpawner::MakeMesh("TropicalOcean", "public_engine_assets/models/OceanGrid.obj");
 		}
-		else
+		if (!oceanGO)
 		{
 			oceanGO = ShapeSpawner::SpawnPlane();
 		}
@@ -326,12 +346,13 @@ int XenityFFI::Init(int width, int height)
 			oceanGO->SetName("TropicalOcean");
 		}
 	}
-	if (oceanGO && AssetManager::waterShader)
+	if (oceanGO)
 	{
-		oceanGO->GetTransform()->SetPosition(Vector3(0.0f, -0.4f, 0.0f));
+		oceanGO->SetName("TropicalOcean");
+		oceanGO->GetTransform()->SetPosition(Vector3(0.0f, 0.0f, 0.0f));
 		oceanGO->GetTransform()->SetLocalScale(Vector3(1500.0f, 1.0f, 1500.0f));
 		auto oceanMesh = oceanGO->GetComponent<MeshRenderer>();
-		if (oceanMesh)
+		if (oceanMesh && AssetManager::waterShader)
 		{
 			auto waterMat = Material::MakeMaterial();
 			waterMat->SetShader(AssetManager::waterShader);
