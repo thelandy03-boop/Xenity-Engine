@@ -278,12 +278,12 @@ void ShaderOpenGL::SetShaderCameraPosition()
 		if (m_viewPosLocation != 0 && m_viewPosLocation != static_cast<unsigned int>(-1))
 		{
 			const Vector3& pos = Graphics::usedCamera->GetTransformRaw()->GetPosition();
-			glUniform3f(m_viewPosLocation, pos.x, pos.y, pos.z);
+			glUniform3f(m_viewPosLocation, -pos.x, pos.y, pos.z);
 		}
 		if (m_fogParamsLocation != 0 && m_fogParamsLocation != static_cast<unsigned int>(-1))
 		{
 			const auto& s = Graphics::s_settings;
-			glUniform4f(m_fogParamsLocation, s.isFogEnabled ? 1.0f : 0.0f, 0.003f, 0.08f, 0.0f);
+			glUniform4f(m_fogParamsLocation, s.isFogEnabled ? 1.0f : 0.0f, 0.0004f, 0.04f, 0.0f);
 		}
 		if (m_fogColorLocation != 0 && m_fogColorLocation != static_cast<unsigned int>(-1))
 		{

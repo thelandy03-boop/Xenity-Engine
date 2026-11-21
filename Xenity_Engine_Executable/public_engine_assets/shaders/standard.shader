@@ -95,12 +95,16 @@ vec3 CalculateDirectionalLight(DirectionalLight light2, vec3 norm, vec3 fragPos)
 	vec3 texColor = vec3(texture(diffuse, (v_TexCoord * tiling) + offset));
 	vec3 diffColor = (diff * texColor) * light2.color * 2.0;
 
-	// Blinn-Phong Specular (CryEngine / PS3 aesthetic)
-	vec3 viewDir = normalize(viewPos - fragPos);
-	vec3 halfDir = normalize(lightDir + viewDir);
-	float specAngle = max(dot(norm, halfDir), 0.0);
-	float spec = pow(specAngle, 32.0);
-	vec3 specColor = (spec * 0.35) * light2.color;
+	// Blinn-Phong Specular (only where light directly illuminates the surface)
+	vec3 specColor = vec3(0.0);
+	if (diff > 0.0)
+	{
+		vec3 viewDir = normalize(viewPos - fragPos);
+		vec3 halfDir = normalize(lightDir + viewDir);
+		float specAngle = max(dot(norm, halfDir), 0.0);
+		float spec = pow(specAngle, 32.0);
+		specColor = (spec * 0.20) * light2.color;
+	}
 
 	return diffColor + specColor;
 }
@@ -114,11 +118,15 @@ vec3 CalculatePointLight(PointLight light2, vec3 norm, vec3 fragPos)
 	vec3 diffColor = (diff * texColor) * light2.color * 2.0;
 
 	// Blinn-Phong Specular
-	vec3 viewDir = normalize(viewPos - fragPos);
-	vec3 halfDir = normalize(lightDir + viewDir);
-	float specAngle = max(dot(norm, halfDir), 0.0);
-	float spec = pow(specAngle, 32.0);
-	vec3 specColor = (spec * 0.35) * light2.color;
+	vec3 specColor = vec3(0.0);
+	if (diff > 0.0)
+	{
+		vec3 viewDir = normalize(viewPos - fragPos);
+		vec3 halfDir = normalize(lightDir + viewDir);
+		float specAngle = max(dot(norm, halfDir), 0.0);
+		float spec = pow(specAngle, 32.0);
+		specColor = (spec * 0.20) * light2.color;
+	}
 
 	float distanceSq = dot(lightVec, lightVec);
 	float attenuation = 1.0f / (light2.light_data.x + light2.light_data.y * sqrt(distanceSq) + light2.light_data.z * distanceSq);
@@ -134,11 +142,15 @@ vec3 CalculateSpotLight(SpotLight light2, vec3 norm, vec3 fragPos)
 	vec3 diffColor = (diff * texColor) * light2.color * 2.0;
 
 	// Blinn-Phong Specular
-	vec3 viewDir = normalize(viewPos - fragPos);
-	vec3 halfDir = normalize(lightDir + viewDir);
-	float specAngle = max(dot(norm, halfDir), 0.0);
-	float spec = pow(specAngle, 32.0);
-	vec3 specColor = (spec * 0.35) * light2.color;
+	vec3 specColor = vec3(0.0);
+	if (diff > 0.0)
+	{
+		vec3 viewDir = normalize(viewPos - fragPos);
+		vec3 halfDir = normalize(lightDir + viewDir);
+		float specAngle = max(dot(norm, halfDir), 0.0);
+		float spec = pow(specAngle, 32.0);
+		specColor = (spec * 0.20) * light2.color;
+	}
 
 	float distance = length(light2.position - fragPos);
 	float attenuation = 1.0 / (1.0 + light2.light_data.x * distance + light2.light_data.y * (distance * distance));
