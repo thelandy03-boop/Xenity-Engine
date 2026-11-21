@@ -191,6 +191,7 @@ protected:
 	unsigned int m_usedPointLightCountLocation = 0;
 	unsigned int m_usedSpotLightCountLocation = 0;
 	unsigned int m_usedDirectionalLightCountLocation = 0;
+	unsigned int m_viewPosLocation = 0;
 };
 
 #endif

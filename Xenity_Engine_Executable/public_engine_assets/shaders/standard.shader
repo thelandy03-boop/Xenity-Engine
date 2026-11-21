@@ -39,6 +39,7 @@ uniform vec4 color;
 uniform vec2 tiling;
 uniform vec2 offset;
 uniform vec3 ambientLight;
+uniform vec3 viewPos;
 
 struct DirectionalLight 
 {
@@ -87,42 +88,73 @@ vec3 CalculateDirectionalLight(DirectionalLight light2, vec3 norm, vec3 fragPos)
 {
 	vec3 lightDir = normalize(-light2.direction); // Directional light
 	float diff = max(dot(norm, lightDir), 0.0); //If the light is behind the face, diff is 0
-	vec3 diffuse = (diff * vec3(texture(diffuse, (v_TexCoord * tiling) + offset))) * light2.color * 2; //Set the light color and intensity
+	vec3 texColor = vec3(texture(diffuse, (v_TexCoord * tiling) + offset));
+	vec3 diffColor = (diff * texColor) * light2.color * 2.0;
 
-	return diffuse;
+	// Blinn-Phong Specular (CryEngine / PS3 aesthetic)
+	vec3 viewDir = normalize(viewPos - fragPos);
+	vec3 halfDir = normalize(lightDir + viewDir);
+	float specAngle = max(dot(norm, halfDir), 0.0);
+	float spec = pow(specAngle, 32.0);
+	vec3 specColor = (spec * 0.35) * light2.color;
+
+	return diffColor + specColor;
 }
 
 vec3 CalculatePointLight(PointLight light2, vec3 norm, vec3 fragPos) 
 {
 	vec3 lightVec = light2.position - fragPos;
-	vec3 lightDir = normalize(light2.position - fragPos); //Direction of the point light between the light source and the face
-	float diff = max(dot(norm, lightDir), 0.0); //If the light is behind the face, diff is 0
-	vec3 diffuse = (diff * vec3(texture(diffuse, (v_TexCoord * tiling) + offset))) * light2.color * 2; //Set the light color and intensity
+	vec3 lightDir = normalize(lightVec);
+	float diff = max(dot(norm, lightDir), 0.0);
+	vec3 texColor = vec3(texture(diffuse, (v_TexCoord * tiling) + offset));
+	vec3 diffColor = (diff * texColor) * light2.color * 2.0;
 
-	float distanceSq = dot(lightVec, lightVec); // distance square
+	// Blinn-Phong Specular
+	vec3 viewDir = normalize(viewPos - fragPos);
+	vec3 halfDir = normalize(lightDir + viewDir);
+	float specAngle = max(dot(norm, halfDir), 0.0);
+	float spec = pow(specAngle, 32.0);
+	vec3 specColor = (spec * 0.35) * light2.color;
+
+	float distanceSq = dot(lightVec, lightVec);
 	float attenuation = 1.0f / (light2.light_data.x + light2.light_data.y * sqrt(distanceSq) + light2.light_data.z * distanceSq);
 
-	vec3 result = (diffuse * attenuation);
-	return result;
+	return (diffColor + specColor) * attenuation;
 }
 
 vec3 CalculateSpotLight(SpotLight light2, vec3 norm, vec3 fragPos) 
 {
-	vec3 lightDir = normalize(light2.position - fragPos); //Direction of the point light between the light source and the face
-	float diff = max(dot(norm, lightDir), 0.0); //If the light is behind the face, diff is 0
-	vec3 diffuse = (diff * vec3(texture(diffuse, (v_TexCoord * tiling) + offset))) * light2.color * 2; //Set the light color and intensity
+	vec3 lightDir = normalize(light2.position - fragPos);
+	float diff = max(dot(norm, lightDir), 0.0);
+	vec3 texColor = vec3(texture(diffuse, (v_TexCoord * tiling) + offset));
+	vec3 diffColor = (diff * texColor) * light2.color * 2.0;
+
+	// Blinn-Phong Specular
+	vec3 viewDir = normalize(viewPos - fragPos);
+	vec3 halfDir = normalize(lightDir + viewDir);
+	float specAngle = max(dot(norm, halfDir), 0.0);
+	float spec = pow(specAngle, 32.0);
+	vec3 specColor = (spec * 0.35) * light2.color;
 
 	float distance = length(light2.position - fragPos);
-	float attenuation = 1.0 / (1 + light2.light_data.x * distance + light2.light_data.y * (distance * distance));
+	float attenuation = 1.0 / (1.0 + light2.light_data.x * distance + light2.light_data.y * (distance * distance));
 
 	float theta = dot(lightDir, normalize(-light2.direction));
 	float epsilon = light2.light_data.z - light2.light_data.w;
 	float intensity = clamp((theta - light2.light_data.w) / epsilon, 0.0, 1.0);
-	diffuse *= intensity;
 
-	//Result
-	vec3 result = (diffuse * attenuation); //Set face result
-	return result;
+	return (diffColor + specColor) * attenuation * intensity;
+}
+
+// Curva de Tonemapping ACES (Naughty Dog & Crytek)
+vec3 ACESFilm(vec3 x)
+{
+	float a = 2.51;
+	float b = 0.03;
+	float c = 2.43;
+	float d = 0.59;
+	float e = 0.14;
+	return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
 
 void main()
@@ -132,7 +164,7 @@ void main()
 	vec3 norm = normalize(v_Normal); //Direction of normals
 
 	//Result
-	vec3 result = vec3(0,0,0); //Set face result
+	vec3 result = vec3(0.0);
 	for (int i = 0; i < lightIndices.usedPointLightCount; i++)
 	{
 		result += CalculatePointLight(pointLights[lightIndices.pointLightsIndices[i].x], norm, v_FragPos);
@@ -154,7 +186,9 @@ void main()
 	{
 		vertCol = vec4(1.0, 1.0, 1.0, 1.0);
 	}
-	gl_FragColor = vec4(result * color.xyz, alpha) * vertCol;
+
+	vec3 litColor = ACESFilm(result * color.xyz);
+	gl_FragColor = vec4(litColor, alpha) * vertCol;
 }
 
 //-------------- {psvita}

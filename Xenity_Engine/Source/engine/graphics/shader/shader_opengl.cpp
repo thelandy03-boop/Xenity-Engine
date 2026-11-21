@@ -275,6 +275,11 @@ void ShaderOpenGL::SetShaderCameraPosition()
 	if (Graphics::usedCamera != nullptr)
 	{
 		glUniformMatrix4fv(m_cameraLocation, 1, false, glm::value_ptr(Graphics::usedCamera->viewMatrix)); // Y position and rotation inverted
+		if (m_viewPosLocation != 0 && m_viewPosLocation != static_cast<unsigned int>(-1))
+		{
+			const Vector3& pos = Graphics::usedCamera->GetTransformRaw()->GetPosition();
+			glUniform3f(m_viewPosLocation, pos.x, pos.y, pos.z);
+		}
 	}
 }
 
@@ -503,7 +508,7 @@ void ShaderOpenGL::Link()
 	glBindAttribLocation(m_programId, 2, "a_Position");
 	glBindAttribLocation(m_programId, 3, "a_Color");
 #endif
-	glVertexAttrib4f(3, 1.0f, 1.0f, 1.0f, 1.0f); // Valeur par défaut
+	glVertexAttrib4f(3, 1.0f, 1.0f, 1.0f, 1.0f); // Valeur par dÃ©faut
 	glLinkProgram(m_programId);
 	Engine::GetRenderer().UseShaderProgram(m_programId);
 
@@ -521,6 +526,7 @@ void ShaderOpenGL::Link()
 	m_usedPointLightCountLocation = GetShaderUniformLocation("usedPointLightCount");
 	m_usedSpotLightCountLocation = GetShaderUniformLocation("usedSpotLightCount");
 	m_usedDirectionalLightCountLocation = GetShaderUniformLocation("usedDirectionalLightCount");
+	m_viewPosLocation = GetShaderUniformLocation("viewPos");
 
 	m_pointlightVariableIds.reserve(MAX_LIGHT_COUNT);
 	m_directionallightVariableIds.reserve(MAX_LIGHT_COUNT);

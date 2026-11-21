@@ -3,9 +3,9 @@
 See [AGENT.md](AGENT.md) for detailed guidelines.
 
 - **Mandatory Knowledge Base**: When designing features, rendering pipelines, or system proposals, always store and expand documents in `knowledge_base/` following `knowledge_base/templates/ai_document_template.md`.
-- **Build Commands**:
+- **Build & Run Commands**:
   - Engine & C++ Editor Library: `cmake --build build -j$(nproc)`
-  - Rust Editor GUI: `cargo run --release --manifest-path xenity-editor/Cargo.toml`
+  - Rust Editor GUI: ALWAYS run with `cargo run --release --manifest-path xenity-editor/Cargo.toml` (never run debug profile due to pixel conversion overhead).
 - **Architectural Rules**:
   - C++17 Core (`Xenity_Engine/`) + Rust 2024 UI (`xenity-editor/`).
   - Respect memory budgets: 256MB VRAM on PS3, 32MB total on PSP, 128MB VRAM on Vita.

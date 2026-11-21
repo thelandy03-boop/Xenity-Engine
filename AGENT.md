@@ -30,6 +30,9 @@ Whenever you (the AI) are asked to research, design, optimize, or propose techni
 * **Editor GUI**: Rust 2024 + `eframe` (egui) + `wgpu` (`xenity-editor/`)
   - Communicates with C++ engine via FFI (`extern "C"` exports in `xenity_ffi.h` / `libXenity_Editor.so`).
   - Backend on Linux: **Vulkan** (`WGPU_BACKEND="vulkan"` to avoid EGL/GLX context collisions with SDL3).
+  - **MANDATORY EXECUTION COMMAND**: ALWAYS run the editor with:
+    `cargo run --release --manifest-path xenity-editor/Cargo.toml`
+    *Never run without `--release` in dev/debug mode, as unoptimized pixel conversions cause heavy viewport lag.*
 * **Asset Pipeline**:
   - Offline cooker compresses scenes, shaders, and meshes into `.xenb` binary archives.
 
