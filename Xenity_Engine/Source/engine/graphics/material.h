@@ -122,6 +122,14 @@ public:
 	}
 
 	/**
+	* @brief Set the rendering mode of the material
+	*/
+	void SetRenderingMode(MaterialRenderingMode mode)
+	{
+		m_renderingMode = mode;
+	}
+
+	/**
 	* @brief Get the texture offset of the material
 	*/
 	[[nodiscard]] const Vector2& GetOffset() const

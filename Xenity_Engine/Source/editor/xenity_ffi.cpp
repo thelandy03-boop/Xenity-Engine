@@ -316,15 +316,16 @@ int XenityFFI::Init(int width, int height)
 		if (oceanGO)
 		{
 			oceanGO->SetName("TropicalOcean");
-			oceanGO->GetTransform()->SetPosition(Vector3(0.0f, 0.1f, 0.0f));
-			oceanGO->GetTransform()->SetLocalScale(Vector3(120.0f, 1.0f, 120.0f));
+			oceanGO->GetTransform()->SetPosition(Vector3(0.0f, -2.5f, 0.0f));
+			oceanGO->GetTransform()->SetLocalScale(Vector3(1500.0f, 1.0f, 1500.0f));
 			auto oceanMesh = oceanGO->GetComponent<MeshRenderer>();
 			if (oceanMesh)
 			{
 				auto waterMat = Material::MakeMaterial();
 				waterMat->SetShader(AssetManager::waterShader);
-				waterMat->SetColor(Color::CreateFromRGBAFloat(0.04f, 0.62f, 0.72f, 0.85f));
-				waterMat->SetTiling(Vector2(16.0f, 16.0f));
+				waterMat->SetRenderingMode(MaterialRenderingMode::Transparent);
+				waterMat->SetColor(Color::CreateFromRGBAFloat(0.06f, 0.55f, 0.68f, 0.70f));
+				waterMat->SetTiling(Vector2(64.0f, 64.0f));
 				waterMat->SetUseLighting(true);
 				oceanMesh->SetMaterial(waterMat, 0);
 			}

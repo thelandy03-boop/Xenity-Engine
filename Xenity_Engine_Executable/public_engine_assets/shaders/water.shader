@@ -65,19 +65,24 @@ layout(std140) uniform LightIndices
 	ivec4 directionalLightsIndices[10];
 } lightIndices;
 
-// Gerstner Wavelet normal generation (CryEngine style analytical wavelets)
-vec3 CalculateWaveNormal(vec2 uv, float t)
+// Multi-octave wave normal calculation with crisp CryEngine surface ripples
+vec3 CalculateWaveNormal(vec2 p, float t)
 {
-	float w1 = sin(uv.x * 0.15 + t * 0.8) * cos(uv.y * 0.12 + t * 0.6);
-	float w2 = sin(uv.x * 0.35 - t * 1.1 + 0.7) * cos(uv.y * 0.30 - t * 0.9);
-	float w3 = sin((uv.x + uv.y) * 0.70 + t * 1.5) * 0.5;
+	vec2 p1 = p * 0.4 + vec2(t * 0.3, t * 0.15);
+	vec2 p2 = p * 0.9 - vec2(t * 0.25, t * 0.4);
+	vec2 p3 = p * 2.2 + vec2(t * 0.5, -t * 0.3);
+	vec2 p4 = p * 4.5 - vec2(t * 0.7, t * 0.6);
 
-	float dx = (cos(uv.x * 0.15 + t * 0.8) * 0.15 * cos(uv.y * 0.12 + t * 0.6)
-	          + cos(uv.x * 0.35 - t * 1.1 + 0.7) * 0.35 * cos(uv.y * 0.30 - t * 0.9)) * 0.25;
-	float dy = (-sin(uv.x * 0.15 + t * 0.8) * sin(uv.y * 0.12 + t * 0.6) * 0.12
-	          - sin(uv.x * 0.35 - t * 1.1 + 0.7) * sin(uv.y * 0.30 - t * 0.9) * 0.30) * 0.25;
+	float dx = (cos(p1.x + p1.y * 1.2) * 0.40
+	          + cos(p2.x * 1.3 - p2.y) * 0.35
+	          + cos(p3.x + p3.y * 1.5) * 0.30
+	          + cos(p4.x * 1.4 - p4.y) * 0.25);
+	float dy = (cos(p1.x + p1.y * 1.2) * 0.45
+	          - cos(p2.x * 1.3 - p2.y) * 0.35
+	          + cos(p3.x + p3.y * 1.5) * 0.45
+	          - cos(p4.x * 1.4 - p4.y) * 0.30);
 
-	return normalize(vec3(-dx, 1.0, -dy));
+	return normalize(vec3(-dx * 0.35, 1.0, -dy * 0.35));
 }
 
 // Schlick's approximation for Fresnel reflectance
@@ -89,11 +94,11 @@ float SchlickFresnel(float cosTheta, float F0)
 void main()
 {
 	vec2 uv = (v_TexCoord * tiling) + offset;
-	float t = time * 1.5;
+	float t = time * 1.2;
 
-	// Dual-wavelet normal perturbation
+	// Multi-octave wave normal perturbation
 	vec3 waveNorm = CalculateWaveNormal(v_FragPos.xz, t);
-	vec3 norm = normalize(mix(normalize(v_Normal), waveNorm, 0.85));
+	vec3 norm = normalize(mix(normalize(v_Normal), waveNorm, 0.90));
 
 	vec3 viewDir = normalize(viewPos - v_FragPos);
 	float cosTheta = max(dot(norm, viewDir), 0.0);
@@ -104,11 +109,11 @@ void main()
 	// Tropical CryEngine color gradient:
 	// Shallows: vibrant Caribbean turquoise/cyan
 	// Deep: deep ocean navy blue
-	vec3 shallowColor = vec3(0.04, 0.62, 0.72);
-	vec3 deepColor = vec3(0.01, 0.12, 0.28);
-	vec3 skyReflectColor = vec3(0.60, 0.78, 0.95);
+	vec3 shallowColor = vec3(0.06, 0.55, 0.68);
+	vec3 deepColor = vec3(0.01, 0.10, 0.25);
+	vec3 skyReflectColor = vec3(0.65, 0.78, 0.95);
 
-	vec3 waterBase = mix(deepColor, shallowColor, clamp(cosTheta * 0.8 + 0.2, 0.0, 1.0));
+	vec3 waterBase = mix(deepColor, shallowColor, clamp(cosTheta * 0.7 + 0.3, 0.0, 1.0));
 	vec3 surfaceColor = mix(waterBase, skyReflectColor, fresnel * 0.75);
 
 	// Sun glitter (high-gloss Blinn-Phong specular on wave facets)
@@ -119,8 +124,8 @@ void main()
 		vec3 lightDir = normalize(-sun.direction);
 		vec3 halfDir = normalize(lightDir + viewDir);
 		float specAngle = max(dot(norm, halfDir), 0.0);
-		float spec = pow(specAngle, 128.0); // sharp sparkling reflection
-		sunGlitter += spec * sun.color * 1.8;
+		float spec = pow(specAngle, 64.0); // sharp sparkling reflection
+		sunGlitter += spec * sun.color * 1.6;
 	}
 
 	vec3 finalColor = surfaceColor + sunGlitter;
@@ -135,6 +140,6 @@ void main()
 		finalColor = mix(finalColor, fogColor, fogAmount);
 	}
 
-	float alpha = clamp(0.75 + fresnel * 0.20, 0.0, 0.95);
+	float alpha = clamp(0.50 + fresnel * 0.45, 0.0, 0.92);
 	gl_FragColor = vec4(finalColor, alpha);
 }
