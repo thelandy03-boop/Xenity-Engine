@@ -238,10 +238,14 @@ impl StudioViewportState {
 
                 // Leer framebuffer RGBA del motor
                 if eng.read_frame(vp_w, vp_h, &mut self.pixel_buffer) {
-                    let color_image = egui::ColorImage::from_rgba_unmultiplied(
-                        [vp_w as usize, vp_h as usize],
-                        &self.pixel_buffer,
-                    );
+                    let mut pixels = Vec::with_capacity((vp_w * vp_h) as usize);
+                    for chunk in self.pixel_buffer.chunks_exact(4) {
+                        pixels.push(Color32::from_rgba_premultiplied(chunk[0], chunk[1], chunk[2], 255));
+                    }
+                    let color_image = egui::ColorImage {
+                        size: [vp_w as usize, vp_h as usize],
+                        pixels,
+                    };
                     match &mut self.viewport_texture {
                         Some(tex) => tex.set(color_image, egui::TextureOptions::LINEAR),
                         None => {
