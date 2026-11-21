@@ -66,6 +66,8 @@ struct SpotLight
 };
 
 uniform sampler2D diffuse;
+uniform sampler2D normalMap;
+uniform float hasNormalMap;
 
 #define NR_POINT_LIGHTS 10 
 uniform PointLight pointLights[NR_POINT_LIGHTS];
@@ -159,11 +161,35 @@ vec3 ACESFilm(vec3 x)
 	return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
 
+// Screen-space cotangent frame for tangent-space normal mapping without precomputed vertex tangents
+// Enables CryEngine-style micro-detail bump mapping across all meshes with 0 additional VRAM cost
+mat3 CotangentFrame(vec3 N, vec3 p, vec2 uv)
+{
+	vec3 dp1 = dFdx(p);
+	vec3 dp2 = dFdy(p);
+	vec2 duv1 = dFdx(uv);
+	vec2 duv2 = dFdy(uv);
+
+	vec3 dp2perp = cross(dp2, N);
+	vec3 dp1perp = cross(N, dp1);
+	vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+	vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+
+	float invmax = inversesqrt(max(dot(T, T), dot(B, B)));
+	return mat3(T * invmax, B * invmax, N);
+}
+
 void main()
 {
 	vec4 textureFrag = texture(diffuse, (v_TexCoord * tiling) + offset);
 
 	vec3 norm = normalize(v_Normal); //Direction of normals
+	if (hasNormalMap > 0.5)
+	{
+		vec3 mapNormal = texture(normalMap, (v_TexCoord * tiling) + offset).xyz * 2.0 - 1.0;
+		mat3 TBN = CotangentFrame(norm, v_FragPos, v_TexCoord);
+		norm = normalize(TBN * mapNormal);
+	}
 
 	//Result
 	vec3 result = vec3(0.0);

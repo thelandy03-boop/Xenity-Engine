@@ -33,7 +33,7 @@ bool AssimpMeshLoader::LoadMesh(MeshData& mesh, const LoadingOptions& options)
 		// Load the mesh with assimp
 		Assimp::Importer importer;
 		// aiProcess_Triangulate because we want to have only triangles, some submeshes mix triangles and quads and I don't know how to handle that
-		unsigned int flags = aiProcess_RemoveComponent | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate;
+		unsigned int flags = aiProcess_RemoveComponent | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace;
 		const std::string fileExtension = file->GetFileExtension();
 		const aiScene* scene = importer.ReadFileFromMemory(data, size, flags, fileExtension.substr(1).c_str());
 		if (!scene)
