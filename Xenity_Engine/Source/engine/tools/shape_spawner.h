@@ -63,7 +63,6 @@ public:
 	*/
 	static std::shared_ptr <GameObject> SpawnCylinder();
 
-private:
 	/**
 	* Create a GameObject and add a MeshRenderer to it
 	* @param gameObjectName The name of the GameObject
@@ -71,6 +70,8 @@ private:
 	* @return A shared pointer to the GameObject
 	*/
 	static std::shared_ptr<GameObject> MakeMesh(const std::string& gameObjectName, const std::string& meshFilePath);
+
+private:
 
 	static Vector3 s_defaultPosition;
 	static Vector3 s_defaultRotation;

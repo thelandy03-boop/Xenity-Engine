@@ -12,18 +12,72 @@ out vec2 v_TexCoord;
 out vec3 v_Normal;
 out vec3 v_FragPos;
 out vec4 v_Color;
+out float v_WaveHeight;
 
 uniform mat4 model;
 uniform mat4 MVP;
 uniform mat3 normalMatrix;
+uniform float time;
+
+// Physical 3D Gerstner Wave displacement (CryEngine 2/3)
+vec3 GerstnerDisplacement(vec2 worldXZ, float t)
+{
+	vec3 disp = vec3(0.0);
+
+	// Wave 1: Primary oceanic swell (L ~ 50m, Amp = 0.55m)
+	vec2 d1 = vec2(0.85, 0.52);
+	float w1 = 0.125;
+	float phi1 = dot(worldXZ, d1) * w1 + t * 0.90;
+	disp.x += d1.x * (0.40 * 0.55) * cos(phi1);
+	disp.z += d1.y * (0.40 * 0.55) * cos(phi1);
+	disp.y += 0.55 * sin(phi1);
+
+	// Wave 2: Secondary swell (L ~ 30m, Amp = 0.35m)
+	vec2 d2 = vec2(-0.50, 0.86);
+	float w2 = 0.210;
+	float phi2 = dot(worldXZ, d2) * w2 + t * 1.25;
+	disp.x += d2.x * (0.45 * 0.35) * cos(phi2);
+	disp.z += d2.y * (0.45 * 0.35) * cos(phi2);
+	disp.y += 0.35 * sin(phi2);
+
+	// Wave 3: Cross chop (L ~ 16m, Amp = 0.22m)
+	vec2 d3 = vec2(0.68, -0.73);
+	float w3 = 0.400;
+	float phi3 = dot(worldXZ, d3) * w3 + t * 1.80;
+	disp.x += d3.x * (0.50 * 0.22) * cos(phi3);
+	disp.z += d3.y * (0.50 * 0.22) * cos(phi3);
+	disp.y += 0.22 * sin(phi3);
+
+	// Wave 4: Surface wavelets (L ~ 8m, Amp = 0.12m)
+	vec2 d4 = vec2(-0.75, -0.66);
+	float w4 = 0.800;
+	float phi4 = dot(worldXZ, d4) * w4 + t * 2.50;
+	disp.x += d4.x * (0.50 * 0.12) * cos(phi4);
+	disp.z += d4.y * (0.50 * 0.12) * cos(phi4);
+	disp.y += 0.12 * sin(phi4);
+
+	return disp;
+}
 
 void main()
 {
-	gl_Position = MVP * vec4(a_Position, 1.0);
-	v_FragPos = vec3(model * vec4(a_Position, 1.0));
+	float t = time * 1.2;
+	vec4 worldBase = model * vec4(a_Position, 1.0);
+	vec3 disp = GerstnerDisplacement(worldBase.xz, t);
+
+	// Displace vertex physically in 3D space
+	vec3 displacedPos = a_Position;
+	displacedPos.y += disp.y;
+	// Lateral Gerstner displacement scaled back to local mesh scale
+	displacedPos.x += disp.x * 0.00067;
+	displacedPos.z += disp.z * 0.00067;
+
+	gl_Position = MVP * vec4(displacedPos, 1.0);
+	v_FragPos = vec3(model * vec4(displacedPos, 1.0));
 	v_TexCoord = a_TexCoord;
 	v_Normal = normalMatrix * a_Normal;
 	v_Color = a_Color;
+	v_WaveHeight = disp.y;
 }
 
 //-------------- {fragment}
@@ -34,6 +88,7 @@ in vec3 v_Normal;
 in vec3 v_FragPos;
 in vec4 v_Color;
 in vec2 v_TexCoord;
+in float v_WaveHeight;
 
 uniform vec4 color;
 uniform vec2 tiling;
@@ -65,34 +120,33 @@ layout(std140) uniform LightIndices
 	ivec4 directionalLightsIndices[10];
 } lightIndices;
 
-// 6 directional Gerstner Wavelets ranging from 35m swells down to 1.2m capillary ripples
-// Authentic CryEngine 2/3 tropical ocean simulation
+// 6 directional Gerstner Wavelets ranging from 50m swells down to capillary ripples
+// Authentic CryEngine 2/3 tropical ocean surface normal simulation
 vec3 CalculateWaveNormal(vec2 p, float t)
 {
-	vec2 d1 = vec2(0.89, 0.45);
-	vec2 d2 = vec2(-0.45, 0.89);
-	vec2 d3 = vec2(0.60, -0.80);
+	vec2 d1 = vec2(0.85, 0.52);
+	vec2 d2 = vec2(-0.50, 0.86);
+	vec2 d3 = vec2(0.68, -0.73);
 	vec2 d4 = vec2(-0.75, -0.66);
-	vec2 d5 = vec2(0.30, 0.95);
+	vec2 d5 = vec2(0.35, 0.94);
 	vec2 d6 = vec2(-0.92, 0.38);
 
-	// Swells
-	float ph1 = dot(p, d1) * 0.15 + t * 0.7;
-	float ph2 = dot(p, d2) * 0.28 + t * 1.0;
-	// Medium chop
-	float ph3 = dot(p, d3) * 0.65 + t * 1.5;
-	float ph4 = dot(p, d4) * 1.20 + t * 2.1;
-	// Micro ripples (sparkling highlights)
-	float ph5 = dot(p, d5) * 2.50 + t * 3.0;
-	float ph6 = dot(p, d6) * 5.00 + t * 4.2;
+	// Swells matching vertex displacement
+	float ph1 = dot(p, d1) * 0.125 + t * 0.90;
+	float ph2 = dot(p, d2) * 0.210 + t * 1.25;
+	float ph3 = dot(p, d3) * 0.400 + t * 1.80;
+	float ph4 = dot(p, d4) * 0.800 + t * 2.50;
+	// Micro capillary ripples (sparkling highlights)
+	float ph5 = dot(p, d5) * 2.200 + t * 3.60;
+	float ph6 = dot(p, d6) * 4.800 + t * 5.10;
 
 	vec2 grad = vec2(0.0);
-	grad += d1 * cos(ph1) * 0.35;
-	grad += d2 * cos(ph2) * 0.28;
-	grad += d3 * cos(ph3) * 0.22;
-	grad += d4 * cos(ph4) * 0.16;
-	grad += d5 * cos(ph5) * 0.10;
-	grad += d6 * cos(ph6) * 0.06;
+	grad += d1 * cos(ph1) * 0.26;
+	grad += d2 * cos(ph2) * 0.22;
+	grad += d3 * cos(ph3) * 0.18;
+	grad += d4 * cos(ph4) * 0.14;
+	grad += d5 * cos(ph5) * 0.08;
+	grad += d6 * cos(ph6) * 0.05;
 
 	return normalize(vec3(-grad.x, 1.0, -grad.y));
 }
@@ -120,7 +174,7 @@ void main()
 
 	// Multi-octave wave normal perturbation
 	vec3 waveNorm = CalculateWaveNormal(v_FragPos.xz, t);
-	vec3 norm = normalize(mix(normalize(v_Normal), waveNorm, 0.92));
+	vec3 norm = normalize(mix(normalize(v_Normal), waveNorm, 0.88));
 
 	vec3 viewDir = normalize(viewPos - v_FragPos);
 	float cosTheta = max(dot(norm, viewDir), 0.0);
@@ -128,26 +182,33 @@ void main()
 	// Schlick Fresnel factor (R0 = 0.02 for clean ocean water)
 	float fresnel = SchlickFresnel(cosTheta, 0.02);
 
-	// Dynamic Atmospheric Sky Dome Reflection (CryEngine)
+	// Dynamic Atmospheric Sky Dome Reflection (CryEngine 2/3)
 	vec3 reflectDir = reflect(-viewDir, norm);
-	vec3 skyHorizon = vec3(0.72, 0.84, 0.96);
-	vec3 skyZenith = vec3(0.12, 0.38, 0.75);
+	vec3 skyHorizon = vec3(0.68, 0.82, 0.96);
+	vec3 skyZenith = vec3(0.10, 0.35, 0.72);
 	vec3 skyReflectColor = mix(skyHorizon, skyZenith, clamp(reflectDir.y, 0.0, 1.0));
 
 	// Tropical CryEngine water body colors:
-	// Shallows: vibrant Caribbean turquoise/cyan
-	// Deep: deep ocean navy blue
-	vec3 shallowColor = vec3(0.05, 0.62, 0.72);
-	vec3 deepColor = vec3(0.01, 0.06, 0.16);
+	// Shallows: vibrant Caribbean turquoise/cyan (rich, saturated, crystal-clear)
+	// Mid-depth: emerald cyan
+	// Deep ocean: rich cobalt navy blue
+	vec3 shallowColor = vec3(0.04, 0.72, 0.78);
+	vec3 midColor = vec3(0.02, 0.38, 0.54);
+	vec3 deepColor = vec3(0.01, 0.07, 0.22);
 
-	vec3 waterBase = mix(deepColor, shallowColor, clamp(cosTheta * 0.6 + 0.4, 0.0, 1.0));
+	// Depth gradient based on view angle and wave elevation
+	float depthMix = clamp(cosTheta * 0.5 + 0.3 + v_WaveHeight * 0.25, 0.0, 1.0);
+	vec3 waterBase = mix(deepColor, mix(midColor, shallowColor, depthMix), depthMix);
 	vec3 surfaceColor = mix(waterBase, skyReflectColor, fresnel * 0.85);
 
-	// Wave crest foam
+	// Authentic CryEngine Wave Crest Foam (Whitecaps):
+	// ONLY triggers at steep wave peaks (steepness > 0.70)
+	// Zero foam on the rest of the ocean, eliminating milky wash!
 	float waveSteepness = length(waveNorm.xz);
-	float foamFactor = smoothstep(0.40, 0.65, waveSteepness);
-	vec3 foamColor = vec3(0.95, 0.98, 1.0);
-	surfaceColor = mix(surfaceColor, foamColor, foamFactor * 0.60);
+	float crestThreshold = 0.70 - v_WaveHeight * 0.10;
+	float foamFactor = smoothstep(crestThreshold, crestThreshold + 0.22, waveSteepness);
+	vec3 foamColor = vec3(0.96, 0.98, 1.0);
+	surfaceColor = mix(surfaceColor, foamColor, foamFactor * 0.85);
 
 	// Directional sun specular glitter & subsurface scattering
 	vec3 sunGlitter = vec3(0.0);
@@ -160,17 +221,17 @@ void main()
 
 		float NdotH = max(dot(norm, halfDir), 0.0);
 		// Crisp micro-facet sparkles + broad golden path
-		float sharpGlint = pow(NdotH, 256.0) * 2.8;
-		float broadGlint = pow(NdotH, 32.0) * 0.50;
-		sunGlitter += (sharpGlint + broadGlint) * sun.color * 1.8;
+		float sharpGlint = pow(NdotH, 512.0) * 3.5;
+		float broadGlint = pow(NdotH, 48.0) * 0.65;
+		sunGlitter += (sharpGlint + broadGlint) * sun.color * 2.0;
 
-		// Subsurface scattering through wave peaks
+		// CryEngine Subsurface Scattering through wave crests (emerald glow when backlit)
 		float sss = pow(max(dot(viewDir, -lightDir), 0.0), 3.0) * max(norm.y, 0.0);
-		sssColor += vec3(0.08, 0.65, 0.60) * sss * 0.5 * sun.color;
+		sssColor += vec3(0.05, 0.75, 0.65) * sss * 0.75 * sun.color;
 
 		// Sun disc reflection on the sky dome
 		float sunReflectDot = max(dot(reflectDir, lightDir), 0.0);
-		surfaceColor += vec3(1.0, 0.92, 0.75) * pow(sunReflectDot, 128.0) * 1.2 * fresnel;
+		surfaceColor += vec3(1.0, 0.92, 0.75) * pow(sunReflectDot, 128.0) * 1.5 * fresnel;
 	}
 
 	vec3 finalColor = surfaceColor + sunGlitter + sssColor;
@@ -186,7 +247,7 @@ void main()
 	}
 
 	finalColor = ACESFilm(finalColor);
-	// Crystal-clear tropical water transparency: see-through in shallows, reflective at distance
-	float alpha = clamp(0.28 + fresnel * 0.60, 0.0, 0.92);
+	// Dense, physical tropical ocean: solid presence with beautiful Fresnel reflectance
+	float alpha = clamp(0.72 + fresnel * 0.24, 0.0, 0.96);
 	gl_FragColor = vec4(finalColor, alpha);
 }

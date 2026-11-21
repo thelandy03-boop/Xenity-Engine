@@ -48,6 +48,10 @@
 #include <engine/event_system/event_system.h>
 #include <engine/debug/stack_debug_object.h>
 
+#if defined(CopyFile)
+#undef CopyFile
+#endif
+
 std::weak_ptr<AudioSource> Editor::s_audioSource;
 std::shared_ptr <ProjectDirectory> Editor::s_currentProjectDirectory = nullptr;
 
@@ -852,6 +856,10 @@ bool Editor::StartFolderCopy(const std::string& path, const std::string& newPath
 {
 	STACK_DEBUG_OBJECT(STACK_HIGH_PRIORITY);
 
+#if defined(CopyFile)
+#undef CopyFile
+#endif
+
 	if (path.empty() || newPath.empty())
 		return false;
 
@@ -1032,6 +1040,9 @@ void Editor::OnDragAndDropFileFinished()
 			}
 			else
 			{
+#if defined(CopyFile)
+#undef CopyFile
+#endif
 				const CopyFileResult copyResult = FileSystem::CopyFile(path, newPath, false);
 				if (copyResult == CopyFileResult::FileAlreadyExists)
 				{

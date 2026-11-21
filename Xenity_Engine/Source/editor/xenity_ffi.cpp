@@ -312,7 +312,15 @@ int XenityFFI::Init(int width, int height)
 	}
 	if (!oceanGO && AssetManager::waterShader)
 	{
-		oceanGO = ShapeSpawner::SpawnPlane();
+		std::shared_ptr<FileReference> oceanGridRef = ProjectManager::GetFileReferenceByFilePath("public_engine_assets/models/OceanGrid.obj");
+		if (oceanGridRef)
+		{
+			oceanGO = ShapeSpawner::MakeMesh("TropicalOcean", "public_engine_assets/models/OceanGrid.obj");
+		}
+		else
+		{
+			oceanGO = ShapeSpawner::SpawnPlane();
+		}
 		if (oceanGO)
 		{
 			oceanGO->SetName("TropicalOcean");
@@ -321,14 +329,14 @@ int XenityFFI::Init(int width, int height)
 	if (oceanGO && AssetManager::waterShader)
 	{
 		oceanGO->GetTransform()->SetPosition(Vector3(0.0f, -0.4f, 0.0f));
-		oceanGO->GetTransform()->SetLocalScale(Vector3(3000.0f, 1.0f, 3000.0f));
+		oceanGO->GetTransform()->SetLocalScale(Vector3(1500.0f, 1.0f, 1500.0f));
 		auto oceanMesh = oceanGO->GetComponent<MeshRenderer>();
 		if (oceanMesh)
 		{
 			auto waterMat = Material::MakeMaterial();
 			waterMat->SetShader(AssetManager::waterShader);
 			waterMat->SetRenderingMode(MaterialRenderingMode::Transparent);
-			waterMat->SetColor(Color::CreateFromRGBAFloat(0.05f, 0.62f, 0.72f, 0.70f));
+			waterMat->SetColor(Color::CreateFromRGBAFloat(0.04f, 0.72f, 0.78f, 0.85f));
 			waterMat->SetTiling(Vector2(64.0f, 64.0f));
 			waterMat->SetUseLighting(true);
 			oceanMesh->SetMaterial(waterMat, 0);

@@ -69,6 +69,9 @@ public:
 	* @param newPath New file path
 	* @param replace If true, replace the file if it already exists
 	*/
+#if defined(CopyFile)
+#undef CopyFile
+#endif
 	static CopyFileResult CopyFile(const std::string& path, const std::string& newPath, bool replace);
 
 	/**
