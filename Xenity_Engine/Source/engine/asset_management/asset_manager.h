@@ -229,6 +229,7 @@ public:
 	static std::shared_ptr<Shader> standardShaderNoPointLight;
 #endif
 	static std::shared_ptr<Shader> unlitShader;
+	static std::shared_ptr<Shader> waterShader;
 
 	static std::shared_ptr<Material> standardMaterial;
 	static std::shared_ptr<Material> unlitMaterial;

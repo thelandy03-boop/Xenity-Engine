@@ -33,9 +33,11 @@ graph TD
 - [x] **Modelo Especular Blinn-Phong**: Integrado en el cálculo de luces Direccionales, Spot y Puntuales en `standard.shader`.
 - [x] **Niebla Atmosférica por Altura Exponencial (Exponential Height Fog)**: Implementación analítica en `standard.shader`, vinculando uniforms `fogParams` y `fogColor` desde el subsistema `ShaderOpenGL` y `xenity_ffi.cpp`.
 
-### Fase 2: Superficies, Tangentes y Mallas (80% COMPLETADO - ACTIVO)
+### Fase 2: Superficies, Tangentes y Mallas (90% COMPLETADO - ACTIVO)
 - [x] **Cálculo de Tangentes y Normales Suaves en Assimp**: Agregadas las banderas `aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals` en `assimp_mesh_loader.cpp`.
 - [x] **Normal Mapping sin Descriptores de Vértice (Cotangent Frame)**: Función `CotangentFrame` integrada en `standard.shader` derivada del paper de Christian Schüler (ShaderX5). Permite relieve fotorrealista con 0 bytes adicionales de memoria en VRAM.
+- [x] **Shader de Océano Tropical CryEngine (`water.shader`)**: Implementado con perturbación de oleaje analítico dual (Gerstner Wavelets), aproximación de Fresnel de Schlick ($R_0 = 0.02$), gradiente de profundidad Caribeña (cyan/turquesa a azul marino) y destello solar especular (Sun Glitter).
+- [x] **Sincronización de Tiempo (`time` uniform)**: Subida automática de `Time::GetTime()` a la GPU en `ShaderOpenGL::SetShaderCameraPosition` para animación fluida de shaders de agua y efectos de viento.
 - [ ] **Siguiente Entregable Inmediato**: Implementar shader de `Radial Blur` para Rayos Solares Crepusculares (God Rays) o slot de textura `normalMap` expuesto directamente en el Inspector del Editor de Rust.
 
 ### Fase 3: Lightmaps UV2 y Áreas Estáticas (PENDIENTE)

@@ -194,6 +194,7 @@ protected:
 	unsigned int m_viewPosLocation = 0;
 	unsigned int m_fogParamsLocation = 0;
 	unsigned int m_fogColorLocation = 0;
+	unsigned int m_timeLocation = 0;
 };
 
 #endif

@@ -46,6 +46,7 @@ std::shared_ptr<Shader> AssetManager::standardShader = nullptr;
 std::shared_ptr<Shader> AssetManager::standardShaderNoPointLight = nullptr;
 #endif
 std::shared_ptr<Shader> AssetManager::unlitShader = nullptr;
+std::shared_ptr<Shader> AssetManager::waterShader = nullptr;
 std::shared_ptr<Material> AssetManager::standardMaterial = nullptr;
 std::shared_ptr<Material> AssetManager::unlitMaterial = nullptr;
 
@@ -74,6 +75,7 @@ void AssetManager::Clear()
 	standardShaderNoPointLight.reset();
 #endif
 	unlitShader.reset();
+	waterShader.reset();
 
 	standardMaterial.reset();
 	unlitMaterial.reset();
@@ -107,6 +109,12 @@ void AssetManager::OnProjectLoaded()
 		unlitShader = AssetManager::LoadEngineAsset<Shader>("public_engine_assets/shaders/unlit.shader");
 		XCHECK(unlitShader != nullptr, "[AssetManager::OnProjectLoaded] Unlit Shader is null");
 		unlitShader->LoadFileReference(loadOptions);
+
+		waterShader = AssetManager::LoadEngineAsset<Shader>("public_engine_assets/shaders/water.shader");
+		if (waterShader)
+		{
+			waterShader->LoadFileReference(loadOptions);
+		}
 	}
 
 	// Load materials

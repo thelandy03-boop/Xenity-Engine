@@ -20,6 +20,7 @@
 #include <engine/game_elements/transform.h>
 #include <engine/game_elements/gameobject.h>
 #include <engine/lighting/lighting.h>
+#include <engine/time/time.h>
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__LINUX__)
 #include <glad/gl.h>
@@ -290,6 +291,10 @@ void ShaderOpenGL::SetShaderCameraPosition()
 			const RGBA& c = Graphics::s_settings.fogColor.GetRGBA();
 			glUniform3f(m_fogColorLocation, c.r, c.g, c.b);
 		}
+		if (m_timeLocation != 0 && m_timeLocation != static_cast<unsigned int>(-1))
+		{
+			glUniform1f(m_timeLocation, Time::GetTime());
+		}
 	}
 }
 
@@ -539,6 +544,7 @@ void ShaderOpenGL::Link()
 	m_viewPosLocation = GetShaderUniformLocation("viewPos");
 	m_fogParamsLocation = GetShaderUniformLocation("fogParams");
 	m_fogColorLocation = GetShaderUniformLocation("fogColor");
+	m_timeLocation = GetShaderUniformLocation("time");
 
 	m_pointlightVariableIds.reserve(MAX_LIGHT_COUNT);
 	m_directionallightVariableIds.reserve(MAX_LIGHT_COUNT);

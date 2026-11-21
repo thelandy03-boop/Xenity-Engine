@@ -299,6 +299,38 @@ int XenityFFI::Init(int width, int height)
 		}
 	}
 
+	// 8. Setup CryEngine Tropical Ocean demo body
+	bool hasWater = false;
+	for (int i = 0; i < goCount; i++)
+	{
+		const auto& go = GameplayManager::GetGameObjects()[i];
+		if (go && go->GetName() == "TropicalOcean")
+		{
+			hasWater = true;
+			break;
+		}
+	}
+	if (!hasWater && AssetManager::waterShader)
+	{
+		auto oceanGO = ShapeSpawner::SpawnPlane();
+		if (oceanGO)
+		{
+			oceanGO->SetName("TropicalOcean");
+			oceanGO->GetTransform()->SetPosition(Vector3(0.0f, 0.1f, 0.0f));
+			oceanGO->GetTransform()->SetLocalScale(Vector3(120.0f, 1.0f, 120.0f));
+			auto oceanMesh = oceanGO->GetComponent<MeshRenderer>();
+			if (oceanMesh)
+			{
+				auto waterMat = Material::MakeMaterial();
+				waterMat->SetShader(AssetManager::waterShader);
+				waterMat->SetColor(Color::CreateFromRGBAFloat(0.04f, 0.62f, 0.72f, 0.85f));
+				waterMat->SetTiling(Vector2(16.0f, 16.0f));
+				waterMat->SetUseLighting(true);
+				oceanMesh->SetMaterial(waterMat, 0);
+			}
+		}
+	}
+
 	s_initialized = true;
 	return 0;
 }
