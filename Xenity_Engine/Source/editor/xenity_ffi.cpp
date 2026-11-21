@@ -342,8 +342,16 @@ int XenityFFI::Init(int width, int height)
 			auto waterMat = Material::MakeMaterial();
 			waterMat->SetShader(AssetManager::waterShader);
 			waterMat->SetRenderingMode(MaterialRenderingMode::Transparent);
+			auto waterNormTex = LoadTextureDirect("public_engine_assets/textures/water_normal.png");
+			if (waterNormTex)
+			{
+				waterNormTex->SetWrapMode(WrapMode::Repeat);
+				waterNormTex->SetFilter(Filter::Bilinear);
+				waterNormTex->SetUseMipmap(true);
+				waterMat->SetTexture(waterNormTex);
+			}
 			waterMat->SetColor(Color::CreateFromRGBAFloat(0.04f, 0.72f, 0.78f, 0.85f));
-			waterMat->SetTiling(Vector2(64.0f, 64.0f));
+			waterMat->SetTiling(Vector2(1.0f, 1.0f));
 			waterMat->SetUseLighting(true);
 			oceanMesh->SetMaterial(waterMat, 0);
 		}

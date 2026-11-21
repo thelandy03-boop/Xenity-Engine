@@ -43,6 +43,7 @@ uniform vec3 viewPos;
 uniform vec4 fogParams;
 uniform vec3 fogColor;
 uniform float time;
+uniform sampler2D diffuse;
 
 struct DirectionalLight 
 {
@@ -65,45 +66,7 @@ layout(std140) uniform LightIndices
 	ivec4 directionalLightsIndices[10];
 } lightIndices;
 
-// CryEngine 2/3 Multi-Harmonic Ocean Wave Simulation with Distance LOD Filtering
-vec3 CalculateWaveNormal(vec2 p, float t, float dist)
-{
-	// Distance LOD: Attenuate high frequency ripples with distance to eliminate moiré aliasing
-	float lodMedium = clamp(1.0 - dist * 0.003, 0.0, 1.0);
-	float lodFine = clamp(1.0 - dist * 0.015, 0.0, 1.0);
-
-	// Octave 1: Primary oceanic swell (L ~ 50m)
-	vec2 d1 = vec2(0.85, 0.52);
-	float ph1 = dot(p, d1) * 0.06 + t * 0.70;
-
-	// Octave 2: Secondary cross chop (L ~ 25m)
-	vec2 d2 = vec2(-0.55, 0.83);
-	float ph2 = dot(p, d2) * 0.14 + t * 1.10;
-
-	// Octave 3: Surface ripples (L ~ 10m, fades smoothly by 300m)
-	vec2 d3 = vec2(0.70, -0.71);
-	float ph3 = dot(p, d3) * 0.35 + t * 1.80;
-
-	// Octave 4: Capillary sparkle (L ~ 3m, fades smoothly by 70m)
-	vec2 d4 = vec2(-0.90, 0.43);
-	float ph4 = dot(p, d4) * 0.90 + t * 2.60;
-
-	vec2 grad = vec2(0.0);
-	grad += d1 * cos(ph1) * 0.16;
-	grad += d2 * cos(ph2) * (0.12 * lodMedium);
-	grad += d3 * cos(ph3) * (0.08 * lodMedium);
-	grad += d4 * cos(ph4) * (0.04 * lodFine);
-
-	return normalize(vec3(-grad.x, 1.0, -grad.y));
-}
-
-// Schlick's approximation for Fresnel reflectance
-float SchlickFresnel(float cosTheta, float F0)
-{
-	return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-}
-
-// ACES Filmic tonemapping curve (CryEngine 3)
+// ACES Filmic tonemapping curve
 vec3 ACESFilm(vec3 x)
 {
 	float a = 2.51;
@@ -116,48 +79,53 @@ vec3 ACESFilm(vec3 x)
 
 void main()
 {
-	float t = time * 1.1;
+	// Dual scrolling normal map animation
+	float t = time * 0.035;
+	
+	// Layer 1: broad oceanic swell moving northeast
+	vec2 uv1 = (v_FragPos.xz * 0.030) + vec2(t * 0.60, t * 0.40);
+	// Layer 2: finer cross waves moving southeast
+	vec2 uv2 = (v_FragPos.xz * 0.065) + vec2(-t * 0.40, t * 0.55);
+
+	// Sample hardware filtered normal map (MIP-maps automatically eliminate moiré and distant noise)
+	vec3 n1 = texture2D(diffuse, uv1).rgb * 2.0 - 1.0;
+	vec3 n2 = texture2D(diffuse, uv2).rgb * 2.0 - 1.0;
+
+	// Blend normals in tangent space (where Z is up towards sky)
+	vec3 waveTangent = normalize(vec3(n1.xy + n2.xy, n1.z * n2.z * 1.5));
+
+	// Convert tangent normal to world normal (Y is up in world space)
+	// Normal strength factor: 0.35 gives gentle, realistic tropical ripples
+	vec3 norm = normalize(vec3(waveTangent.x * 0.35, waveTangent.z, waveTangent.y * 0.35));
+
 	vec3 viewVec = viewPos - v_FragPos;
 	float dist = length(viewVec);
 	vec3 viewDir = normalize(viewVec);
 
-	// Distance-filtered wave normal (eliminates moiré horizontal banding completely)
-	vec3 waveNorm = CalculateWaveNormal(v_FragPos.xz, t, dist);
-	vec3 norm = normalize(mix(normalize(v_Normal), waveNorm, 0.85));
-
 	float cosTheta = max(dot(norm, viewDir), 0.0);
 
-	// Schlick Fresnel factor (R0 = 0.02 for clean ocean water)
-	float fresnel = SchlickFresnel(cosTheta, 0.02);
+	// Schlick Fresnel approximation: shallow glance has high sky reflection, top-down view sees through
+	float fresnel = 0.02 + 0.98 * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 4.5);
 
-	// Atmospheric Sky Dome Reflection (CryEngine 2/3)
+	// Atmospheric Sky Dome Reflection (Caribbean clear sky)
 	vec3 reflectDir = reflect(-viewDir, norm);
 	vec3 skyHorizon = vec3(0.68, 0.82, 0.96);
 	vec3 skyZenith = vec3(0.12, 0.38, 0.75);
 	vec3 skyReflectColor = mix(skyHorizon, skyZenith, clamp(reflectDir.y, 0.0, 1.0));
 
-	// Tropical CryEngine water body colors:
-	// Shallows: vibrant Caribbean turquoise/cyan (crystal clear)
-	// Mid-depth: emerald cyan
-	// Deep ocean: rich cobalt navy blue
-	vec3 shallowColor = vec3(0.04, 0.72, 0.78);
-	vec3 midColor = vec3(0.02, 0.38, 0.54);
-	vec3 deepColor = vec3(0.01, 0.07, 0.22);
+	// Vibrant Tropical Ocean colors:
+	// Shallow: glowing Caribbean cyan
+	// Mid: tropical turquoise
+	// Deep: azure blue
+	vec3 shallowColor = vec3(0.04, 0.78, 0.85);
+	vec3 midColor = vec3(0.02, 0.45, 0.62);
+	vec3 deepColor = vec3(0.01, 0.12, 0.32);
 
-	float depthMix = clamp(cosTheta * 0.5 + 0.3, 0.0, 1.0);
+	float depthMix = clamp(cosTheta * 0.65 + 0.20, 0.0, 1.0);
 	vec3 waterBase = mix(deepColor, mix(midColor, shallowColor, depthMix), depthMix);
-	vec3 surfaceColor = mix(waterBase, skyReflectColor, fresnel * 0.82);
+	vec3 surfaceColor = mix(waterBase, skyReflectColor, fresnel * 0.80);
 
-	// Crest Foam (Whitecaps) with distance fade (only visible near camera, no horizon streaks)
-	float waveSteepness = length(waveNorm.xz);
-	float foamDistFade = clamp(1.0 - dist * 0.015, 0.0, 1.0);
-	float foamFactor = smoothstep(0.16, 0.26, waveSteepness) * foamDistFade;
-	vec3 foamColor = vec3(0.96, 0.98, 1.0);
-	surfaceColor = mix(surfaceColor, foamColor, foamFactor * 0.60);
-
-	// Directional sun specular glitter & subsurface scattering
-	vec3 sunGlitter = vec3(0.0);
-	vec3 sssColor = vec3(0.0);
+	// Sun directional specular glitter & reflection
 	if (lightIndices.usedDirectionalLightCount > 0)
 	{
 		DirectionalLight sun = directionalLights[lightIndices.directionalLightsIndices[0].x];
@@ -165,23 +133,19 @@ void main()
 		vec3 halfDir = normalize(lightDir + viewDir);
 
 		float NdotH = max(dot(norm, halfDir), 0.0);
-		// Crisp micro-facet sparkles + broad golden path
-		float sharpGlint = pow(NdotH, 256.0) * 2.2;
-		float broadGlint = pow(NdotH, 48.0) * 0.60;
-		sunGlitter = (sharpGlint + broadGlint) * sun.color * 1.6;
-
-		// CryEngine Subsurface Scattering through wave crests (emerald glow when backlit)
-		float sss = pow(max(dot(viewDir, -lightDir), 0.0), 3.0) * max(norm.y, 0.0);
-		sssColor = vec3(0.04, 0.65, 0.55) * sss * 0.60 * sun.color;
+		// Crisp micro-facet sparkles + golden reflection path
+		float sharpGlint = pow(NdotH, 192.0) * 2.0;
+		float broadGlint = pow(NdotH, 32.0) * 0.45;
+		surfaceColor += (sharpGlint + broadGlint) * sun.color * 1.5;
 
 		// Sun disc reflection on the sky dome
 		float sunReflectDot = max(dot(reflectDir, lightDir), 0.0);
-		surfaceColor += vec3(1.0, 0.95, 0.80) * pow(sunReflectDot, 64.0) * 1.2 * fresnel;
+		surfaceColor += vec3(1.0, 0.95, 0.82) * pow(sunReflectDot, 64.0) * 1.0 * fresnel;
 	}
 
-	vec3 finalColor = surfaceColor + sunGlitter + sssColor;
+	vec3 finalColor = surfaceColor;
 
-	// Atmospheric exponential height fog
+	// Atmospheric height fog
 	if (fogParams.x > 0.5)
 	{
 		float fogDensity = fogParams.y > 0.0 ? fogParams.y : 0.0004;
@@ -190,6 +154,6 @@ void main()
 	}
 
 	finalColor = ACESFilm(finalColor);
-	float alpha = clamp(0.72 + fresnel * 0.24, 0.0, 0.96);
+	float alpha = clamp(0.74 + fresnel * 0.22, 0.0, 0.96);
 	gl_FragColor = vec4(finalColor, alpha);
 }
