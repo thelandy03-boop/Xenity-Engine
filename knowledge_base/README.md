@@ -9,11 +9,16 @@
 ```text
 knowledge_base/
 ├── README.md                                  # Índice general y guía de contribución (este archivo)
+├── CURRENT_STATUS.md                          # 📍 Bitácora en vivo: ¿Dónde vamos actualmente? Fases, commits y tareas
+├── references/                                # Repositorios fuente y fuentes académicas originales
+│   └── 01_source_provenance_and_citations.md  # Enlaces oficiales (CryEngine, OpenLara, Urho3D) y papers
 ├── graphics/                                  # Arquitectura gráfica, shaders, pipelines y post-procesado
 │   ├── 01_cryengine_master_plan.md           # Plan maestro de destilación CryEngine 2/3
 │   └── 02_glsl_reference_shaders.md           # Colección de shaders GLSL listos para usar
 ├── platforms/                                 # Especificaciones de hardware, consolas y APIs
 │   └── 01_console_hardware_constraints.md    # Restricciones técnicas de PS3, 360, Vita y PSP
+├── architecture/                              # Arquitectura interna del motor y FFI
+│   └── 01_engine_architecture_overview.md    # Ciclo de vida, reflexión y puente con Rust
 └── templates/                                 # Plantillas estándar para nuevos documentos
     └── ai_document_template.md                # Plantilla base para que cualquier IA añada contenido
 ```
@@ -37,6 +42,12 @@ Cuando un asistente de IA genere o proponga nueva documentación técnica para X
 ---
 
 ## 📑 Índice de Documentos Actuales
+
+### 📍 Estado y Bitácora Activa
+* [**Estado Actual del Proyecto (Live Status)**](CURRENT_STATUS.md): Respuesta inmediata a "¿dónde vamos actualmente?". Fases, commits recientes, hitos completados y próximos pasos a ejecutar.
+
+### 📚 Procedencia de Código & Fuentes Académicas
+* [**01. Fuentes Oficiales y Papers Académicos**](references/01_source_provenance_and_citations.md): Enlaces canónicos a repositorios de CryEngine, OpenLara, Urho3D y derivaciones matemáticas exactas (cero suposiciones).
 
 ### 🎨 Gráficos & Shaders
 * [**01. Plan Maestro CryEngine 2/3**](graphics/01_cryengine_master_plan.md): Adaptación ligera de SSAO, rayos crepusculares, niebla atmosférica y agua tropical sin colapsar el rendimiento.

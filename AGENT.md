@@ -8,14 +8,19 @@
 ## 🧠 1. Automatic Knowledge Base Protocol (MANDATORY)
 
 Whenever you (the AI) are asked to research, design, optimize, or propose technical architecture for Xenity Engine:
-1. **Always consult `knowledge_base/` first**:
+1. **Always consult `knowledge_base/CURRENT_STATUS.md` first**:
+   - Check the live progress, active phase, and completed milestones so you never ask or guess "where are we currently?".
+2. **Consult domain documents in `knowledge_base/`**:
+   - `knowledge_base/CURRENT_STATUS.md`: Live status, active phase, recent commits, and immediate next tasks.
+   - `knowledge_base/references/`: Official codebases (CryEngine, OpenLara, Urho3D) and academic papers/citations. All algorithms are mathematically proven, not guessed.
    - `knowledge_base/graphics/`: Existing shaders, rendering pipelines, CryEngine adaptation plan.
    - `knowledge_base/platforms/`: Console hardware specs (PS3 256MB VRAM, Vita, PSP, 360) and memory budgets.
    - `knowledge_base/architecture/`: Engine core systems and design.
-2. **Always document new technical proposals in `knowledge_base/`**:
+3. **Always document new technical proposals and update status in `knowledge_base/`**:
    - Do NOT just write long transient text in the chat.
    - Use the template located at [`knowledge_base/templates/ai_document_template.md`](knowledge_base/templates/ai_document_template.md).
-   - Place the new document in the corresponding folder (`graphics/`, `platforms/`, `architecture/`, `audio/`, `physics/`).
+   - Place the new document in the corresponding folder (`graphics/`, `platforms/`, `architecture/`, `references/`, etc.).
+   - Update [`knowledge_base/CURRENT_STATUS.md`](knowledge_base/CURRENT_STATUS.md) whenever a phase or milestone advances.
    - Automatically update the index in [`knowledge_base/README.md`](knowledge_base/README.md).
 
 ---
