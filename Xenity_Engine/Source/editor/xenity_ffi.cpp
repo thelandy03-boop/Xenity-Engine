@@ -325,22 +325,7 @@ int XenityFFI::Init(int width, int height)
 	}
 	if (!oceanGO)
 	{
-		std::shared_ptr<FileReference> oceanGridRef = ProjectManager::GetFileReferenceByFilePath("public_engine_assets/models/OceanGrid.obj");
-		if (oceanGridRef)
-		{
-			if (oceanGridRef->GetFileStatus() != FileStatus::FileStatus_Loaded)
-			{
-				FileReference::LoadOptions syncLoadOptions;
-				syncLoadOptions.platform = Application::GetPlatform();
-				syncLoadOptions.threaded = false;
-				oceanGridRef->LoadFileReference(syncLoadOptions);
-			}
-			oceanGO = ShapeSpawner::MakeMesh("TropicalOcean", "public_engine_assets/models/OceanGrid.obj");
-		}
-		if (!oceanGO)
-		{
-			oceanGO = ShapeSpawner::SpawnPlane();
-		}
+		oceanGO = ShapeSpawner::SpawnPlane();
 		if (oceanGO)
 		{
 			oceanGO->SetName("TropicalOcean");
@@ -349,8 +334,8 @@ int XenityFFI::Init(int width, int height)
 	if (oceanGO)
 	{
 		oceanGO->SetName("TropicalOcean");
-		oceanGO->GetTransform()->SetPosition(Vector3(0.0f, 0.0f, 0.0f));
-		oceanGO->GetTransform()->SetLocalScale(Vector3(1500.0f, 1.0f, 1500.0f));
+		oceanGO->GetTransform()->SetPosition(Vector3(0.0f, -0.6f, 0.0f));
+		oceanGO->GetTransform()->SetLocalScale(Vector3(3000.0f, 1.0f, 3000.0f));
 		auto oceanMesh = oceanGO->GetComponent<MeshRenderer>();
 		if (oceanMesh && AssetManager::waterShader)
 		{

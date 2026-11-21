@@ -388,6 +388,10 @@ void RendererOpengl::DrawSubMesh(const MeshData::SubMesh& subMesh, const Materia
 	{
 		glDepthMask(GL_FALSE);
 	}
+	else
+	{
+		glDepthMask(GL_TRUE);
+	}
 
 	if (lastSettings.max_depth != settings.max_depth)
 	{
